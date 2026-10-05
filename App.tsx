@@ -10,6 +10,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import Toast from "react-native-toast-message"
 
+import { LEAD_SOURCE_ACCESS_ROLES } from "@/constants/leadSourceRoles"
+
 import SpikeHomeScreen from "./src/screens/spike/SpikeHomeScreen"
 import SpikeTabTwoScreen from "./src/screens/spike/SpikeTabTwoScreen"
 import type { SpikeStackParamList, SpikeTabParamList } from "./src/screens/spike/spikeRoutes"
@@ -28,8 +30,8 @@ interface TabIconProps {
 }
 
 /**
- * Same shape as the web's MobileNav `navItems` (name, icon, roles). The role arrays are copied from MobileNav.tsx
- * and LEAD_SOURCE_ACCESS_ROLES; session 5 filters by them. The spike shows every tab.
+ * Same shape as the web's MobileNav `navItems` (name, icon, roles). The Dashboard array is copied from MobileNav.tsx,
+ * and Calls uses LEAD_SOURCE_ACCESS_ROLES as MobileNav does. Session 5 filters by them. The spike shows every tab.
  */
 const SPIKE_NAV_ITEMS: SpikeNavItem[] = [
     {
@@ -42,7 +44,7 @@ const SPIKE_NAV_ITEMS: SpikeNavItem[] = [
     {
         name: "Calls",
         route: "SpikeTabTwo",
-        roles: [10, 15, 45, 69, 50, 60, 65, 70],
+        roles: LEAD_SOURCE_ACCESS_ROLES,
         icon: PhoneCall,
         component: SpikeTabTwoScreen,
     },

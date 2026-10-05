@@ -1,0 +1,9 @@
+# Copies of the web app's files (docs/OVERVIEW.md §8). They stay byte-identical to the web, apart from the edits
+# listed in prompts/README.md, so a format-on-save must not touch them.
+src/constants/*.ts
+src/types/
+src/lib/phone.ts
+src/lib/region.ts
+src/lib/leadSourceDay.ts
+src/lib/callback.ts
+src/hooks/useNow.ts

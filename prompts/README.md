@@ -224,3 +224,74 @@ use `tabBarHeight + 16`.
 - `.env` / `API_BASE_URL` was not set up. The session 1 prompt does not cover it. Session 4 has the fallback: it reads
   `API_BASE_URL` in `src/api/endpoints.ts` with the emulator default. "Before you start" item 2 above is out of date
   on this point.
+
+## Session 2 — shared core
+
+**Status: done, except `npm run android`.** The cloud container still cannot reach `dl.google.com` (HTTP 403), so the
+Android build did not run. This session adds no native code. Run `npm run android` once on your machine.
+
+Copied from the web at commit `6858fb8`. 26 files are byte-identical to the web. The rest carry the edits below.
+
+### Deliberate differences from the web
+
+Redo these edits whenever you copy one of these files again. Everything else is verbatim.
+
+| RN file | Web file | Edit |
+|---|---|---|
+| `src/constants/callStatus.ts` | `src/constants/callStatus.ts` | Line 1 is `import type * as Icons from "lucide-react-native"`. No runtime import. |
+| `src/constants/notificationChannels.ts` | same | Data only: codes 2, 3, 4 with labels. The `dispatch*` imports and `channel` fields stay on the server. |
+| `src/types/notification.ts` | same | Mongoose `Types.ObjectId` fields are `string`. The mongoose import is gone. |
+| `src/types/quotation.ts` | same | Same as `notification.ts`. |
+| `src/types/interaction.ts` | same | Legacy header. The `@/config/interactionTypes` string union is inlined, because RN has no `src/config`. |
+| `src/types/contact.ts` | same | Legacy header. The `@/config/services` and `@/config/statuses` string unions are inlined. |
+| `src/lib/region.ts` | `src/lib/region.ts` | `getRegion()` is replaced by a comment. Session 4 supplies the region from the user's `regions[]`. |
+| `src/lib/leadSourceDay.ts` | `src/lib/lead-sources/day.ts` | None. Only the file name and folder differ. |
+| `src/lib/callback.ts` | `src/components/admin/operations/lead-sources/callback.ts` | The import points at `@/lib/leadSourceDay`. |
+| `src/hooks/useNow.ts` | `src/components/admin/operations/lead-sources/useNow.ts` | The `"use client"` line is gone. |
+
+`src/lib/phone.ts` is byte-identical. Its `HIDDEN_MARKS` regex keeps all four invisible ranges (U+200B–U+200F,
+U+202A–U+202E, U+2066–U+2069, U+FEFF). `.prettierignore` lists every copy, so a format-on-save cannot rewrite them.
+
+To check the copies against a fresh `reference/` clone, run `cmp` per file, for example
+`cmp reference/zan-workspace/src/constants/leadStatus.ts src/constants/leadStatus.ts`.
+
+### Where this session differs from `docs/SHARED_CODE.md`
+
+SHARED_CODE.md is an analysis of the web, and it marks some files "do not port". The session 2 prompt copies all of
+them anyway, with the edits above: `labels.ts`, `notificationRules.ts`, `statusMetaByEntity.ts`, `contact.ts`,
+`interaction.ts`, `notification.ts`, `quotation.ts` and `facebook-leads.ts`. SHARED_CODE.md also says to fix
+`types/user.ts`. It is copied unchanged, so it still has a required `password` and no `regions`. Session 16 should
+use a password-less user row with `regions` when it builds the user screens.
+
+### New tooling
+
+- `@/` resolves in all three toolchains: `paths` in `tsconfig.json`, `babel-plugin-module-resolver` in
+  `babel.config.js` (pinned at 5.0.3, the only new package), and `moduleNameMapper` in `jest.config.js`. The Babel
+  alias key `"@"` only matches `@/…`, so scoped packages such as `@react-navigation/native` are not affected.
+- `src/lib/format.ts` replaces the web's `toLocaleString()` calls and `TimeAgo.tsx`. Each function names the web call
+  sites it replaces. Two choices beyond the prompt: a missing or unreadable value returns `"—"`, because
+  `dayjs(undefined)` is the current time and would show a missing date as "now"; and `formatAmount` has no `₹` sign,
+  because the web adds it in the JSX.
+- The spike screen and `App.tsx` now import `LEAD_SOURCE_STATUS_META` and `LEAD_SOURCE_ACCESS_ROLES` from
+  `src/constants` instead of holding their own copies.
+
+### Findings
+
+- **`"9876543210"` with `US` is `INVALID`, not an accepted US number.** It is read in the US plan (+1 987 654 3210),
+  and 987 is not a US area code. With `IN` it is `+919876543210`. The test asserts this real behaviour.
+- **Two numbers in one cell give `NOT_A_NUMBER` only when a comma separates them.** With `/` or a space, the digits run
+  together and `validatePhone` returns `TOO_LONG`. This is the web's behaviour, copied as is.
+- **The `\p{Nd}` regex in `checkPastedPhone` is safe on Hermes.** The RN Babel preset rewrites it into plain character
+  ranges, and RN's own `hermesc` compiles a bundle of every new module with no warnings.
+- **`callback.ts` formats times with `toLocaleTimeString`**, so its clock text follows the phone's locale. That is
+  the web's behaviour. `format.ts` uses fixed formats instead.
+
+### What was verified
+
+- `npm test`: 8 suites, 95 tests. The `src` suites also pass with `TZ` set to UTC, Asia/Kolkata,
+  America/Los_Angeles, Pacific/Kiritimati, Pacific/Pago_Pago, America/St_Johns and Australia/Lord_Howe.
+- `npx tsc --noEmit` and `npm run lint` pass.
+- A Metro production bundle of the app, and one of a probe that imports every new module, both build. Metro resolves
+  `libphonenumber-js/mobile/examples`. `hermesc` compiles both.
+- The type-file count: the web has 11 type files plus `facebook/facebook-leads.ts`, 12 in all, and all 12 are
+  copied. The Definition of done's "12 files plus facebook" counts the facebook file twice.

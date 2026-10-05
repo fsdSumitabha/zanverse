@@ -129,6 +129,9 @@ ObjectId). Everything else ports.
 correct on day one — and it means two copies now exist. When a code or label changes in the web app, copy the file
 again. A silent drift here makes the app and the web disagree with no error anywhere.
 
+A few copies carry small RN edits (no mongoose, no server imports, type-only lucide). Session 2 lists them in
+`prompts/README.md`. Redo those edits whenever you copy one of those files again.
+
 ## 9. Session plan
 
 Each session is one prompt file in `prompts/`, ends with a working app, and finishes when its Definition of Done is met.

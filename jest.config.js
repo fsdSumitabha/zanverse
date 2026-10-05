@@ -6,6 +6,7 @@ module.exports = {
         "^.+\\.mjs$": "babel-jest",
     },
     moduleNameMapper: {
+        "^@/(.*)$": "<rootDir>/src/$1",
         "\\.css$": "<rootDir>/jest/cssStub.js",
     },
     // react-native and react-native-*, plus the other packages that ship untranspiled ESM or JSX.
