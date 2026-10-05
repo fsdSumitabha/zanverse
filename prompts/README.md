@@ -726,3 +726,89 @@ mocked API. Real data needs the session 4 backend patch, and the cloud container
 - [ ] A role outside the lead roles sees AccessDenied; an unknown id shows "Lead not found".
 - [ ] The four interaction buttons show their colours. The Fab sits 16 dp above the tab bar.
 - [ ] The country sheet scrolls and searches; on Hermes, check whether country names show or only codes.
+
+## Session 8 — interactions and timeline
+
+**Status: done, except the device checks.** The lead screen now has its timeline and all four forms, tested inside
+the whole app against a mocked API. Real data needs the session 4 backend patch, and the cloud container has no
+Android SDK. **New native package:** `@react-native-clipboard/clipboard@1.16.3` (pinned; it has a codegen config, so it
+is a TurboModule). Run `npm run android` once to link it.
+
+### What is in it
+
+- `src/hooks/useInteractions.ts` — a timeline for `{ entityType, entityId }` (lead 0, client 1, project 2) through
+  `sendRaw`, reading `json.interactions`; reloads quietly on focus. `getTimelinePath()` maps the three routes.
+- `src/components/interactions/` — `InteractionTimeline` (the screen as one FlatList: header, rows, pull-to-refresh,
+  skeletons, "No interactions yet", an error with "Try again"), `InteractionItem` (the type switch),
+  `types/NoteItem | CallItem | MeetingItem | QuotationItem | StatusChangeItem | DocumentItem`, `InteractionRowFrame`,
+  `RowHeader`, `InteractionEditor`, `EditHistory`, `MeetingLinkButton`, `InteractionActions`,
+  `InteractionItemSkeleton`, `FormActions`, `canEditInteraction`, `timelineTypes`.
+- `src/screens/interactions/` — `AddNoteScreen`, `LogCallScreen`, `ScheduleMeetingScreen`, `SendQuotationScreen`,
+  `AttendeePickerScreen`.
+- `src/components/ui/DateTimeField.tsx`, `src/components/ui/FilePickerField.tsx` (with `getFileRejection`),
+  `src/lib/toastPromise.ts`.
+- `LeadDetailScreen` now renders through `InteractionTimeline`. `components/leads/LeadInteractionActions.tsx` is
+  replaced by `components/interactions/InteractionActions.tsx`.
+
+### Decisions
+
+- **The forms are modals in the root stack, not in the Leads stack.** Sessions 9 and 10 need the same forms from the
+  Clients and Projects tabs. Registered once at the root (`presentation: "modal"`, with a header), they open from any
+  tab and cover the tab bar. A form calls `goBack()` on success; the timeline screen regains focus and reloads, so
+  the new row appears with no manual refresh.
+- **The attendee list is its own screen.** It returns `{ _id, name }[]` to the meeting form with
+  `popTo("ScheduleMeeting", { attendees }, { merge: true })`, so the form shows the names and "N selected".
+- **The timeline is the screen's list.** The header card, the converted block, the add buttons and Delete are the
+  FlatList header, so the whole screen scrolls as one list and rows stay virtualized. The vertical line is one
+  segment per row. The web's staggered fade-in is dropped.
+- **A 2050 meeting row** reads every `meeting` field through optional chaining. The web reads `meeting.description`
+  unguarded and would crash on it.
+- **New 2310 document row:** title, description, the document's title and an Open link. The web renders nothing.
+- **Recordings and documents** are relative paths; they open at `API_BASE_URL + path` with `Linking.openURL`, in place
+  of the web's `<audio>` player. Quotation files are absolute ImageKit URLs and open as they are.
+- **Amounts** use `formatAmount` (Indian grouping, as the web's `toLocaleString()` shows in India): `₹1,00,000 + 18%
+  GST`, `Amount Inclusive GST : ₹1,18,000`. Call times use `formatDateTime`.
+- **The pencil** is always visible, 44 dp, for `[10, 15, 60, 69, 45, 50, 70]`. The editor's PATCH sends only the keys
+  that changed, as the web.
+- **Files.** The picker is filtered to the allowed types, and the web's react-dropzone checks run again on the result
+  with the same messages ("File type must be one of …", "File is larger than N bytes"). Quotations: PDF, DOC, DOCX up
+  to 10 MB, as the web. Recordings: `audio/*`; the web and the route set no size limit, and the app caps it at 50 MB.
+  File parts are `{ uri, name, type }`; `Content-Type` is never set by hand.
+- **Dates** go out as ISO strings (`callTime`, `scheduledAt`). The web sends the `datetime-local` text. A call's time
+  starts at now; a meeting's starts empty and cannot be in the past.
+- **Required fields on Log Call.** The web's inputs are `required`, which the browser enforces. The app shows "Please
+  fill required fields" for a blank contact name, duration, title or notes. The `status` part stays `"0"`.
+- **Messages** are the web's: "Description cannot be empty", "Title is required", "Amount is required", and the eight
+  `toast.promise` strings through `toastPromise` (one toast that turns from loading into success or error).
+- **The "Created by" tooltip** becomes a visible last line on every row.
+
+### What was verified
+
+- `src/components/interactions/__tests__/rows.test.tsx` (16 tests): every row type, including the 2050 row with
+  `meeting: null`, the status pills from `STATUS_META_BY_ENTITY[0]`, Join and Copy ("Copied" for 1.5 s), the recording
+  opening on the API host, the GST total, the document row; no pencil for role 30; the editor's disabled Save and
+  partial PATCH; EditHistory's "once / twice / thrice / N times", "Someone", and the previous value; the file rules;
+  `toastPromise`; `getTimelinePath`.
+- `__tests__/timeline.test.tsx` (9 tests, the whole app): "No interactions yet"; rows newest first; Add Note refusing
+  an empty note, posting the web's body and showing the new row on return; a quotation as multipart with the web's
+  eight part names, `gst_percentage` 18, `status` 2410, the PDF part and no Content-Type; a `.txt` refused before
+  upload; Log Call with the twelve part names, E.164 phone, `status` "0", a recording, and a `field: "phone"` error
+  under the field; a meeting with two attendees from the picker; an in-place note edit sending only `description`
+  and then showing "Edited once"; no pencils for role 30.
+- `npm test`: 25 suites, 257 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds with the
+  clipboard module in it, the new classes are compiled, and `hermesc` compiles it.
+
+### Device checklist
+
+- [ ] `npm run android` builds with the clipboard module; no red box.
+- [ ] A lead's timeline shows note, call, meeting, quotation and status rows with badges and times; an empty lead
+      shows "No interactions yet". A 2050 row does not crash.
+- [ ] A 2510 row shows both pills and the remarks.
+- [ ] A new note appears at the top on return, with no manual refresh.
+- [ ] A call with a recording saves, and Open plays the recording from the row.
+- [ ] A quotation with a PDF saves; a `.txt` cannot be picked or is refused with the allowlist message.
+- [ ] An online meeting with two attendees saves; its row shows Join (once the server added a link). Copy says
+      "Copied".
+- [ ] Editing a note and a 2510 remark both survive pull-to-refresh; EditHistory says "Edited once" with the old value.
+- [ ] A role outside the edit roles sees no pencil.
+- [ ] Android date and time dialogs open one after the other; the keyboard never covers a form field.

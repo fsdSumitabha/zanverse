@@ -1,22 +1,24 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native"
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
 import { useState } from "react"
-import { Alert, RefreshControl, ScrollView, View } from "react-native"
+import { Alert, ScrollView, View } from "react-native"
 
 import { sendRaw } from "@/api/client"
+import InteractionActions from "@/components/interactions/InteractionActions"
+import InteractionTimeline from "@/components/interactions/InteractionTimeline"
 import ConvertedClientBlock from "@/components/leads/ConvertedClientBlock"
 import LeadDetailsCard from "@/components/leads/LeadDetailsCard"
 import LeadDetailsSkeleton from "@/components/leads/LeadDetailsSkeleton"
-import LeadInteractionActions from "@/components/leads/LeadInteractionActions"
 import { AccessDenied, Button, EmptyState } from "@/components/ui"
+import { ENTITY_TYPE } from "@/constants/entityTypes"
 import { useAuth } from "@/contexts/AuthContext"
 import { useDetailQuery } from "@/hooks/useDetailQuery"
+import { useInteractions } from "@/hooks/useInteractions"
 import { notify } from "@/lib/notify"
 import { openClient } from "@/navigation/openRecord"
 import type { LeadsStackParamList } from "@/navigation/types"
 import type { Client } from "@/types/clients"
 import type { Lead } from "@/types/lead"
-import { BRAND_COLOR } from "@/theme"
 
 type Navigation = NativeStackNavigationProp<LeadsStackParamList, "LeadDetail">
 
@@ -29,18 +31,28 @@ interface LeadDetailData {
 const LEADS_API = "/api/admin/operations/leads"
 const ADMIN_ROLE = 10
 
-/** One lead: header card, converted client, the add-interaction buttons and, for Admin, Delete. */
+/** One lead: header card, converted client, the add buttons, the timeline and, for Admin, Delete. */
 export default function LeadDetailScreen() {
     const navigation = useNavigation<Navigation>()
     const { id } = useRoute<RouteProp<LeadsStackParamList, "LeadDetail">>().params
     const { role } = useAuth()
-    const { data, loading, refreshing, accessError, refresh, refetch } = useDetailQuery<LeadDetailData>(
-        `${LEADS_API}/${id}`,
-    )
+    const detail = useDetailQuery<LeadDetailData>(`${LEADS_API}/${id}`)
+    const timeline = useInteractions({ entityType: ENTITY_TYPE.LEAD, entityId: id })
     const [isDeleting, setIsDeleting] = useState(false)
 
-    const lead = data?.lead ?? null
-    const client = data?.client ?? null
+    const lead = detail.data?.lead ?? null
+    const client = detail.data?.client ?? null
+
+    function handleRefresh() {
+        detail.refresh()
+        timeline.reload()
+    }
+
+    function handleStatusUpdated() {
+        // The status change adds a 2510 row, so the timeline reloads with the lead.
+        detail.refetch()
+        timeline.reload()
+    }
 
     async function deleteLead() {
         if (isDeleting) return
@@ -63,51 +75,56 @@ export default function LeadDetailScreen() {
         ])
     }
 
-    if (accessError) {
+    if (detail.accessError) {
         return (
             <View className="flex-1 justify-center p-4">
-                <AccessDenied message={accessError} />
+                <AccessDenied message={detail.accessError} />
             </View>
         )
     }
 
-    return (
-        <ScrollView
-            contentContainerClassName="gap-3 p-4"
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[BRAND_COLOR.light]} />}
-        >
-            {loading && <LeadDetailsSkeleton />}
+    if (detail.loading || !lead) {
+        return (
+            <ScrollView contentContainerClassName="gap-3 p-4">
+                {detail.loading ? <LeadDetailsSkeleton /> : <EmptyState title="Lead not found" />}
+            </ScrollView>
+        )
+    }
 
-            {!loading && !lead && <EmptyState title="Lead not found" />}
+    const header = (
+        <View className="gap-3">
+            <View>
+                <LeadDetailsCard
+                    lead={lead}
+                    onEdit={() => navigation.navigate("LeadEdit", { id })}
+                    onConvert={() => navigation.navigate("LeadConvert", { id })}
+                    onStatusUpdated={handleStatusUpdated}
+                />
+                {client && <ConvertedClientBlock client={client} onViewClient={() => openClient(client._id, role)} />}
+            </View>
 
-            {!loading && lead && (
-                <>
-                    <View>
-                        <LeadDetailsCard
-                            lead={lead}
-                            onEdit={() => navigation.navigate("LeadEdit", { id })}
-                            onConvert={() => navigation.navigate("LeadConvert", { id })}
-                            onStatusUpdated={refetch}
-                        />
-                        {client && (
-                            <ConvertedClientBlock client={client} onViewClient={() => openClient(client._id, role)} />
-                        )}
-                    </View>
+            <InteractionActions entityType={ENTITY_TYPE.LEAD} entityId={id} />
 
-                    <LeadInteractionActions onAction={() => notify.info("Available in the next session")} />
-
-                    {role === ADMIN_ROLE && (
-                        <View className="flex-row justify-end">
-                            <Button
-                                label={isDeleting ? "Deleting..." : "Delete Lead"}
-                                variant="danger"
-                                loading={isDeleting}
-                                onPress={handleDelete}
-                            />
-                        </View>
-                    )}
-                </>
+            {role === ADMIN_ROLE && (
+                <View className="flex-row justify-end">
+                    <Button
+                        label={isDeleting ? "Deleting..." : "Delete Lead"}
+                        variant="danger"
+                        loading={isDeleting}
+                        onPress={handleDelete}
+                    />
+                </View>
             )}
-        </ScrollView>
+        </View>
+    )
+
+    return (
+        <InteractionTimeline
+            entityType={ENTITY_TYPE.LEAD}
+            timeline={timeline}
+            header={header}
+            refreshing={detail.refreshing}
+            onRefresh={handleRefresh}
+        />
     )
 }

@@ -62,12 +62,31 @@ export type TabParamList = {
     MoreTab: NavigatorScreenParams<MoreStackParamList>
 }
 
+/** A meeting attendee, as the picker returns it to the meeting form. */
+export interface AttendeeOption {
+    _id: string
+    name: string
+}
+
+/** The record a timeline form writes to: a lead (0), client (1) or project (2). */
+export interface InteractionFormParams {
+    entityType: number
+    entityId: string
+}
+
 export type RootStackParamList = {
     Splash: undefined
     Auth: undefined
     App: NavigatorScreenParams<TabParamList> | undefined
     /** The session 3 primitives page, kept reachable for the device checklists. */
     KitchenSink: undefined
+    // The timeline forms, as modals over the tabs, so the lead, client and project screens all open the same ones.
+    AddNote: InteractionFormParams
+    LogCall: InteractionFormParams
+    SendQuotation: InteractionFormParams
+    /** `attendees` comes back from AttendeePicker. */
+    ScheduleMeeting: InteractionFormParams & { attendees?: AttendeeOption[] }
+    AttendeePicker: { selected: AttendeeOption[] }
 }
 
 /** Every screen inside a tab, by name. */

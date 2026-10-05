@@ -7,6 +7,11 @@ import { useRegionScope } from "@/contexts/RegionContext"
 import LoginScreen from "@/screens/auth/LoginScreen"
 import SplashScreen, { SplashView } from "@/screens/auth/SplashScreen"
 import KitchenSinkScreen from "@/screens/dev/KitchenSinkScreen"
+import AddNoteScreen from "@/screens/interactions/AddNoteScreen"
+import AttendeePickerScreen from "@/screens/interactions/AttendeePickerScreen"
+import LogCallScreen from "@/screens/interactions/LogCallScreen"
+import ScheduleMeetingScreen from "@/screens/interactions/ScheduleMeetingScreen"
+import SendQuotationScreen from "@/screens/interactions/SendQuotationScreen"
 import { useNavigationTheme } from "@/theme"
 
 import { linking } from "./linking"
@@ -25,7 +30,7 @@ function AppTabsScreen() {
     return <TabNavigator key={active} />
 }
 
-/** Splash, then Login or the tabs. */
+/** Splash, then Login or the tabs, and the timeline forms as modals over the tabs. */
 export default function RootNavigator() {
     const { loading, user } = useAuth()
     const theme = useNavigationTheme()
@@ -47,6 +52,25 @@ export default function RootNavigator() {
                 <Stack.Screen name="Auth" component={LoginScreen} />
                 <Stack.Screen name="App" component={AppTabsScreen} />
                 <Stack.Screen name="KitchenSink" component={KitchenSinkScreen} />
+                <Stack.Group screenOptions={{ presentation: "modal", headerShown: true }}>
+                    <Stack.Screen name="AddNote" component={AddNoteScreen} options={{ title: "Add Note" }} />
+                    <Stack.Screen name="LogCall" component={LogCallScreen} options={{ title: "Log Call" }} />
+                    <Stack.Screen
+                        name="SendQuotation"
+                        component={SendQuotationScreen}
+                        options={{ title: "Send Quotation" }}
+                    />
+                    <Stack.Screen
+                        name="ScheduleMeeting"
+                        component={ScheduleMeetingScreen}
+                        options={{ title: "Schedule Meeting" }}
+                    />
+                    <Stack.Screen
+                        name="AttendeePicker"
+                        component={AttendeePickerScreen}
+                        options={{ title: "Attendees" }}
+                    />
+                </Stack.Group>
             </Stack.Navigator>
         </NavigationContainer>
     )

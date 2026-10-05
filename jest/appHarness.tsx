@@ -122,3 +122,37 @@ export async function typeInto(renderer: ReactTestRenderer.ReactTestRenderer, la
     )
     await ReactTestRenderer.act(async () => input.props.onChangeText(text))
 }
+
+export interface FormPart {
+    fieldName: string
+    string?: string
+    uri?: string
+    name?: string
+    type?: string
+}
+
+/**
+ * A FormData that records its parts the way React Native's does: strings as `string`, files as `{ uri, name, type }`.
+ * Node's FormData, which Jest provides, turns a file object into "[object Object]".
+ */
+export class RecordingFormData {
+    private parts: FormPart[] = []
+
+    append(fieldName: string, value: unknown) {
+        this.parts.push(typeof value === "string" ? { fieldName, string: value } : { fieldName, ...(value as object) })
+    }
+
+    getParts(): FormPart[] {
+        return this.parts
+    }
+}
+
+/** Swaps the global FormData for RecordingFormData. Returns a function that puts the original back. */
+export function installRecordingFormData(): () => void {
+    const holder = globalThis as unknown as { FormData: unknown }
+    const original = holder.FormData
+    holder.FormData = RecordingFormData
+    return () => {
+        holder.FormData = original
+    }
+}

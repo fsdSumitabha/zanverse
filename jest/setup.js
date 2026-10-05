@@ -43,3 +43,5 @@ jest.mock("@react-native-documents/picker", () => ({
 jest.mock("react-native-nitro-modules", () => ({
     NitroModules: { createHybridObject: jest.fn() },
 }))
+
+jest.mock("@react-native-clipboard/clipboard", () => require("@react-native-clipboard/clipboard/jest/clipboard-mock.js"))
