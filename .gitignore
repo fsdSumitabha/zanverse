@@ -76,3 +76,6 @@ yarn-error.log
 
 # read-only clone of the web app, used as reference
 reference/
+
+# personal Claude settings (machine-specific paths)
+.claude/settings.local.json
