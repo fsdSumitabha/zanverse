@@ -198,3 +198,43 @@ describe("screen guard", () => {
         await unmountApp(renderer)
     })
 })
+
+describe("list kit demo", () => {
+    const LEADS = [
+        { _id: "l1", name: "Acme Traders", phone: "+91 98765 43210", status: 10 },
+        { _id: "l2", name: "Bolt Logistics", phone: "+91 98765 43211", status: 20 },
+    ]
+
+    async function openDemo(renderer: ReactTestRenderer.ReactTestRenderer) {
+        await press(findPressableByText(renderer, "More"))
+        await press(findPressable(renderer, "List kit demo"))
+    }
+
+    it("opens from More and shows the first page of leads", async () => {
+        const renderer = await signInAs(ADMIN)
+        fetchMock.mockResolvedValueOnce(
+            respond(200, { success: true, data: LEADS, pagination: { page: 1, limit: 10, total: 2, pages: 1 } }),
+        )
+
+        await openDemo(renderer)
+
+        expect(fetchMock.mock.calls[1][0]).toBe("http://10.0.2.2:3000/api/admin/operations/leads?page=1&limit=10")
+        const texts = getTexts(renderer)
+        expect(texts).toContain("Acme Traders")
+        expect(texts).toContain("Contacted")
+        expect(texts).toContain("2 leads found")
+        await unmountApp(renderer)
+    })
+
+    it("shows AccessDenied with the API's message on a 403", async () => {
+        const renderer = await signInAs({ ...ADMIN, role: 30 })
+        fetchMock.mockResolvedValueOnce(
+            respond(403, { success: false, message: "You aren't authorized to perform this action." }),
+        )
+
+        await openDemo(renderer)
+
+        expect(getTexts(renderer)).toContain("Access Denied")
+        await unmountApp(renderer)
+    })
+})

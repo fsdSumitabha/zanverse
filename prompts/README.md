@@ -566,3 +566,78 @@ device also needs the session 4 backend patch.
 - [ ] Logout returns to Login, and a relaunch stays on Login.
 - [ ] Airplane mode shows the offline bar under the header; turning it off hides it.
 - [ ] The seven tab labels fit without clipping on a small phone.
+
+## Session 6 — shared list kit
+
+**Status: done, except the device checks.** The kit is tested against a mocked API, both as units and inside the
+whole app. The demo screen needs the session 4 backend patch to show real leads, and the cloud container has no
+Android SDK.
+
+### What is in it
+
+- `src/hooks/useListQuery.ts` — `{ query, searchText, setSearch, setPage, setFilters, resetFilters, items, setItems,
+  envelope, total, pages, loading, refreshing, loadingMore, accessError, error, refresh, loadMore }`. Options: `path`,
+  `pageSize` (10), `extraParams`, `initialQuery`, `selectItems`.
+- `src/components/list/ListScreen.tsx` — the FlatList scaffold. Props: `query`, `renderItem`, `SkeletonComponent`,
+  `emptyText`, `getCountLabel`, `searchPlaceholder`, `statusMeta`, `hideDateFilters`, `headerRight`, `headerExtra`,
+  `bottomInset`.
+- `src/components/list/ListFilters.tsx`, `DateField.tsx`, `SearchField.tsx`; `src/lib/dates.ts` (`MIN_DATE`,
+  `todayLocal`, `clampDate` verbatim, plus `parseLocalDate` / `formatLocalDate`).
+- `src/screens/dev/ListKitDemoScreen.tsx` — More → "List kit demo" (debug builds), on
+  `GET /api/admin/operations/leads`.
+- `FIELD_BOX_CLASSES`, `FIELD_CLASSES` and `FIELD_TEXT_CLASSES` are now exported from `@/components/ui`.
+
+### Decisions
+
+- **Four loading states, one at a time.** `loading` (first page after mount or a filter or search change: five
+  skeletons), `refreshing` (pull-to-refresh: the spinner), `loadingMore` (one skeleton under the rows), and a quiet
+  reload on focus that shows nothing. The mode of the next page-1 fetch is kept in a ref, so a search that ends where
+  it started fetches nothing.
+- **Newest request wins.** Every fetch aborts the one before it, and an aborted fetch never writes state. That also
+  covers unmounting.
+- **Errors.** 403 → `accessError` and AccessDenied in place of the list. 401 → nothing here (the client already went
+  to Login). Anything else → `error`: an empty list shows "Could not load the list" with "Try again"; a list with rows
+  keeps them and shows a toast.
+- **Appended pages are merged by `_id`**, so a row that moved pages between requests is not shown twice.
+- **The query string is built by hand**, not with `URLSearchParams`, because React Native's `URLSearchParams` is
+  incomplete. The param order is the web's: `page`, `limit`, then `search`, `status`, `from`, `to`, `view`, `sort`, then
+  any `extraParams`.
+- **Search** waits 300 ms and fires only at 0 or 2+ characters, as the prompt says. (The web's list search has no
+  minimum; only its dashboard search does.)
+- **Filters are a draft until the sheet closes**, by Done, Back or a tap outside, and then `setFilters` runs once. The
+  same values again fetch nothing. Statuses are chips: "All statuses", then each label of the META map.
+- **Dates.** Android opens the system dialog through `DateTimePickerAndroid.open`, limited to `min` and `max` (From:
+  `2026-01-01`..To, To: From..today). iOS opens a sheet with the inline calendar. Both show the short date ("Mar 10"),
+  muted until chosen, as the web shows its default range.
+- **`useFocusEffect`** skips the first focus (the mount is already loading) and reloads page 1 quietly on later ones.
+  A reload on focus drops the appended pages, back to page 1.
+- **Rows are spaced by the content container's `gap`**, not a separator component.
+
+### What was verified
+
+- `src/hooks/__tests__/useListQuery.test.tsx` (11 tests, a fetch mock that honours AbortSignal): page 1 with the web's
+  param names; loadMore appends and stops at the last page; a second loadMore while loading does nothing; filters reset
+  to page 1 and replace the rows; search at 1 character fires nothing and at 2 fires once after exactly 300 ms; refresh
+  keeps filters and search; the first focus does not refetch and a later one reloads quietly; an aborted stale response
+  writes nothing; 403 → `accessError`; `pagination.totalPages`; `setPage` is stable.
+- `src/components/list/__tests__/list.test.tsx` (14 tests): five skeletons on first load, rows and the count, the
+  footer skeleton, the empty text, the error with retry, AccessDenied with the server's message, `onEndReached` and
+  pull-to-refresh wiring, the filter count; ListFilters lists the META labels, applies once on close, and shows "Clear
+  filters" only while something is set; DateField on Android passes min and max and returns `YYYY-MM-DD`;
+  `clampDate` and `todayLocal`.
+- `__tests__/App.test.tsx`: the demo opens from More, requests `leads?page=1&limit=10` and shows the rows and "2 leads
+  found"; a 403 shows AccessDenied.
+- `npm test`: 21 suites, 209 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it.
+
+### Device checklist
+
+- [ ] The demo opens from More; the first page shows 10 rows.
+- [ ] Scrolling to the bottom appends page 2 with the footer skeleton; past the last page no request goes out.
+- [ ] Pull-to-refresh returns to page 1 and keeps the status, dates and search.
+- [ ] A status from the filter sheet resets to page 1, and the count line matches `pagination.total`.
+- [ ] From cannot go before 2026-01-01 or after To; To cannot go after today.
+- [ ] One typed character sends nothing; two send one request after 300 ms.
+- [ ] Leaving the tab and coming back reloads page 1 with no spinner, and no warning appears in Metro.
+- [ ] A role outside the leads list's roles sees AccessDenied with the API's message.
+- [ ] A search with no match shows "No leads found".

@@ -4,6 +4,7 @@ import { renderScreenLayout } from "@/navigation/ScreenLayout"
 import { getStackScreenOptions } from "@/navigation/stackOptions"
 import type { MoreStackParamList } from "@/navigation/types"
 import MoreScreen from "@/screens/more/MoreScreen"
+import ListKitDemoScreen from "@/screens/dev/ListKitDemoScreen"
 import PlaceholderScreen from "@/screens/PlaceholderScreen"
 
 const Stack = createNativeStackNavigator<MoreStackParamList>()
@@ -18,6 +19,7 @@ export default function MoreStack() {
             <Stack.Screen name="ActivityLogs" component={PlaceholderScreen} />
             <Stack.Screen name="Notifications" component={PlaceholderScreen} />
             <Stack.Screen name="Profile" component={PlaceholderScreen} />
+            <Stack.Screen name="ListKitDemo" component={ListKitDemoScreen} />
         </Stack.Navigator>
     )
 }

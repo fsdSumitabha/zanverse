@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native"
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { ChevronRight, Code, LogOut, Send, type LucideIcon } from "lucide-react-native"
+import { ChevronRight, Code, List, LogOut, Send, type LucideIcon } from "lucide-react-native"
 import { useState } from "react"
 import { Pressable, ScrollView, Text, View } from "react-native"
 
@@ -27,7 +27,7 @@ interface RowProps {
     hasChevron?: boolean
 }
 
-enableIconClassNames(ChevronRight, Code, LogOut, Send)
+enableIconClassNames(ChevronRight, Code, List, LogOut, Send)
 
 function MoreRow({ label, icon: Icon, onPress, isDanger = false, hasChevron = true }: RowProps) {
     return (
@@ -120,6 +120,8 @@ export default function MoreScreen() {
                         hasChevron={false}
                         onPress={handleTestRequest}
                     />
+                    <Divider />
+                    <MoreRow label="List kit demo" icon={List} onPress={() => navigation.navigate("ListKitDemo")} />
                     <Divider />
                     <MoreRow label="Kitchen sink" icon={Code} onPress={() => navigationRef.navigate("KitchenSink")} />
                 </Card>
