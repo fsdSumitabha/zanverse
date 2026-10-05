@@ -5,19 +5,9 @@ import { resetToApp, resetToLogin } from "@/api/navigationRef"
 import { useAuth } from "@/contexts/AuthContext"
 import { BRAND_COLOR, PALETTE } from "@/theme"
 
-/**
- * The first screen. AuthProvider reads the token from Keychain and asks `/api/auth/me` while this shows. When that
- * answers, a user goes to the app and `data === null` goes to Login.
- */
-export default function SplashScreen() {
-    const { loading, user } = useAuth()
+/** The splash's look, also shown by the navigation container while a deep link waits for the session. */
+export function SplashView() {
     const isDarkMode = useColorScheme() === "dark"
-
-    useEffect(() => {
-        if (loading) return
-        if (user) resetToApp()
-        else resetToLogin()
-    }, [loading, user])
 
     return (
         <View className="flex-1 items-center justify-center gap-4 bg-neutral-50 dark:bg-neutral-950">
@@ -25,4 +15,21 @@ export default function SplashScreen() {
             <ActivityIndicator color={isDarkMode ? PALETTE["blue-400"] : BRAND_COLOR.light} />
         </View>
     )
+}
+
+/**
+ * The first screen. AuthProvider reads the token from Keychain and asks `/api/auth/me` while this shows. When that
+ * answers, a user goes to the tabs and `data === null` goes to Login. The region was seeded from the answer's
+ * `activeRegion` by then.
+ */
+export default function SplashScreen() {
+    const { loading, user } = useAuth()
+
+    useEffect(() => {
+        if (loading) return
+        if (user) resetToApp()
+        else resetToLogin()
+    }, [loading, user])
+
+    return <SplashView />
 }

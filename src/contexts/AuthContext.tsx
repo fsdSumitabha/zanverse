@@ -48,6 +48,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
+// Settles when the first boot has asked /api/auth/me. Deep links wait on it, so a link never opens a signed-in screen
+// for a dead session.
+let resolveAuthBoot: (isSignedIn: boolean) => void = () => {}
+const authBoot = new Promise<boolean>((resolve) => {
+    resolveAuthBoot = resolve
+})
+
+/** Resolves once the app knows whether someone is signed in. */
+export function waitForAuthBoot(): Promise<boolean> {
+    return authBoot
+}
+
 /**
  * The session. Ported from the web's AuthContext.
  *
@@ -95,7 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         async function bootstrap() {
             await loadToken()
-            await fetchUser()
+            const bootUser = await fetchUser()
+            resolveAuthBoot(bootUser !== null)
         }
 
         bootstrap()

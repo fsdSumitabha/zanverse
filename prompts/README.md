@@ -489,3 +489,80 @@ checklist below. The cloud container also has no Android SDK, so `npm run androi
 - [ ] Logout shows Login at once, and the "Logged out successfully" toast is still visible over it.
 - [ ] Wrong password shows "Invalid credentials" in the red block; a deactivated account shows "Account is
       deactivated".
+
+## Session 5 — navigation shell
+
+**Status: done, except the device checks.** The shell is built and tested with the whole app mounted in Jest. The
+cloud container has no Android SDK, so `npm run android` and the `adb` deep-link check did not run. Signing in on a
+device also needs the session 4 backend patch.
+
+### What is in it
+
+- `src/navigation/navItems.ts` (the six MobileNav items, literal role arrays, `getNavItemsForRole`),
+  `moreItems.ts` (SideBar's Meetings, Overall Stats, Activity Logs, plus Notifications and Profile for every role),
+  `permissions.ts` (`SCREEN_ROLES`, `canOpen`), `screenTitles.ts`, `stackOptions.ts`.
+- `src/navigation/RootNavigator.tsx` — `Splash`, `Auth`, `App` (the tabs), and the dev `KitchenSink` route.
+- `src/navigation/TabNavigator.tsx` and `src/navigation/stacks/*Stack.tsx` — one native stack per tab, every screen
+  name from the prompt registered and pointing at `PlaceholderScreen`.
+- `src/navigation/ScreenLayout.tsx` — every stack's `screenLayout`: the offline bar, then the screen or
+  `AccessDenied` when `canOpen` is false.
+- `src/navigation/linking.ts` — `zanverse://` deep links, `resolveNotificationPath()`, `getTargetNavigation()`.
+- `src/screens/PlaceholderScreen.tsx` (route name and params), `src/screens/more/MoreScreen.tsx`,
+  `src/components/ui/OfflineBanner.tsx`.
+- `android/app/src/main/AndroidManifest.xml` — a `VIEW` intent filter for the `zanverse` scheme. iOS needs the same
+  URL type in session 24.
+- `AccessDenied` was already ported in session 3, so this session only uses it.
+
+### Decisions
+
+- **The tabs remount on a region switch, not the `NavigationContainer`.** `App` renders `<TabNavigator
+  key={active} />`. Every tab and screen remounts and fetches again, which is what the prompt's
+  `<NavigationContainer key={activeRegion}>` is for. Remounting the container itself would also re-run deep-link
+  handling: the link that opened the app would open again after every switch, or be lost during boot. React
+  Navigation restores the tab and stack you were on, so the person stays on the same screen, as the web's reload
+  keeps the URL.
+- **Deep links wait for the session.** `getInitialURL` waits for the first `/api/auth/me` answer (`waitForAuthBoot()`
+  in AuthContext). Signed out, the link is dropped and Login opens. While it waits, the container shows the splash
+  view. Links that arrive while the app runs are followed only with a token. Each tab's config sets
+  `initialRouteName`, so `zanverse://leads/<id>` opens LeadDetail with LeadsList under it.
+- **Deep link paths** are the web's paths without `/admin/operations`: `leads/:id`, `leads/:id/edit`,
+  `clients/:clientId/projects/create`, `lead-sources/uploads`, `activity-logs`, and so on (see `linking.ts`).
+- **Role lists follow the prompt, which differ from the web in two places.** The web proxy uses the first matching
+  pattern, and `users(\/|$)` comes before `users/create` and `users/:id/edit`, so on the web those pages are really
+  gated by `[10, 45, 20, 69]`. The app uses the intended lists: UserCreate `[10, 20, 69]`, UserEdit `[10, 20]`.
+  `LeadSourceDetail` is gated by `LEAD_SOURCE_ACCESS_ROLES`, as the proxy's `lead-sources(\/|$)` pattern does.
+- **Role 15 sees a Users tab that shows AccessDenied.** MobileNav gives Users to `[10, 15, 20, 69]`, but the proxy
+  allows UsersList for `[10, 45, 20, 69]`. The web does the same: the item shows, the page redirects. Kept as is.
+- **More** shows the user's avatar, name and role label, the region switcher, the role-filtered rows and Logout. In
+  debug builds it also has "Send a test request" (shows the `X-Active-Region` it sent) and "Kitchen sink".
+- **Tab labels are 10 pt**, so seven tabs fit a 360 dp phone. The More tab uses lucide's `Ellipsis` icon.
+- **`navigationRef` stays in `src/api/`** (see session 4). `resetToLogin()` and `resetToApp()` were already there.
+
+### What was verified
+
+- `__tests__/App.test.tsx` (11 tests, the whole app): boot to Login / tabs / Login-on-dead-token; an Admin sees six
+  tabs plus More and a role 65 account sees Dashboard, Leads, Calls and More; More shows Activity Logs for role 10
+  and hides it for role 50; the region switch posts, remounts on the same tab, and the next request carries the
+  header; a one-region badge; logout; UserEdit as role 69 renders AccessDenied with the fallback message; LeadDetail
+  as Admin shows the placeholder with its `id`.
+- `__tests__/navigation/navigation.test.ts` (11 tests): tab and More filters for several roles, `canOpen`,
+  `resolveNotificationPath` and `getTargetNavigation`, and `getStateFromPath` for `leads/<id>` (LeadsList under
+  LeadDetail), the static paths over `:id`, and the More destinations.
+- `OfflineBanner` shows offline, hides online and while unknown.
+- `npm test`: 19 suites, 182 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The Metro production bundle
+  builds, the new classes are compiled, and `hermesc` compiles it.
+
+### Device checklist
+
+- [ ] `npm run android` installs and launches with no red box.
+- [ ] An Admin sees six tabs plus More; a role 65 account sees Dashboard, Leads, Calls and More.
+- [ ] Every tab opens its placeholder, and the placeholder prints its route name.
+- [ ] More shows Activity Logs for role 10 and hides it for role 50.
+- [ ] `adb shell am start -a android.intent.action.VIEW -d "zanverse://leads/<objectId>"` lands on LeadDetail with
+      that id; Back goes to Leads.
+- [ ] UserEdit as role 69 (`zanverse://users/<id>/edit`) shows AccessDenied.
+- [ ] A region switch on a multi-region account remounts the tabs, and the new region is still selected after a
+      restart.
+- [ ] Logout returns to Login, and a relaunch stays on Login.
+- [ ] Airplane mode shows the offline bar under the header; turning it off hides it.
+- [ ] The seven tab labels fit without clipping on a small phone.

@@ -15,7 +15,7 @@ const TOP_GAP = 16
 // Room under the last section for the floating button, so it never covers content.
 const FAB_CLEARANCE = 56 + 32
 
-/** Every shared UI primitive on one scrolling page, in light and dark mode. Opened from the placeholder Home (session 4). */
+/** Every shared UI primitive on one scrolling page, in light and dark mode. Opened from More, in debug builds. */
 export default function KitchenSinkScreen() {
     const insets = useSafeAreaInsets()
 
