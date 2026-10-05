@@ -390,3 +390,102 @@ three times shows one toast. There is no `toast.promise`; the web never uses it.
 - **Session 5:** hand `NAVIGATION_THEME` (or `useNavigationTheme()`) to `NavigationContainer`. For `Fab`'s
   `extraBottom` on tab screens, check the session 1 floating-button finding first.
 - **Session 12:** the dialer toast's "Copy number" action needs a clipboard package, which is not installed.
+
+## Session 4 — API client, auth and region
+
+**Status: the app code is done and tested against a mocked API. It is blocked on the backend.** The web source on
+`main` (commit `6858fb8`) has none of `docs/BACKEND_CHANGES.md` items 1–4: `getUserFromRequest` reads only the cookie,
+the login response has no `token`, and nothing reads `X-Active-Region`. So step 1's curl checks cannot pass, and a real
+login on the device will stop with "The server did not return a sign-in token". `docs/backend-patch/mobile-auth.patch`
+makes items 1–4 in the web repo; `git apply --check` passes against `6858fb8`. Item 5 needs no change (both `.xlsx`
+routes go through `requireRole` → `requireAuth` → `getUserFromRequest`). Apply it, deploy it, then run the device
+checklist below. The cloud container also has no Android SDK, so `npm run android` did not run.
+
+### What is in it
+
+- `src/api/endpoints.ts` — `API_BASE_URL` (`http://10.0.2.2:3000`), `AUTH_API`, `OPERATIONS_API`, `LEAD_SOURCES_API`,
+  `resolveApiUrl()`. No env loader exists, so `.env.example` only records the value.
+- `src/api/client.ts` — `ApiError` (the web's fields), `send()`, `sendRaw()`, `isAbortError()`, `isNetworkError()`,
+  `setUnauthorizedListener()`. Every request carries `Authorization: Bearer` and `X-Active-Region`.
+- `src/api/handleAuthError.ts` — `handleAuthError(error, onForbidden)`: 403 → `onForbidden(message)`, 401 → handled
+  already, both return `true`.
+- `src/api/navigationRef.ts` — `navigationRef`, `resetToLogin()`, `resetToApp()`, `handleNavigationReady()`.
+- `src/store/keychain.ts` (the JWT only) and `src/store/mmkv.ts` (me payload, region pin, last email, region-keyed
+  cache with `getRegionCache` / `saveRegionCache`, `clearRegionCache()`, `clearAll()`).
+- `src/contexts/AuthContext.tsx`, `RegionContext.tsx`, `StatusContext.tsx` (verbatim, in `.prettierignore`).
+- `src/components/region/` — `RegionSwitcher`, `RegionBadges` / `RegionBadge`, `tone.ts` (verbatim web colours).
+- `src/screens/auth/SplashScreen.tsx`, `LoginScreen.tsx`; `src/screens/dev/HomePlaceholderScreen.tsx`;
+  `src/navigation/RootNavigator.tsx` (temporary) and `types.ts`.
+- `Avatar`'s `baseUrl` now defaults to `API_BASE_URL`, as session 3 asked.
+
+### Decisions
+
+- **Which 401 ends the session.** Only a 401 for a request that carried the current token. A login attempt carries no
+  token, so its 401 "Invalid credentials" stays a plain error. Parallel 401s share one token: the first clears it, so
+  the rest do nothing and `resetToLogin()` runs once. A late 401 for a token already replaced is ignored.
+- **The last login email survives logout.** `clearAll()` drops the session (me payload, region pin) and every cached
+  list, and keeps `prefs.lastEmail`, because the Definition of done wants Login prefilled. Everything else goes.
+- **Login clears the session before storing the token**, so user B never inherits user A's region pin. Then
+  `/api/auth/me` with no region header returns the account's default, which is stored.
+- **`refreshUser()` resolves to the user** (or `null`). The web's returns nothing. Callers that ignore the value are
+  unaffected; Login uses it to stop on "The server did not accept the sign-in token".
+- **`/api/auth/me` is skipped with no token.** The server would answer `data: null` anyway. With a token it is always
+  called and the branch is on `data === null`, which also clears the dead token.
+- **A start with no network** uses the cached me payload, if a token exists. Any other failure means signed out, as on
+  the web.
+- **A failed connection** becomes `ApiError("No connection. Check your network and try again.", 0)`. An AbortError
+  passes through untouched.
+- **Error text** is `json.message`, then `json.error` (the quotations route), then a fallback by status: 401 "Session
+  expired. Please log in again.", 403 the web's "You aren't authorized to perform this action.", else "Something went
+  wrong. Try again."
+- **Login's error block.** The web declares an inline error block but never fills it, and toasts instead. The app
+  fills the block with the server's message (400 / 401 / 403 text as sent). Success still toasts "Login successful".
+- **Region switch.** `setActive` posts, stores `data.active` in MMKV, updates the cached me payload, drops the
+  region-keyed cache, and sets the override. `NavigationContainer` is keyed on `active`, so every screen remounts. The
+  initial route is picked from the session (`Splash` while loading, else `App` or `Auth`), so a remount never shows
+  Splash. The override is tied to the user id, so it never leaks to the next account.
+- **Region switcher.** A plain badge for one region, a pill that opens a sheet for more. The web's SVG flags are left
+  out; "All regions" shows a globe and the web's label, "Planet". It renders nothing until `/api/auth/me` answers.
+- **Root route names are session 5's already:** `Splash`, `Auth`, `App`, plus a dev `KitchenSink` route opened from
+  the placeholder Home, so the session 1–3 device checklists stay reachable.
+- **`navigationRef` lives in `src/api/`**, as this prompt and OVERVIEW §5 say. The session 5 prompt calls it
+  `src/navigation/navigationRef.ts`; it means this file.
+- **Keychain entry:** service `com.zanverse.auth`, `ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY` (the token is not
+  restored onto another device from a backup).
+- **Plain HTTP in debug** needs no manifest change: RN's Gradle plugin sets `usesCleartextTraffic="true"` for debug
+  builds and `false` for release.
+
+### What was verified
+
+- `__tests__/api/client.test.ts` (16 tests, mocked `fetch`): the four required cases — a 401 clears the token and the
+  MMKV session and calls `resetToLogin` once (two parallel 401s), `field: "phone"` becomes an ApiError with that field,
+  FormData goes out with no `Content-Type`, `sendRaw` keeps `counts` and `progress` — plus the Bearer and region
+  headers, the login 401 that must not log out, the quotations `error` field, AbortError, network errors and
+  `handleAuthError`.
+- `__tests__/App.test.tsx` (6 tests, the whole app mounted): no token → Login with the last email prefilled and no
+  request; a valid token → Splash → Home with the region seeded from `/api/auth/me`; `data: null` → Login and the token
+  gone; a region switch posts `{ region }`, trusts `data.active`, remounts, and the next request carries the new
+  header; one region → plain badge, `canSwitch: false`; logout posts, clears Keychain and MMKV and shows Login at once.
+- `npm test`: 17 suites, 164 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. A Metro production bundle
+  builds, the new classes are in its compiled stylesheet, and `hermesc` compiles it.
+
+### Not verified
+
+- The four curl checks (blocked: the backend changes are not in the web source, and no dev API is reachable from the
+  cloud container).
+- Everything on the device.
+
+### Device checklist (after the backend patch is deployed)
+
+- [ ] The four curl checks in `docs/BACKEND_CHANGES.md` ("A ready patch") pass.
+- [ ] `npm run android` builds and installs; no red box. Splash → Login on a fresh install.
+- [ ] A real login lands on Home with the right name, role label, regions and active region.
+- [ ] Kill and relaunch: Splash → Home, no login. After logout, Login shows the last email.
+- [ ] Corrupt the token (or wait for expiry): the next request ("Send a test request") shows one "Session expired"
+      toast and lands on Login; relaunching stays on Login.
+- [ ] Switch region on a multi-region account: the pill shows the server's answer, and "Send a test request" reports
+      the new `X-Active-Region` in its toast.
+- [ ] A one-region account shows a plain badge with nothing to press.
+- [ ] Logout shows Login at once, and the "Logged out successfully" toast is still visible over it.
+- [ ] Wrong password shows "Invalid credentials" in the red block; a deactivated account shows "Account is
+      deactivated".

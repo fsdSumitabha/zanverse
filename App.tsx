@@ -5,18 +5,27 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 
 import { ToastHost } from "@/components/ui"
-import KitchenSinkScreen from "@/screens/dev/KitchenSinkScreen"
+import { AuthProvider } from "@/contexts/AuthContext"
+import { RegionProvider } from "@/contexts/RegionContext"
+import { StatusProvider } from "@/contexts/StatusContext"
+import RootNavigator from "@/navigation/RootNavigator"
 import { ThemedStatusBar } from "@/theme"
 
-// Session 3 shows the kitchen sink directly. Session 5 replaces it with the navigator (NAVIGATION_THEME in
-// src/theme.ts is ready for it). The session 1 spike's native module checks are the last kitchen-sink section.
+// The providers sit above the navigation container, so a region switch can remount the screens without losing the
+// session. The toast host sits above it too, so a toast outlives the screen that showed it.
 function App() {
     return (
         <GestureHandlerRootView style={styles.root}>
             <SafeAreaProvider>
-                <ThemedStatusBar />
-                <KitchenSinkScreen />
-                <ToastHost />
+                <AuthProvider>
+                    <RegionProvider>
+                        <StatusProvider>
+                            <ThemedStatusBar />
+                            <RootNavigator />
+                            <ToastHost />
+                        </StatusProvider>
+                    </RegionProvider>
+                </AuthProvider>
             </SafeAreaProvider>
         </GestureHandlerRootView>
     )

@@ -1,5 +1,6 @@
 import { Text, View, useColorScheme } from "react-native"
 
+import { API_BASE_URL } from "@/api/endpoints"
 import { Avatar, InlineValue, TimeAgo } from "@/components/ui"
 import { getImagekitUrl } from "@/lib/imagekitUrl"
 import { BRAND_COLOR } from "@/theme"
@@ -7,9 +8,6 @@ import { BRAND_COLOR } from "@/theme"
 import KitchenSection from "./KitchenSection"
 
 const AVATAR_SIZE = 48
-
-// The emulator reaches the dev machine at 10.0.2.2. Session 4 replaces this with the real API base URL.
-const DEV_API_BASE_URL = "http://10.0.2.2:3000"
 
 interface AvatarSample {
     label: string
@@ -58,13 +56,13 @@ export default function MediaSections() {
             >
                 {AVATAR_SAMPLES.map((sample) => (
                     <View key={sample.label} className="flex-row items-center gap-3">
-                        <Avatar uri={sample.uri} size={AVATAR_SIZE} name={sample.label} baseUrl={DEV_API_BASE_URL} />
+                        <Avatar uri={sample.uri} size={AVATAR_SIZE} name={sample.label} />
                         <View className="min-w-0 flex-1">
                             <Text className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
                                 {sample.label}
                             </Text>
                             <InlineValue
-                                value={getImagekitUrl(sample.uri, AVATAR_SIZE, DEV_API_BASE_URL) ?? "(nothing to load)"}
+                                value={getImagekitUrl(sample.uri, AVATAR_SIZE, API_BASE_URL) ?? "(nothing to load)"}
                             />
                         </View>
                     </View>

@@ -2,6 +2,7 @@ import { User } from "lucide-react-native"
 import { useState } from "react"
 import { Image, View, useColorScheme } from "react-native"
 
+import { API_BASE_URL } from "@/api/endpoints"
 import { getImagekitUrl } from "@/lib/imagekitUrl"
 import { PALETTE } from "@/theme"
 
@@ -12,7 +13,7 @@ interface Props {
     size?: number
     /** The person's name, for screen readers. */
     name?: string
-    /** Put in front of a legacy relative URL. Session 4 passes the API base URL. */
+    /** Put in front of a legacy relative URL. Defaults to the API base URL, where those files are served. */
     baseUrl?: string
 }
 
@@ -62,7 +63,7 @@ function AvatarImage({ source, size, label }: AvatarImageProps) {
 }
 
 /** A round avatar from ImageKit, sized for the screen. A missing or broken image shows the User icon instead. */
-export default function Avatar({ uri, size = DEFAULT_SIZE, name, baseUrl }: Props) {
+export default function Avatar({ uri, size = DEFAULT_SIZE, name, baseUrl = API_BASE_URL }: Props) {
     const source = getImagekitUrl(uri, size, baseUrl)
     const label = name ? `${name}'s photo` : "Photo"
 

@@ -27,6 +27,34 @@ can upload a sheet but never download the report it produced.
 **Not needed:** CORS (native `fetch` is not bound by the browser's same-origin policy) and any change to
 `POST /api/auth/logout` (it clears a cookie the app never had; the app calls it anyway and then clears its own storage).
 
+## A ready patch for items 1–4
+
+`docs/backend-patch/mobile-auth.patch` makes items 1–4 in the web repo. It was written in session 4 against
+`zan-workspace` `main` at commit `6858fb8`, and `git apply --check` passes there. It adds one helper,
+`src/lib/auth/requestCredentials.ts` (`readAuthToken`, `readActiveRegion`), and uses it in the seven places that read the
+cookies today. The cookie always wins when it is present, so the web app behaves exactly as before.
+
+```
+cd zan-workspace
+git apply /path/to/zanverse/docs/backend-patch/mobile-auth.patch
+npx tsc --noEmit && npm run lint
+```
+
+Item 5 needs no change: both `.xlsx` routes call `requireRole`, which calls `requireAuth`, which calls
+`getUserFromRequest`. They inherit the Bearer fallback from the patch. The page proxy (`src/proxy.ts`) only guards
+`/admin` pages, not `/api` routes, so it needs no change either.
+
+Then run the four curl checks from session 4, step 1:
+
+```
+API=http://localhost:3000
+TOKEN=$(curl -s -X POST $API/api/auth/login -H 'Content-Type: application/json' \
+    -d '{"email":"<staff email>","password":"<password>"}' | node -pe 'JSON.parse(require("fs").readFileSync(0)).data.token')
+curl -s $API/api/auth/me -H "Authorization: Bearer $TOKEN"
+curl -s $API/api/auth/me -H "Authorization: Bearer $TOKEN" -H "X-Active-Region: US"   # activeRegion "US" if held
+curl -s "$API/api/admin/operations/leads?limit=1" -H "Authorization: Bearer $TOKEN"
+```
+
 ## Strongly recommended
 
 **Paginate the dashboard feed.** `GET /api/admin/operations` returns every lead, client and project that has a

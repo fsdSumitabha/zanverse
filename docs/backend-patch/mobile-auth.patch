@@ -1,0 +1,220 @@
+diff --git a/src/app/api/auth/login/route.ts b/src/app/api/auth/login/route.ts
+index 3caf474..d83ccfa 100644
+--- a/src/app/api/auth/login/route.ts
++++ b/src/app/api/auth/login/route.ts
+@@ -123,6 +123,10 @@ export async function POST(req: NextRequest) {
+         await user.save({ validateModifiedOnly: true })
+ 
+         // 11. Return success (NO password)
++        //
++        // `token` is for the mobile app, which cannot use the httpOnly cookie
++        // and sends it back as Authorization: Bearer. The web app ignores the
++        // body and keeps using the cookie.
+         return NextResponse.json(
+             {
+                 success: true,
+@@ -132,7 +136,8 @@ export async function POST(req: NextRequest) {
+                     name: user.name,
+                     email: user.email,
+                     role: user.role,
+-                    regions: user.regions ?? []
++                    regions: user.regions ?? [],
++                    token
+                 }
+             },
+             { status: 200 }
+diff --git a/src/app/api/auth/me/route.ts b/src/app/api/auth/me/route.ts
+index 8644eb9..46649cd 100644
+--- a/src/app/api/auth/me/route.ts
++++ b/src/app/api/auth/me/route.ts
+@@ -7,15 +7,15 @@ import User from "@/models/User"
+ import {
+     runWithoutRegionScope,
+     narrowToActiveRegion,
+-    ACTIVE_REGION_COOKIE,
+ } from "@/lib/region-scope"
++import { readActiveRegion, readAuthToken } from "@/lib/auth/requestCredentials"
+ 
+ const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
+ 
+ export async function GET(req: NextRequest) {
+     try {
+-        // 1. Get token from cookie
+-        const token = req.cookies.get("auth_token")?.value
++        // 1. Get token from the cookie, or the Bearer header
++        const token = readAuthToken(req)
+ 
+         // 2. No token → not logged in
+         if (!token) {
+@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
+         ) as RegionCode[]
+ 
+         const selection = narrowToActiveRegion(
+-            req.cookies.get(ACTIVE_REGION_COOKIE)?.value,
++            readActiveRegion(req),
+             accountRegions
+         )
+ 
+diff --git a/src/app/api/auth/profile/avatar/route.ts b/src/app/api/auth/profile/avatar/route.ts
+index 17b2c55..a91e498 100644
+--- a/src/app/api/auth/profile/avatar/route.ts
++++ b/src/app/api/auth/profile/avatar/route.ts
+@@ -4,11 +4,12 @@ import dbConnect from "@/lib/db/dbConnect"
+ import User from "@/models/User"
+ import { runWithoutRegionScope } from "@/lib/region-scope"
+ import { verifyToken } from "@/lib/auth/verifyToken"
++import { readAuthToken } from "@/lib/auth/requestCredentials"
+ import { imagekit } from "@/lib/imagekit/imagekit"
+ 
+ export async function POST(req: NextRequest) {
+     try {
+-        const token = req.cookies.get("auth_token")?.value
++        const token = readAuthToken(req)
+ 
+         if (!token) {
+             return NextResponse.json(
+diff --git a/src/app/api/auth/profile/password/route.ts b/src/app/api/auth/profile/password/route.ts
+index 9d40912..fcc8753 100644
+--- a/src/app/api/auth/profile/password/route.ts
++++ b/src/app/api/auth/profile/password/route.ts
+@@ -5,10 +5,11 @@ import dbConnect from "@/lib/db/dbConnect"
+ import User from "@/models/User"
+ import { runWithoutRegionScope } from "@/lib/region-scope"
+ import { verifyToken } from "@/lib/auth/verifyToken"
++import { readAuthToken } from "@/lib/auth/requestCredentials"
+ 
+ export async function PATCH(req: NextRequest) {
+     try {
+-        const token = req.cookies.get("auth_token")?.value
++        const token = readAuthToken(req)
+ 
+         if (!token) {
+             return NextResponse.json(
+diff --git a/src/app/api/auth/profile/route.ts b/src/app/api/auth/profile/route.ts
+index e419a9e..aa9a9e3 100644
+--- a/src/app/api/auth/profile/route.ts
++++ b/src/app/api/auth/profile/route.ts
+@@ -4,6 +4,7 @@ import dbConnect from "@/lib/db/dbConnect"
+ import User from "@/models/User"
+ import { runWithoutRegionScope } from "@/lib/region-scope"
+ import { verifyToken } from "@/lib/auth/verifyToken"
++import { readAuthToken } from "@/lib/auth/requestCredentials"
+ 
+ type PopulatedCreatedBy = {
+     _id: unknown
+@@ -14,7 +15,7 @@ type PopulatedCreatedBy = {
+ 
+ export async function GET(req: NextRequest) {
+     try {
+-        const token = req.cookies.get("auth_token")?.value
++        const token = readAuthToken(req)
+ 
+         if (!token) {
+             return NextResponse.json(
+diff --git a/src/lib/auth/getUserFromRequest.ts b/src/lib/auth/getUserFromRequest.ts
+index 52ddc89..391411b 100644
+--- a/src/lib/auth/getUserFromRequest.ts
++++ b/src/lib/auth/getUserFromRequest.ts
+@@ -4,6 +4,7 @@ import dbConnect from "@/lib/db/dbConnect"
+ import User from "@/models/User"
+ 
+ import { verifyToken, AuthTokenPayload } from "./verifyToken"
++import { readAuthToken } from "./requestCredentials"
+ import { runWithoutRegionScope } from "@/lib/region-scope"
+ import type { RegionCode } from "@/lib/region"
+ 
+@@ -19,15 +20,16 @@ export interface AuthUser {
+ }
+ 
+ /**
+- * Extracts user from request using JWT cookie
++ * Extracts user from request using the JWT cookie, or an Authorization:
++ * Bearer header when the cookie is absent (the mobile app)
+  * Returns user or null (never throws for missing auth)
+  */
+ export async function getUserFromRequest(
+     req: NextRequest
+ ): Promise<AuthUser | null> {
+     try {
+-        // 1. Read token from cookie
+-        const token = req.cookies.get("auth_token")?.value
++        // 1. Read token from the cookie, or the Bearer header
++        const token = readAuthToken(req)
+ 
+         if (!token) {
+             return null
+diff --git a/src/lib/auth/requestCredentials.ts b/src/lib/auth/requestCredentials.ts
+new file mode 100644
+index 0000000..4fafed6
+--- /dev/null
++++ b/src/lib/auth/requestCredentials.ts
+@@ -0,0 +1,38 @@
++import { NextRequest } from "next/server"
++import { ACTIVE_REGION_COOKIE } from "@/lib/region-scope"
++
++/**
++ * Where a request's credentials come from.
++ *
++ * The web app sends an httpOnly cookie. The mobile app cannot rely on one, so
++ * it sends the same JWT as `Authorization: Bearer <jwt>` and the active region
++ * as `X-Active-Region`. The cookie wins when both are present, so the web app
++ * behaves exactly as before.
++ */
++
++export const ACTIVE_REGION_HEADER = "x-active-region"
++
++/** The JWT from the auth_token cookie, or from an Authorization: Bearer header. */
++export function readAuthToken(req: NextRequest): string | undefined {
++    const cookie = req.cookies.get("auth_token")?.value
++    if (cookie) return cookie
++
++    const header = req.headers.get("authorization")
++    const match = header?.match(/^Bearer\s+(\S+)\s*$/i)
++
++    return match?.[1] || undefined
++}
++
++/**
++ * The region the session is narrowed to, from the active_region cookie or the
++ * X-Active-Region header. Pass the result to narrowToActiveRegion, which only
++ * ever narrows to regions the account holds and ignores anything else, so the
++ * header is exactly as safe as the cookie.
++ */
++export function readActiveRegion(req: NextRequest): string | undefined {
++    return (
++        req.cookies.get(ACTIVE_REGION_COOKIE)?.value ||
++        req.headers.get(ACTIVE_REGION_HEADER) ||
++        undefined
++    )
++}
+diff --git a/src/lib/auth/requireAuth.ts b/src/lib/auth/requireAuth.ts
+index 7885f2f..f9decda 100644
+--- a/src/lib/auth/requireAuth.ts
++++ b/src/lib/auth/requireAuth.ts
+@@ -3,10 +3,10 @@ import { beginAuditContext } from "@/lib/activity-log/auditContext"
+ import {
+     beginRegionContext,
+     narrowToActiveRegion,
+-    ACTIVE_REGION_COOKIE,
+ } from "@/lib/region-scope"
+ import { getUserFromRequest, AuthUser } from "./getUserFromRequest"
+ import { AuthError } from "./AuthError"
++import { readActiveRegion } from "./requestCredentials"
+ 
+ export { AuthError }
+ 
+@@ -57,10 +57,11 @@ export async function requireAuth(req: NextRequest): Promise<AuthUser> {
+     // Narrowing them here is the whole region switch: every route, every
+     // query and every stamped write follows, with no other change anywhere.
+     //
+-    // The cookie can only narrow. The result is always a subset of what the
+-    // user row says, so the cookie never has to be trusted.
++    // The cookie (or the mobile app's X-Active-Region header) can only
++    // narrow. The result is always a subset of what the user row says, so
++    // neither ever has to be trusted.
+     const selection = narrowToActiveRegion(
+-        req.cookies.get(ACTIVE_REGION_COOKIE)?.value,
++        readActiveRegion(req),
+         user.regions
+     )
+ 
