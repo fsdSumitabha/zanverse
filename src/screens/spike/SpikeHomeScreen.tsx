@@ -5,34 +5,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Svg, { Circle } from "react-native-svg"
 import Toast from "react-native-toast-message"
 
+import { LEAD_SOURCE_STATUS, LEAD_SOURCE_STATUSES, LEAD_SOURCE_STATUS_META } from "@/constants/leadSourceStatus"
+
 import NativeModuleChecks from "./NativeModuleChecks"
 import SpikeSection from "./SpikeSection"
-
-// Copied verbatim from the web's src/constants/leadSourceStatus.ts. Session 2 copies the real file into src/constants.
-const LEAD_SOURCE_STATUS = {
-    NEW: 10,
-    NOT_REACHED: 20,
-    CALL_BACK: 30,
-    INTERESTED: 40,
-    NOT_INTERESTED: 50,
-    CONVERTED: 70,
-} as const
-
-type LeadSourceStatus = (typeof LEAD_SOURCE_STATUS)[keyof typeof LEAD_SOURCE_STATUS]
-
-const LEAD_SOURCE_STATUS_META: Record<
-    LeadSourceStatus,
-    { label: string; color: string; dot: string; closed: boolean }
-> = {
-    10: { label: "New", color: "bg-slate-500 text-white", dot: "bg-slate-400", closed: false },
-    20: { label: "Not Reached", color: "bg-amber-500 text-amber-950", dot: "bg-amber-500", closed: false },
-    30: { label: "Call Back", color: "bg-violet-600 text-white", dot: "bg-violet-500", closed: false },
-    40: { label: "Interested", color: "bg-emerald-600 text-white", dot: "bg-emerald-500", closed: false },
-    50: { label: "Not Interested", color: "bg-rose-600 text-white", dot: "bg-rose-500", closed: true },
-    70: { label: "Converted", color: "bg-blue-600 text-white", dot: "bg-blue-500", closed: true },
-}
-
-const LEAD_SOURCE_STATUSES = Object.values(LEAD_SOURCE_STATUS) as LeadSourceStatus[]
 
 // The web's StatusBadge classes, with the status colour appended unchanged.
 const BADGE_CLASSES = "self-start overflow-hidden rounded-md px-2 py-1 text-xs font-medium"
