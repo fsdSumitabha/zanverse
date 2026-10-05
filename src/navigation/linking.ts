@@ -106,6 +106,7 @@ const CLIENTS_PATHS: PathConfig<ClientsStackParamList> = {
         ClientsList: "clients",
         ClientDetail: "clients/:id",
         ClientEdit: "clients/:id/edit",
+        ClientProjects: "clients/:clientId/projects",
         ProjectCreate: "clients/:clientId/projects/create",
     },
 }

@@ -1,9 +1,7 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native"
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { useState } from "react"
-import { Alert, ScrollView, View } from "react-native"
+import { ScrollView, View } from "react-native"
 
-import { sendRaw } from "@/api/client"
 import InteractionActions from "@/components/interactions/InteractionActions"
 import InteractionTimeline from "@/components/interactions/InteractionTimeline"
 import ConvertedClientBlock from "@/components/leads/ConvertedClientBlock"
@@ -12,9 +10,9 @@ import LeadDetailsSkeleton from "@/components/leads/LeadDetailsSkeleton"
 import { AccessDenied, Button, EmptyState } from "@/components/ui"
 import { ENTITY_TYPE } from "@/constants/entityTypes"
 import { useAuth } from "@/contexts/AuthContext"
+import { useDeleteRecord } from "@/hooks/useDeleteRecord"
 import { useDetailQuery } from "@/hooks/useDetailQuery"
 import { useInteractions } from "@/hooks/useInteractions"
-import { notify } from "@/lib/notify"
 import { openClient } from "@/navigation/openRecord"
 import type { LeadsStackParamList } from "@/navigation/types"
 import type { Client } from "@/types/clients"
@@ -38,7 +36,12 @@ export default function LeadDetailScreen() {
     const { role } = useAuth()
     const detail = useDetailQuery<LeadDetailData>(`${LEADS_API}/${id}`)
     const timeline = useInteractions({ entityType: ENTITY_TYPE.LEAD, entityId: id })
-    const [isDeleting, setIsDeleting] = useState(false)
+    const remove = useDeleteRecord({
+        path: `${LEADS_API}/${id}`,
+        question: "Delete this lead?",
+        successMessage: "Lead deleted successfully",
+        onDeleted: () => navigation.popTo("LeadsList"),
+    })
 
     const lead = detail.data?.lead ?? null
     const client = detail.data?.client ?? null
@@ -52,27 +55,6 @@ export default function LeadDetailScreen() {
         // The status change adds a 2510 row, so the timeline reloads with the lead.
         detail.refetch()
         timeline.reload()
-    }
-
-    async function deleteLead() {
-        if (isDeleting) return
-        setIsDeleting(true)
-        try {
-            const json = await sendRaw<{ message?: string }>(`${LEADS_API}/${id}`, "DELETE")
-            notify.success(json.message || "Lead deleted successfully")
-            navigation.popTo("LeadsList")
-        } catch (error) {
-            notify.error(error instanceof Error ? error.message : "Something went wrong")
-        } finally {
-            setIsDeleting(false)
-        }
-    }
-
-    function handleDelete() {
-        Alert.alert("Delete this lead?", "This cannot be undone.", [
-            { text: "Cancel", style: "cancel" },
-            { text: "Delete", style: "destructive", onPress: deleteLead },
-        ])
     }
 
     if (detail.accessError) {
@@ -108,10 +90,10 @@ export default function LeadDetailScreen() {
             {role === ADMIN_ROLE && (
                 <View className="flex-row justify-end">
                     <Button
-                        label={isDeleting ? "Deleting..." : "Delete Lead"}
+                        label={remove.isDeleting ? "Deleting..." : "Delete Lead"}
                         variant="danger"
-                        loading={isDeleting}
-                        onPress={handleDelete}
+                        loading={remove.isDeleting}
+                        onPress={remove.confirmDelete}
                     />
                 </View>
             )}

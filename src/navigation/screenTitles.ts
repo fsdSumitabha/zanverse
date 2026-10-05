@@ -14,6 +14,7 @@ export const SCREEN_TITLES: Record<AppScreenName, string> = {
     ClientsList: "Clients",
     ClientDetail: "Client",
     ClientEdit: "Edit Client",
+    ClientProjects: "Client Projects",
     ProjectCreate: "Create Project",
     ProjectsList: "Projects",
     ProjectDetail: "Project",

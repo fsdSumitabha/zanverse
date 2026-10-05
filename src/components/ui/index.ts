@@ -18,6 +18,7 @@ export { default as NotificationBadge, NOTIFICATION_BADGE_NAMES } from "./Notifi
 export { default as OfflineBanner } from "./OfflineBanner"
 export { default as Pagination } from "./Pagination"
 export { default as SectionHeader } from "./SectionHeader"
+export { default as SegmentedControl, type Segment } from "./SegmentedControl"
 export { default as SelectSheet, type SelectOption } from "./SelectSheet"
 export { default as Sheet } from "./Sheet"
 export { SkeletonBlock, SkeletonList } from "./Skeleton"

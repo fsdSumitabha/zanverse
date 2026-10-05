@@ -27,6 +27,8 @@ export type ClientsStackParamList = {
     ClientsList: undefined
     ClientDetail: IdParams
     ClientEdit: IdParams
+    /** Every project of one client. */
+    ClientProjects: { clientId: string }
     /** The web's clients/:id/projects/create. A project always belongs to a client. */
     ProjectCreate: { clientId: string }
 }

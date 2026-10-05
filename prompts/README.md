@@ -812,3 +812,69 @@ is a TurboModule). Run `npm run android` once to link it.
 - [ ] Editing a note and a 2510 remark both survive pull-to-refresh; EditHistory says "Edited once" with the old value.
 - [ ] A role outside the edit roles sees no pencil.
 - [ ] Android date and time dialogs open one after the other; the keyboard never covers a form field.
+
+## Session 9 — clients module
+
+**Status: done, except the device checks.** Five client screens are built and tested inside the whole app against a
+mocked API. Real data needs the session 4 backend patch; the cloud container has no Android SDK. No new package.
+
+### What is in it
+
+- Screens (`src/screens/clients/`): `ClientsListScreen`, `ClientDetailScreen`, `ClientEditScreen`,
+  `ClientProjectsScreen`, `ProjectCreateScreen`, wired into `ClientsStack`. A new route `ClientProjects`
+  (`{ clientId }`, deep link `zanverse://clients/:clientId/projects`).
+- Components (`src/components/clients/`): `ClientCard`, `ClientHeaderCard`, `ClientStatusSheet`,
+  `ConvertedFromLeadBlock`, `ClientProjectPreviewCard`, `ClientProjectsSection`, `ClientForm`, `ClientInfoCard`.
+- Shared: `src/components/status/StatusSheet.tsx` (the generic two-step status sheet; `LeadStatusSheet` and
+  `ClientStatusSheet` are thin wrappers, and projects reuse it in session 10), `src/components/ui/SegmentedControl.tsx`,
+  `src/hooks/useDeleteRecord.ts` (Alert → DELETE → toast; the lead screen uses it too).
+
+### Decisions
+
+- **The detail screen has three sections**: Overview (header card, the source lead, Delete), Timeline (the session 8
+  kit at entityType 1 with the four add buttons) and Projects (three cards and View All). Each section is its own
+  scroll view, with pull-to-refresh reloading the client and the timeline.
+- **A status change reloads both the client and the timeline**, so the new pill and the 2510 row appear together. The
+  web reloads only the client. The sheet shows the server's message on failure (the web shows "Failed to update
+  status" for every failure). At Completed the pill is read-only.
+- **Delete** shows only for `[10, 15, 45]`, the DELETE route's roles (the web shows it to everyone). The Alert asks
+  "Delete this client?" (the web's confirm says "lead" by mistake).
+- **Edit link roles**: the web's `[10, 15, 60, 69, 45, 70]`, narrowed by `canOpen("ClientEdit")`, as for leads.
+- **One floating button**, "Create New Project", for roles that may open ProjectCreate (`[10, 45, 60, 70]`). It sits 16
+  dp above the tab bar (`isAboveTabBar`): the prompt's `useBottomTabBarHeight() + insets.bottom` would lift it twice
+  (the session 1 finding).
+- **Project create** loads the client for the read-only card, so no id is typed. Its option labels are the web's (the
+  enum keys with spaces: "WEB DEVELOPMENT", "PROPOSAL SENT"). The body is `{ clientId, title, description,
+  serviceType, status, budget }`, with no region. Title, description and budget are required, as the web's `required`
+  inputs. On success the form closes and the new project opens in the Projects tab at once (the web waits 3 s and
+  goes to the project list).
+- **Project cards** open the project in the Projects tab (session 10 builds the screen). The service pill shows its
+  SERVICE_META label where the web prints the code.
+- **The client's projects list** is one FlatList over the full array; the web's slices of five are dropped.
+- **The list** keeps the kit's count line ("1 client found"), which the web's clients page does not show.
+
+### What was verified
+
+- `__tests__/clients.test.tsx` (12 tests, the whole app): the list with no create button; the header and the
+  Converted from Lead block opening the lead; no block for a direct client; the status flow (blank remarks refused,
+  one PATCH, the new pill, the timeline reloaded with the 2510 row); read-only at Completed; a note from the Timeline
+  section at entityType 1; three project cards with the service label and Indian budget format, and View All listing
+  all four; Delete for role 15 through the Alert, none for role 60; AccessDenied on a 403; an edit with a server phone
+  error under the field, then the saved body; a project created from the floating button with the right body, landing
+  on ProjectDetail.
+- The lead tests now check the real client screen after "View client" and after a convert.
+- `npm test`: 26 suites, 269 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it.
+
+### Device checklist
+
+- [ ] The Clients tab lists 10 clients, appends on scroll; a status and date filter resets to page 1.
+- [ ] A converted client shows the Converted from Lead block; a direct client does not.
+- [ ] A status change asks for remarks, refuses blank, and shows the new pill and the 2510 row with no reload.
+- [ ] A Completed client's pill does not open.
+- [ ] A note added from the Timeline section appears at once.
+- [ ] Projects shows at most three cards; View All lists every project in one list.
+- [ ] Editing saves; a duplicate phone shows the server's message under the phone field.
+- [ ] Create New Project needs no typed id and opens the new project at once.
+- [ ] Roles 10, 15 and 45 see Delete; others do not. Delete returns to the list.
+- [ ] A 403 shows AccessDenied with the server's message.

@@ -69,6 +69,26 @@ function detailRoute(lead: object | null, client: object | null = null): FetchRo
     }
 }
 
+const CLIENT = {
+    _id: CLIENT_ID,
+    name: "Acme",
+    company: "Acme Pvt",
+    phone: "+919876543210",
+    status: 1,
+    createdAt: "2026-09-02T10:00:00Z",
+}
+
+const CLIENT_ROUTES: FetchRoute[] = [
+    {
+        path: `/api/admin/operations/clients/${CLIENT_ID}`,
+        reply: () => respond(200, { success: true, data: { client: CLIENT, lead: null, projects: [] } }),
+    },
+    {
+        path: `/api/admin/operations/clients/${CLIENT_ID}/interactions`,
+        reply: () => respond(200, { success: true, interactions: [] }),
+    },
+]
+
 let fetchMock: FetchMock
 
 async function openLeads(routes: FetchRoute[], user: object = ADMIN) {
@@ -174,21 +194,19 @@ describe("lead detail", () => {
     })
 
     it("shows the converted client and opens it in the Clients tab", async () => {
-        const client = {
-            _id: CLIENT_ID,
-            name: "Acme",
-            company: "Acme Pvt",
-            status: 1,
-            createdAt: "2026-09-02T10:00:00Z",
-        }
-        const renderer = await openDetail([listRoute([makeLead()]), detailRoute(makeLead({ status: 60 }), client)])
+        const renderer = await openDetail([
+            listRoute([makeLead()]),
+            detailRoute(makeLead({ status: 60 }), CLIENT),
+            ...CLIENT_ROUTES,
+        ])
 
         expect(getTexts(renderer)).toContain("Converted to Client")
         expect(getTexts(renderer)).toContain("Acme Pvt")
         await press(findPressableByText(renderer, "View client"))
 
-        expect(getTexts(renderer)).toContain("ClientDetail")
-        expect(getTexts(renderer).some((text) => text.includes(CLIENT_ID))).toBe(true)
+        expect(getCalls(fetchMock)).toContain(`GET /api/admin/operations/clients/${CLIENT_ID}`)
+        expect(getTexts(renderer)).toContain("Overview")
+        expect(findPressable(renderer, "Status: Active. Press to change.")).toBeTruthy()
         await unmountApp(renderer)
     })
 
@@ -332,6 +350,7 @@ describe("convert", () => {
                 path: `/api/admin/operations/leads/${ID}/convert`,
                 reply: () => respond(201, { success: true, data: { clientId: CLIENT_ID } }),
             },
+            ...CLIENT_ROUTES,
         ])
         await press(findPressableByText(renderer, "Convert To Client"))
 
@@ -340,7 +359,8 @@ describe("convert", () => {
         await press(findPressableByText(renderer, "Convert to Client"))
 
         expect(getCalls(fetchMock)).toContain(`POST /api/admin/operations/leads/${ID}/convert`)
-        expect(getTexts(renderer)).toContain("ClientDetail")
+        expect(getTexts(renderer)).toContain("Overview")
+        expect(getTexts(renderer)).toContain("Acme Pvt")
         await unmountApp(renderer)
     })
 })
