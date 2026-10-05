@@ -878,3 +878,62 @@ mocked API. Real data needs the session 4 backend patch; the cloud container has
 - [ ] Create New Project needs no typed id and opens the new project at once.
 - [ ] Roles 10, 15 and 45 see Delete; others do not. Delete returns to the list.
 - [ ] A 403 shows AccessDenied with the server's message.
+
+## Session 10 — projects module
+
+**Status: done, except the device checks.** The three project screens are built and tested inside the whole app
+against a mocked API. Real data needs the session 4 backend patch; the cloud container has no Android SDK. No new
+package.
+
+### What is in it
+
+- Screens (`src/screens/projects/`): `ProjectsListScreen`, `ProjectDetailScreen`, `ProjectEditScreen`, wired into
+  `ProjectsStack`. No standalone create screen: projects are created from their client (session 9).
+- Components (`src/components/projects/`): `ProjectCard`, `ProjectCardSkeleton`, `ProjectDetailCard`,
+  `ProjectStatusSheet` (on the shared `StatusSheet`), `ProjectEditForm`.
+- `ClientProjectPreviewCard` now formats the budget with `formatAmount`, like every other amount in the app.
+
+### Decisions
+
+- **Amounts** use `formatAmount` (`Intl.NumberFormat("en-IN")`, so `₹2,50,000`) instead of `toLocaleString`, in one
+  place. If Hermes on the device prints plain digits, only `src/lib/format.ts` changes.
+- **The detail card is the timeline's header**, with the four add buttons and Delete, as on the lead screen. A status
+  change reloads the project and the timeline, so the 2510 row appears at once. At Closed the status is a plain badge.
+- **Delete** shows only for `[10, 15, 60, 45, 70]`, the DELETE route's roles (the web shows it to everyone). The toast
+  is the server's message, with the web's "Projects deleted successfully" as the fallback. Afterwards
+  `popTo("ProjectsList")`.
+- **Edit** shows the client as a read-only row ("Acme Pvt • Acme") and sends its id back unchanged, so no id is typed.
+  The body is the web's: `{ clientId, title, description?, serviceType?, status, companyName?, budget? }`. An empty
+  title shows "Client ID and project title are required". The Edit button uses the web's `[10, 15, 60, 45, 70]`,
+  narrowed by `canOpen("ProjectEdit")` (`[10, 45, 60, 70]`), so role 15 sees no button that leads to AccessDenied.
+- **Service and status selects** use the session 3 `SelectSheet` (the prompt names `@react-native-picker/picker`; the
+  sheet matches every other select in the app and was the follow-up's fallback). Option labels are the web's.
+- **A deleted client** shows "Deleted client" and "N/A" on the card, the detail card and the edit form.
+- **The card** shows the description on two lines and the budget on its own row only when it is set and above 0.
+- **The filter sheet** shows all eight statuses as chips in its scroll view.
+
+### What was verified
+
+- `__tests__/projects.test.tsx` (11 tests, the whole app): the card fields (client, company, title, status, Indian
+  budget, service label, Created by); the deleted-client fallback; all eight statuses in the filter sheet and
+  `status=150` from page 1; AccessDenied on a 403; the detail card above "No interactions yet", and the client row
+  opening the client; the status flow (empty remarks refused with no request, one PATCH, the new pill and the 2510 row);
+  a plain badge at Closed; a note at entityType 2; Delete for role 70 through the Alert, and neither Delete nor Edit
+  for role 50; an edit with the read-only client row sending the web's body and showing the new title and budget; an
+  empty title refused with no request.
+- The client test for "Create New Project" now lands on the real project screen.
+- `npm test`: 27 suites, 280 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] The Projects tab lists 10 cards and appends on scroll with the footer skeleton.
+- [ ] Each card shows client, company, title, status, two description lines, the budget and "Created by".
+- [ ] The filter sheet shows all eight statuses; "In Progress" shows only 150 projects and the count matches.
+- [ ] A card opens the workspace with the detail card above the timeline.
+- [ ] A status change with remarks shows the new 2510 row at once; empty remarks send nothing.
+- [ ] A Closed project shows a plain badge.
+- [ ] A note from the workspace appears in the timeline.
+- [ ] The client row opens the client.
+- [ ] Edit shows the client read-only and saves a new title and budget; the list and the workspace show them.
+- [ ] Amounts show Indian grouping (`₹2,50,000`) under Hermes, not plain digits.

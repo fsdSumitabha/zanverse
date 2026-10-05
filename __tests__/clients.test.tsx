@@ -350,6 +350,14 @@ describe("client forms", () => {
                     return respond(201, { success: true, data: makeProject(9) })
                 },
             },
+            {
+                path: "/api/admin/operations/projects/p9",
+                reply: () => respond(200, { success: true, data: makeProject(9) }),
+            },
+            {
+                path: "/api/admin/operations/projects/p9/interactions",
+                reply: () => respond(200, { success: true, interactions: [] }),
+            },
         ])
         const success = jest.spyOn(notify, "success")
 
@@ -368,7 +376,8 @@ describe("client forms", () => {
             budget: 500000,
         })
         expect(success).toHaveBeenCalledWith("Project created successfully", expect.any(Object))
-        expect(getTexts(renderer)).toContain("ProjectDetail")
+        expect(getCalls(fetchMock)).toContain("GET /api/admin/operations/projects/p9")
+        expect(getTexts(renderer)).toContain("Budget Overview")
         await unmountApp(renderer)
     })
 })

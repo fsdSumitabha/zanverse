@@ -4,6 +4,7 @@ import { Pressable, Text, View } from "react-native"
 import { Badge, TimeAgo } from "@/components/ui"
 import { PROJECT_STATUS_META } from "@/constants/projectStatus"
 import { SERVICE_META } from "@/constants/services"
+import { formatAmount } from "@/lib/format"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import type { Project } from "@/types/projects"
 
@@ -65,7 +66,7 @@ export default function ClientProjectPreviewCard({ project, onPress }: Props) {
                     >
                         <IndianRupee size={12} className="text-emerald-600 dark:text-emerald-400" />
                         <Text className="text-xs text-emerald-600 dark:text-emerald-400">
-                            {project.budget.toLocaleString("en-IN")}
+                            {formatAmount(project.budget)}
                         </Text>
                     </View>
                 )}
