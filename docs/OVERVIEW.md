@@ -26,7 +26,7 @@ web never could: tap a row and the dialer opens.
 
 | Area | Decision |
 |---|---|
-| **Styling** | **NativeWind** — the web's Tailwind class strings are copied verbatim, so all `*_META` colour maps keep working. Default `nativewind@^4.1` + `tailwindcss@~3.4`; session 1 spikes v5 and switches only if it builds clean. |
+| **Styling** | **NativeWind** — the web's Tailwind class strings are copied verbatim, so all `*_META` colour maps keep working. **Settled in session 1: `nativewind@4.2.7` + `tailwindcss@3.4.19`.** v5 (5.0.0-rc.0) failed: its Metro transformer is Expo's and needs the `expo` package. Do not re-open this until v5 is stable and works without Expo. Details in `prompts/README.md`. |
 | **Navigation** | React Navigation 7: native-stack root (Splash → Auth → App), bottom tabs built from the web's `MobileNav` items with the same role arrays. |
 | **Data** | Plain `fetch` + `useState`/`useEffect`, like the web. One `src/api/client.ts` (ported from the web's `lead-sources/api.ts` + `handleAuthError.ts`), one `useListQuery` hook for every list. No TanStack Query, no Redux. |
 | **Auth** | JWT in `react-native-keychain`, sent as `Authorization: Bearer`. Needs the backend changes in `BACKEND_CHANGES.md` — **session 4 is blocked until they are on the dev API**. |
@@ -41,14 +41,16 @@ web never could: tap a row and the dialer opens.
 
 ## 4. Packages (versions verified on npm, 2026-10-01)
 
+The exact pinned versions are in `prompts/README.md`, section "Session 1 — toolchain lock".
+
 Already installed: `react-native@0.87.1`, `react@19.2.3`, `typescript@^6.0.3`, `react-native-safe-area-context@^5.5.2`.
 
 | Package | Version | For |
 |---|---|---|
-| `nativewind` + `tailwindcss` | `^4.1` + `~3.4` | styling (v5 + Tailwind 4 spiked in session 1) |
+| `nativewind` + `tailwindcss` | `4.2.7` + `3.4.19` | styling (v5 + Tailwind 4 spiked in session 1 and rejected) |
 | `@react-navigation/native`, `native-stack`, `bottom-tabs` | `^7` | navigation |
 | `react-native-screens` | `^4.28` | navigation |
-| `react-native-gesture-handler` | `^2` | navigation, swipe actions |
+| `react-native-gesture-handler` | `^2` (2.33.0, npm tag `legacy`) | navigation, swipe actions |
 | `react-native-svg` | `^15.15` | **keystone** — icons and charts both need it |
 | `lucide-react-native` | `^1.49` | same icon names as the web |
 | `react-native-keychain` | `^10` | the JWT, nothing else |
@@ -63,7 +65,7 @@ Already installed: `react-native@0.87.1`, `react@19.2.3`, `typescript@^6.0.3`, `
 | `@react-native-community/netinfo` | `^12` | offline banner |
 | `@sentry/react-native` | `^7` | crash reporting |
 | `react-native-gifted-charts` + `react-native-linear-gradient` | `^1.4` | session 20 only |
-| `react-native-reanimated` + `react-native-worklets` + `@gorhom/bottom-sheet` | `^4.7` + `^0.13` + `^5` | session 21 only; Reanimated 4 needs the separate worklets package |
+| `react-native-reanimated` + `react-native-worklets` + `@gorhom/bottom-sheet` | `^4.7` + `^0.13` + `^5` | Reanimated + Worklets are installed in session 1, because `nativewind/babel` loads their Babel plugin. Bottom sheet stays session 21. |
 
 **Deliberately not used:** TanStack Query, react-hook-form, client-side zod, Redux/Zustand, react-native-windows, Skia,
 react-phone-number-input (its logic already lives in `lib/phone.ts`), react-dropzone, chart.js, recharts, framer-motion.
@@ -178,7 +180,9 @@ Each session is one prompt file in `prompts/`, ends with a working app, and fini
    server-side, and virtualize the list regardless.
 5. **Cookies may appear to work** on Android because `fetch` has a cookie jar. Do not build on that; use the Bearer token.
 6. **Edge-to-edge is on** — content draws under the status and gesture bars. Floating buttons need
-   `useBottomTabBarHeight() + insets.bottom`.
+   `useBottomTabBarHeight() + insets.bottom`. **Session 1 finding:** `useBottomTabBarHeight()` already includes
+   `insets.bottom`, and a tab screen already ends at the tab bar's top edge, so that sum counts the inset twice.
+   Check the spike screen's printed numbers on a device before session 6 (see `prompts/README.md`).
 7. **Constants drift** between the two copies (see §8).
 8. **Release builds differ from debug** — R8 minification breaks reflection-based native modules. Test a release build
    in session 22, not at launch.
