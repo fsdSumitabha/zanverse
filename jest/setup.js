@@ -2,6 +2,9 @@
 // Native modules have no JS fallback under Jest. Each mock returns what the spike checks read.
 import "react-native-gesture-handler/jestSetup"
 
+// The NativeWind preset reads this to emit native styles, not web ones. Metro sets it per platform; tests use Android.
+process.env.NATIVEWIND_OS = "android"
+
 jest.mock("react-native-safe-area-context", () => require("react-native-safe-area-context/jest/mock").default)
 
 jest.mock("@react-native-community/netinfo", () => require("@react-native-community/netinfo/jest/netinfo-mock.js"))
