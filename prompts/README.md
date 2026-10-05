@@ -295,3 +295,98 @@ use a password-less user row with `regions` when it builds the user screens.
   `libphonenumber-js/mobile/examples`. `hermesc` compiles both.
 - The type-file count: the web has 11 type files plus `facebook/facebook-leads.ts`, 12 in all, and all 12 are
   copied. The Definition of done's "12 files plus facebook" counts the facebook file twice.
+
+## Session 3 — design system primitives
+
+**Status: built and tested in Jest. The on-device checks are not done.** The cloud container still cannot reach
+`dl.google.com` (HTTP 403) and has no emulator. Run the device checklist below on your machine.
+
+### What is in `src/components/ui/`
+
+`Badge`, `TemporalBadge`, `NotificationBadge`, `Button`, `Card`, `Field`, `Input`, `Textarea`, `Sheet`,
+`SelectSheet`, `Dialog`, `SkeletonBlock` and `SkeletonList`, `EmptyState`, `AccessDenied`, `Avatar`,
+`SectionHeader`, `InlineValue`, `TimeAgo`, `Fab`, `Pagination`, and `Toast.tsx` (the `ToastHost`). `index.ts`
+re-exports all of them by name. Supporting files: `src/theme.ts`, `src/lib/notify.ts`, `src/lib/imagekitUrl.ts`,
+`src/lib/nativeClasses.ts`, `src/lib/iconClassName.ts`. `Field` (label, required mark, error line) and `Sheet`
+(the bottom sheet under SelectSheet and Dialog) are two extra primitives the listed ones share.
+
+`App.tsx` renders `src/screens/dev/KitchenSinkScreen.tsx` directly, with no navigator. The session 1 spike tabs
+are no longer mounted. Their native module checks are the last kitchen-sink section, so the session 1 device
+checklist can still be run. The spike files stay in `src/screens/spike` until that checklist is done.
+
+### How the web's class strings are used
+
+- **Verbatim strings, split at load time.** Button, Pagination and the FIELD style keep the web's class string as
+  written. `toNativeClasses` drops what has no phone meaning (`hover:`, `focus:`, `disabled:`, transitions,
+  cursors, shadows) and splits the rest between the Pressable and its `<Text>`, because text classes on a View do not
+  reach the Text. A re-copy from the web is one paste.
+- **Icons take colour classes.** A lucide icon ignores `className` and draws with its `color` prop.
+  `enableIconClassNames` registers an icon with NativeWind's `cssInterop`, which moves the class's colour into that
+  prop. That is how NotificationBadge's `BADGE_MAP` stays verbatim. Icons whose colour is not a web class string get
+  a plain `color` from `PALETTE` in `src/theme.ts`.
+- **Shadows are elevation.** Card and the soft button get `elevation: 1` (the web's `shadow-sm`), Fab and toasts 6.
+- **Hover becomes pressed.** Buttons scale with `active:scale-[0.98]` and show the Android ripple. Rows use
+  `active:` background classes.
+
+### Deliberate differences from the web
+
+| Where | Web | App | Why |
+|---|---|---|---|
+| AccessDenied title | `dark:text-orange-800` | `dark:text-neutral-100` | about 2.7:1 contrast on neutral-950, unreadable |
+| TimeAgo | `text-neutral-500` | adds `dark:text-neutral-400` | contrast on dark cards |
+| Badge fallback | ServiceBadge used `bg-gray-500/20 text-gray-400` | `bg-gray-500 text-white` everywhere | the session prompt fixes one fallback, StatusBadge's |
+| Buttons, Pagination, rows | 28–36 px tall | `min-h-[44px]` | the style guide's 44 dp touch target |
+| Toasts | sonner, `theme="dark" richColors` | dark tinted cards (Tailwind 950 / 900 / 300) | same look in both schemes, as on the web |
+| Navigation dark primary | — | blue-400, not `#183668` | `#183668` on a neutral-900 tab bar is about 1.5:1 |
+
+### notify
+
+`notify.success / error / info / warning(message, { id, description, action, duration })`, plus `notify.dismiss()`.
+react-native-toast-message shows one toast at a time and replaces it in place. With an `id`, an identical toast
+while the first is showing is ignored, and new content updates it in place, as sonner does. So `"auth-401"` fired
+three times shows one toast. There is no `toast.promise`; the web never uses it.
+
+### Testing
+
+- `jest/tailwindStyles.ts` compiles the app's real stylesheet (tailwind.config.js and the NativeWind preset) and
+  registers it with NativeWind's runtime, as Metro does for `global.css`. Component tests then check the real styles:
+  badge colours including status 60's grey Unknown pill, the button's container/text split, card and field surfaces
+  in light and dark mode, and lucide icon colours. One test proves a mounted icon recolours when the colour scheme
+  changes, with no remount.
+- That test found a real bug, now fixed: Input passed `borderColor: undefined` in `style`, which wiped out the
+  field's border colour class.
+- Behaviour tests: SelectSheet opens, selects and closes; SelectSheet and Dialog close on the back button
+  (`onRequestClose`) and on a backdrop tap; Dialog wraps its sheet in an enabled KeyboardAvoidingView; the same toast
+  id three times calls the toast library once; the toast host renders a toast's description and action button;
+  Avatar builds the ImageKit URL and falls back on error; TimeAgo toggles; Fab adds the bottom inset; Pagination
+  disables at the ends.
+- `npm test`: 15 suites, 142 tests. `npx tsc --noEmit` and `npm run lint` pass. A Metro production bundle builds, all
+  the new classes are in its compiled stylesheet, and `hermesc` compiles it.
+
+### Not verified (needs the device)
+
+- The `npm run android` build itself, and everything visual: colours, the dark mode flip and the status bar, the sheet
+  slide-in, the keyboard over the Dialog field, the ripple, the Fab's position over the gesture bar.
+- The ImageKit avatar. `ik.imagekit.io` is blocked here too, so the demo URL in the kitchen sink
+  (`https://ik.imagekit.io/demo/default-image.jpg`) is unconfirmed. If it shows the User icon, swap in a real user's
+  avatar URL from the database.
+
+### Device checklist
+
+- [ ] `npm run android` builds, installs and opens the kitchen sink.
+- [ ] Badges show the web's colours for all five META maps, and status 60 is a grey Unknown pill.
+- [ ] Dark mode (`adb shell "cmd uimode night yes"`): every section recolours, the status bar icons turn light, and
+      no text is unreadable. `"cmd uimode night no"` switches back.
+- [ ] SelectSheet and Dialog close on the back button and on a tap outside.
+- [ ] In the Dialog, the Note field stays above the keyboard while typing.
+- [ ] "auth-401 x3" shows one toast.
+- [ ] The long InlineValue and the long SectionHeader title are cut to one line.
+- [ ] The Fab sits clear of the gesture bar.
+- [ ] The first Avatar shows the image and the others show the User icon.
+
+### Notes for later sessions
+
+- **Session 4:** `Avatar` takes a `baseUrl` for legacy relative paths. Make `API_BASE_URL` its default, or pass it.
+- **Session 5:** hand `NAVIGATION_THEME` (or `useNavigationTheme()`) to `NavigationContainer`. For `Fab`'s
+  `extraBottom` on tab screens, check the session 1 floating-button finding first.
+- **Session 12:** the dialer toast's "Copy number" action needs a clipboard package, which is not installed.
