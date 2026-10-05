@@ -69,13 +69,15 @@ export function findPressable(renderer: ReactTestRenderer.ReactTestRenderer, lab
     )
 }
 
-/** The nearest pressable that holds a Text with exactly this string. */
+/** The nearest pressable that holds a Text with exactly this string. A title with the same text is skipped. */
 export function findPressableByText(renderer: ReactTestRenderer.ReactTestRenderer, text: string) {
-    const textNode = renderer.root.findAllByType(Text).find((node) => node.props.children === text)
-    let node = textNode?.parent ?? null
-    while (node && typeof node.props.onPress !== "function") node = node.parent
-    if (!node) throw new Error(`No pressable holds the text "${text}"`)
-    return node
+    for (const textNode of renderer.root.findAllByType(Text)) {
+        if (textNode.props.children !== text) continue
+        let node = textNode.parent
+        while (node && typeof node.props.onPress !== "function") node = node.parent
+        if (node) return node
+    }
+    throw new Error(`No pressable holds the text "${text}"`)
 }
 
 /** Presses a node and lets what it starts settle. */
@@ -85,4 +87,38 @@ export async function press(node: ReactTestRenderer.ReactTestInstance): Promise<
         await Promise.resolve()
     })
     await flush()
+}
+
+export interface FetchRoute {
+    method?: string
+    /** Matched against the path after the API base URL, query string included. */
+    path: string | RegExp
+    reply: (init: RequestInit, path: string) => MockResponse
+}
+
+/** Answers each request from the first matching route, and 404s anything else. Returns the calls made. */
+export function routeFetch(fetchMock: FetchMock, routes: FetchRoute[]): void {
+    fetchMock.mockImplementation((url: string, init: RequestInit) => {
+        const path = url.replace(/^https?:\/\/[^/]+/, "")
+        const method = init.method ?? "GET"
+        const route = routes.find(
+            (candidate) =>
+                (candidate.method ?? "GET") === method &&
+                (typeof candidate.path === "string" ? candidate.path === path : candidate.path.test(path)),
+        )
+        return Promise.resolve(route ? route.reply(init, path) : respond(404, { success: false, message: "Not found" }))
+    })
+}
+
+/** The calls a fetch mock received, as `METHOD path`. */
+export function getCalls(fetchMock: FetchMock): string[] {
+    return fetchMock.mock.calls.map(([url, init]) => `${init.method ?? "GET"} ${url.replace(/^https?:\/\/[^/]+/, "")}`)
+}
+
+/** Types into the TextInput with this accessibility label. */
+export async function typeInto(renderer: ReactTestRenderer.ReactTestRenderer, label: string, text: string) {
+    const input = renderer.root.find(
+        (node) => node.props.accessibilityLabel === label && typeof node.props.onChangeText === "function",
+    )
+    await ReactTestRenderer.act(async () => input.props.onChangeText(text))
 }

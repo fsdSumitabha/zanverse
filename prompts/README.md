@@ -641,3 +641,88 @@ Android SDK.
 - [ ] Leaving the tab and coming back reloads page 1 with no spinner, and no warning appears in Metro.
 - [ ] A role outside the leads list's roles sees AccessDenied with the API's message.
 - [ ] A search with no match shows "No leads found".
+
+## Session 7 — leads module
+
+**Status: done, except the device checks.** All five lead screens are built and tested inside the whole app against a
+mocked API. Real data needs the session 4 backend patch, and the cloud container has no Android SDK.
+
+### What is in it
+
+- Screens (`src/screens/leads/`): `LeadsListScreen`, `LeadDetailScreen`, `LeadCreateScreen`, `LeadEditScreen`,
+  `LeadConvertScreen`, wired into `LeadsStack`. The session 6 demo screen is removed; the Leads tab replaces it.
+- Lead components (`src/components/leads/`): `LeadCard`, `LeadCardSkeleton`, `LeadDetailsSkeleton`, `LeadDetailsCard`,
+  `LeadStatusSheet`, `ConvertedClientBlock`, `LeadInteractionActions` (buttons only; session 8 wires them),
+  `ConvertButton`, `LeadForm`, `LeadInfoCard`.
+- Phone (`src/components/phone/`): `useEditablePhone`, `PhoneField`, `CountrySheet`, `PhoneHint`, `PhoneText`,
+  `WhatsAppLink`.
+- Shared: `src/hooks/useDetailQuery.ts` (one record with loading / refreshing / accessError / not-found and a quiet
+  reload on focus — sessions 9 and 10 reuse it), `src/hooks/useWriteRegion.ts`,
+  `src/components/region/WriteRegionField.tsx`, `src/components/ui/FormScrollView.tsx`, and
+  `src/navigation/openRecord.ts` (`openClient`, `openProject`, `openLead`: open a record in the tab that owns it).
+- `Fab` gained `isAboveTabBar`: on a tab screen it adds no bottom inset (the session 1 finding).
+- New dependency: `@react-navigation/elements@2.9.44`, pinned. It was already installed under native-stack; it is now
+  declared, because `FormScrollView` imports `useHeaderHeight` from it.
+
+### Decisions
+
+- **The status sheet** is two steps in one bottom sheet, driven by `StatusContext`. "Remarks are required" shows under
+  the remarks box (the web toasts it). The PATCH body is `{ status, remarks }`; on success it toasts "Status updated",
+  calls `reset()`, and the screen refetches quietly. Converted is never an option; the button is inert at 60 and 70.
+- **Edit link roles.** The prompt's `LEAD_EDIT_ROLES = [10, 15, 60, 69, 45, 70]`, narrowed by `canOpen("LeadEdit")`.
+  So role 15 does not see a link that would only lead to AccessDenied. On the web, 15 sees it and the proxy redirects.
+- **Convert** shows on the card and on the header card at status 50, and only for roles that may open LeadConvert.
+  After a convert, the convert screen closes and the new client opens in the Clients tab at once. The lead reloads at
+  status 60 when the person goes back to the Leads tab.
+- **Cross-tab links.** "View client" and the convert landing open `ClientDetail` in the Clients tab, with the client
+  list under it. A role with no Clients tab (65) gets the web's 403 line as a toast instead of a jump that does
+  nothing.
+- **Delete** (role 10 only, as the web) asks with `Alert.alert("Delete this lead?")`, toasts the server's message, and
+  goes back with `popTo("LeadsList")`, which reloads the list on focus. React Navigation 7's `navigate` pushes a new
+  screen; `popTo` returns to the existing one. After an edit, `popTo("LeadDetail")`; after a create,
+  `replace("LeadDetail")`, so Back returns to the list.
+- **Not found.** Any failure but 401 and 403 shows "Lead not found", as the web.
+- **Phone field.** The typed text is kept in state (the web reads the `<input>`). A saved valid number shows in national
+  format (`9876543210` → `098765 43210`), and both saved-value rules hold: an unchanged number sends the saved text,
+  and an invalid saved value with an empty box sends it unchanged. A change of more than one character at once is
+  treated as a paste and checked with `checkPastedPhone`; a typed `+` shows `HAS_COUNTRY_CODE`; no length limit.
+- **Country sheet.** The three regions first, then every other country by name, each with its calling code, and a
+  search box. Names come from `Intl.DisplayNames` when Hermes has it, else the code.
+- **WhatsApp** opens `https://wa.me/<number>`, which opens the app or the browser. An invalid number is grey text.
+- **The region field** on create shows the full region name (the web shows a flag and the code). Pinned, it is fixed,
+  with "To save in another region, switch region in More."
+- **Keyboard.** Form screens use `FormScrollView`: `KeyboardAvoidingView` with `behavior="padding"` and the header
+  height as the offset, plus `keyboardShouldPersistTaps="handled"`.
+- **Session 8 hook-in.** `LeadInteractionActions` keeps the web's `onAction(type)` and `activeType` props; today a
+  press shows "Available in the next session".
+
+### What was verified
+
+- `src/components/phone/__tests__/phone.test.tsx` (12 tests): both saved-value rules, E.164 for a changed number, the
+  library's error messages, `setError` and clearing on typing; typed digits, the `+` refusal, a paste with text around
+  the number refused, a pasted full number for the country put in as national, another country's number refused, an
+  extra digit kept and refused by the check.
+- `__tests__/leads.test.tsx` (13 tests, the whole app): the list with the count ("1 lead found" singular), Create New
+  Lead, and Convert only on the status-50 card; detail with WhatsApp and the four buttons; the status flow (blank
+  remarks refused, one PATCH with the right body, the new badge); inert at Converted; the converted block and "View
+  client" opening ClientDetail; Admin delete through the Alert; no Delete or Edit for role 50; "Lead not found" and
+  AccessDenied; the create body (with region `IN`) and the server's phone error under the field; create landing on the
+  new lead; an edit sending the legacy phone `9876543210` unchanged; convert landing on ClientDetail.
+- `npm test`: 23 suites, 232 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every new file is under 250 lines.
+
+### Device checklist
+
+- [ ] The Leads tab lists 10 leads, appends on scroll and refreshes on pull.
+- [ ] A status filter and a 2-character search reset to page 1; the count matches `pagination.total`.
+- [ ] A status-50 card shows "Convert To Client" on its own row with no overlap at 360 dp.
+- [ ] The detail screen shows name, source, phone, email and the created date; the phone row opens WhatsApp.
+- [ ] A status change asks for remarks, refuses blank, PATCHes once, toasts "Status updated" and updates the badge.
+- [ ] Status 60 or 70: the button is inert; "Converted" is never an option.
+- [ ] Create with an invalid phone shows the server's message under the phone field; a valid one opens the new lead.
+- [ ] Editing a lead saved as `9876543210` saves other fields with no phone error.
+- [ ] Converting a status-50 lead opens the client at once; the lead then shows status 60 and the converted block.
+- [ ] Role 10 sees Delete and the Alert; the list no longer shows the lead. Role 50 sees neither Delete nor Edit.
+- [ ] A role outside the lead roles sees AccessDenied; an unknown id shows "Lead not found".
+- [ ] The four interaction buttons show their colours. The Fab sits 16 dp above the tab bar.
+- [ ] The country sheet scrolls and searches; on Hermes, check whether country names show or only codes.

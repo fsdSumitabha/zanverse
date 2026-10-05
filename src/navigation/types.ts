@@ -50,8 +50,6 @@ export type MoreStackParamList = {
     ActivityLogs: undefined
     Notifications: undefined
     Profile: undefined
-    /** Session 6's list kit demo, in debug builds. */
-    ListKitDemo: undefined
 }
 
 export type TabParamList = {
