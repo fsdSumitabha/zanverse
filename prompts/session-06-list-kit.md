@@ -11,7 +11,7 @@ Read docs/CLIENT_SYSTEMS.md "usePagination" and "useSearch", docs/COMPONENTS.md 
 and `filters/DateField.tsx`, docs/SCREENS.md `/admin/operations/leads` (its "On a phone" list), and docs/API_CONTRACT.md
 § envelope + response-shape inconsistencies.
 
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/hooks/usePagination.ts`, `src/hooks/useSearch.ts`, `src/components/admin/operations/ListFilters.tsx`,
 `src/components/admin/operations/filters/DateField.tsx`, `src/components/admin/operations/Pagination.tsx`,
 `src/components/admin/operations/SearchBar.tsx` (take `DEBOUNCE_MS` and the 2-char minimum only),

@@ -13,7 +13,7 @@ Read docs/API_CONTRACT.md rows for `GET /api/admin/operations/meetings`, `PATCH 
 Read docs/COMPONENTS.md rows for `MeetingCard.tsx`, `MeetingFilters.tsx`, `RescheduleMeetingForm.tsx`, `MeetingLinkButton.tsx`,
 `TemporalBadge .tsx`, `skeletons/MeetingCardSkeleton.tsx`.
 
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/app/admin/operations/meetings/MeetingsClient.tsx`, `src/app/admin/operations/meetings/page.tsx`,
 `src/components/admin/operations/MeetingCard.tsx`, `src/components/admin/operations/MeetingFilters.tsx`,
 `src/components/admin/operations/RescheduleMeetingForm.tsx`, `src/components/admin/operations/MeetingLinkButton.tsx`,

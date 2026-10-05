@@ -14,7 +14,7 @@ TCPA EXPOSURE" and "THE DETAIL ROUTE RETURNS THE WHOLE ACTIVITY ARRAY".
 Read docs/API_CONTRACT.md rows for `/lead-sources/:id`, `/:id/notes`, `/:id/callback`, `/:id/convert`, `/bulk`, and
 docs/COMPONENTS.md rows for `button/WhatsAppLink.tsx` and `dayjs/TimeAgo.tsx`.
 
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/components/admin/operations/lead-sources/dialer.ts` (the whole seam, 34 lines),
 `src/app/admin/operations/lead-sources/[sourceId]/page.tsx` (the screen to port, 339 lines),
 `src/components/admin/operations/lead-sources/ActivityTimeline.tsx`, `NoteBox.tsx`, `SheetData.tsx`,

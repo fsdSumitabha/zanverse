@@ -10,7 +10,7 @@ Read docs/OVERVIEW.md §2 (Platforms — the iOS and Windows rows), §3 (Files, 
 Read docs/CLIENT_SYSTEMS.md on the web-only browser APIs (the `whatsapp://` vs `web.whatsapp.com` branch, clipboard, `URL.createObjectURL`) and on `country-flag-icons` (flag emoji render correctly on iOS).
 Read docs/API_CONTRACT.md "BINARY DOWNLOADS" — the lead-source template and upload report must be fetched with the auth header, never opened as a link.
 Read docs/SCREENS.md the "WINDOWS/iOS FROM THE SAME REPO" note (the two places to watch: the tab + FAB layout, and anything touching file system, pickers or secure storage).
-Reference (read-only): D:\zan-workspace — `src/components/admin/operations/button/WhatsAppLink.tsx` and `src/components/admin/operations/lead-sources/dialer.ts` (the contact actions iOS must reproduce), `src/app/api/admin/lead-sources/template/route.ts` and `uploads/[id]/download/route.ts` (the two `.xlsx` downloads).
+Reference (read-only): reference/zan-workspace — `src/components/admin/operations/button/WhatsAppLink.tsx` and `src/components/admin/operations/lead-sources/dialer.ts` (the contact actions iOS must reproduce), `src/app/api/admin/lead-sources/template/route.ts` and `uploads/[id]/download/route.ts` (the two `.xlsx` downloads).
 
 ## Goal
 `npm run ios` installs and runs the whole app on an iOS simulator and one real device from the same `src/`, with no
@@ -53,7 +53,7 @@ states the Windows decision and the evidence for it, and `docs/OVERVIEW.md` poin
   adding only `testID`s where a selector does not resolve.
 - `docs/WINDOWS.md` — the decision record: `react-native-windows` has no 0.87 line (0.84 stable, 0.85 preview, pinned to
   RN 0.84.1), `D:\zanverse` has no `windows/` folder and will not get one this phase, so the Windows surface is the
-  existing Next.js app at `D:\zan-workspace` in a browser — the same API, the same JWT auth, the same region header. A
+  existing Next.js app at `reference/zan-workspace` in a browser — the same API, the same JWT auth, the same region header. A
   Tauri or Electron wrapper of that web app is the only sensible route to a taskbar icon, and it buys packaging, not
   features. Close with the re-open conditions: RNW shipping an 0.87-compatible release, and the audit result proving
   `src/` stayed platform-agnostic.

@@ -13,7 +13,7 @@ Read docs/SCREENS.md `/admin/operations/activity-logs` (purpose, API calls, stat
 `ActivityLogFilters.tsx` and `formatActivityValue.ts`, and docs/SHARED_CODE.md on `STATUS_META_BY_ENTITY`,
 `entityTypes.ts` and `userRoles.ts`.
 
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/app/admin/operations/activity-logs/ActivityLogsClient.tsx` (the `ADMIN_ROLES = [10, 20]` gate and the Restricted-area card),
 `src/components/admin/operations/activityLog/types.ts` (`ActivityLogRow`, `InteractionDetail`, `EMPTY_FILTERS`),
 `src/components/admin/operations/activityLog/ActivityLogList.tsx` (`buildQuery`, `DEFAULT_LIMIT = 15`, the 300 ms search debounce),

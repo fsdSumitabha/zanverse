@@ -1,6 +1,7 @@
 # Backend changes needed for the mobile app
 
-> These happen in the **web app** (`D:\zan-workspace`, the Next.js project that serves the API), not in this repo.
+> These happen in the **web app repo** (`github.com/fsdSumitabha/zan-workspace`), not in this repo. Make them there,
+> then deploy to the dev API.
 > The required ones are small — six one-line reads and one response field — but **session 4 of the mobile app is
 > blocked until they are live on the dev API**, and everything after session 4 depends on session 4.
 

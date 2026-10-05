@@ -14,7 +14,7 @@ Read docs/API_CONTRACT.md on the response envelope, `send()` / `ApiError { messa
 "BINARY DOWNLOADS" note — the two .xlsx routes cannot be opened with `Linking.openURL`. Read docs/BACKEND_CHANGES.md
 item 5 (both .xlsx routes authenticate through `getUserFromRequest`, so they inherit the Bearer fallback).
 
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/components/admin/operations/lead-sources/UploadForm.tsx` (the three-step form, 257 lines), `ReportGrid.tsx`,
 `DayChoice.tsx`, `AssigneeSelect.tsx`, `api.ts`, `src/app/admin/operations/lead-sources/upload/page.tsx`,
 `uploads/UploadsClient.tsx`, `uploads/[uploadId]/page.tsx`, `src/app/api/admin/operations/lead-sources/uploads/route.ts`,

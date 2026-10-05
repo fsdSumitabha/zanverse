@@ -10,7 +10,7 @@ Read docs/OVERVIEW.md §3 (Data, Auth, Region, Storage), §4 (packages), §5 (st
 docs/API_CONTRACT.md "Auth flow", "Region flow", "What a non-browser client must do differently" and "Error handling",
 docs/BACKEND_CHANGES.md (all of it) and docs/CLIENT_SYSTEMS.md (AuthContext, RegionContext, StatusContext,
 handleAuthError, the lead-sources fetch wrapper).
-Reference (read-only): `D:\zan-workspace` —
+Reference (read-only): `reference/zan-workspace` —
 `src/components/admin/operations/lead-sources/api.ts` (the `send()` + `ApiError` you are porting),
 `src/lib/auth/handleAuthError.ts`, `src/contexts/AuthContext.tsx`, `src/contexts/RegionContext.tsx`,
 `src/contexts/StatusContext.tsx`, `src/app/admin/authentication/login/page.tsx`,

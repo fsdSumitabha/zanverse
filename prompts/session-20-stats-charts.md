@@ -13,7 +13,7 @@ Read docs/API_CONTRACT.md the `GET /api/admin/operations/overall-stats` row and 
 panels" note.
 Read docs/CLIENT_SYSTEMS.md the `chart.js + react-chartjs-2` row.
 
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/components/admin/operations/OverallStatsPanel.tsx` (558 lines: the fetch, the four `*_STATUS_META` colour maps,
 `INR_COMPACT`, `KpiCard`, `EntityPieCard`, `CardHeader`),
 `src/components/admin/operations/Leadsovertimecard .tsx` (year accordion, `fillMonths`, the month table),

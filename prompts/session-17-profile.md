@@ -13,7 +13,7 @@ Read docs/API_CONTRACT.md rows for `GET /api/auth/profile`, `POST /api/auth/prof
 the routes that verify the JWT themselves.
 Read docs/BACKEND_CHANGES.md "Required" rows 1 and 2.
 
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/app/admin/operations/profile/page.tsx` (the view screen),
 `src/app/admin/operations/profile/edit/page.tsx` (the edit screen, including its `PasswordField` helper),
 `src/app/api/auth/profile/route.ts`, `src/app/api/auth/profile/avatar/route.ts`,

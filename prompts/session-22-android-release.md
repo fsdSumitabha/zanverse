@@ -7,7 +7,7 @@ At the end you have a signed, minified release AAB that a tester installs from t
 Session 22 — Android release build and CI.
 
 Read docs/OVERVIEW.md §2 (Platforms), §4 (Packages — the version table is authoritative), §10 ("Distribution to staff") and §11 (risk 8: release builds differ from debug).
-Reference (read-only): D:\zan-workspace — `src/components/admin/operations/lead-sources/StatusMenu.tsx` and `LeadSourceRow.tsx` (the status save the first Maestro flow drives), `src/components/admin/operations/lead-sources/UploadForm.tsx` and `src/app/admin/operations/lead-sources/uploads/[uploadId]/page.tsx` (the upload → report journey the second flow drives).
+Reference (read-only): reference/zan-workspace — `src/components/admin/operations/lead-sources/StatusMenu.tsx` and `LeadSourceRow.tsx` (the status save the first Maestro flow drives), `src/components/admin/operations/lead-sources/UploadForm.tsx` and `src/app/admin/operations/lead-sources/uploads/[uploadId]/page.tsx` (the upload → report journey the second flow drives).
 
 ## Goal
 

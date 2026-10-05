@@ -12,7 +12,7 @@ Read docs/CLIENT_SYSTEMS.md "AuthContext", "RegionContext" and the polling note;
 docs/LEAD_SOURCES.md §"Screens" (StatusMenu, CallbackPicker) and docs/COMPONENTS.md rows for `ListFilters.tsx` and
 `InteractionModal/*`.
 
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/components/admin/operations/lead-sources/StatusMenu.tsx`, `CallbackPicker.tsx`, `Popover.tsx`, `Dialog.tsx`,
 `src/components/admin/operations/ListFilters.tsx`,
 `src/components/admin/operations/InteractionModal/{NoteForm,CallForm,MeetingForm,QuotationForm}.tsx`,

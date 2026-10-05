@@ -1,7 +1,8 @@
 # ZAN Mobile (zanverse)
 
-React Native app for ZAN Services staff. It is the mobile client of the CRM. The Next.js web app at
-`D:\zan-workspace` stays the backend. It is also the read-only reference for every screen.
+React Native app for ZAN Services staff. It is the mobile client of the CRM. The backend is the deployed Next.js web
+app. Its source is the repo `github.com/fsdSumitabha/zan-workspace`. That source is the read-only reference for every
+screen.
 
 @docs/OVERVIEW.md
 @docs/CODING_STYLE.md
@@ -15,7 +16,10 @@ React Native app for ZAN Services staff. It is the mobile client of the CRM. The
 
 ## Every session
 1. The overview above explains the whole app. You build ONE session's scope — its prompt is in `prompts/`.
-2. `D:\zan-workspace` (branch `main`) is read-only: read it to see how a screen behaves today. Leave it untouched.
+2. Read the web app source at `reference/zan-workspace` (branch `main`) to see how a screen behaves today. It is
+   read-only. If that folder is missing, clone it first:
+   `git clone --depth 1 https://github.com/fsdSumitabha/zan-workspace reference/zan-workspace`.
+   The folder is gitignored, so it never enters this repo.
 3. Keep behaviour the same as the web where the spec doesn't say otherwise: same endpoints, same status codes, same
    role rules, same messages. The phone changes the layout, not the rules.
 4. Reference docs live in `docs/`. Read the section you need rather than the whole file.

@@ -12,7 +12,7 @@ Read docs/API_CONTRACT.md — the five `users` rows in the endpoint table and th
 Read docs/COMPONENTS.md — the rows for `UserCard.tsx`, `UserCardSkeleton.tsx`, `UserForm.tsx`, `RegionSelect.tsx`, `RegionBadge.tsx`, `FileUpload.tsx`, `AvatarPreview.tsx`.
 Read docs/SHARED_CODE.md — `userRoles.ts` (USER_ROLE_META, `canAdministerAllRegions`, CROSS_REGION_USER_ADMIN_ROLES) and `lib/region.ts` (REGION_CODES, REGIONS).
 
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/app/admin/operations/users/UsersClient.tsx`, `src/app/admin/operations/users/create/page.tsx`,
 `src/app/admin/operations/users/[userId]/edit/page.tsx`,
 `src/components/admin/operations/UserCard.tsx`, `UserCardSkeleton.tsx`, `UserForm.tsx`,

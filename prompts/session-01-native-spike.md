@@ -7,7 +7,7 @@ At the end you have one Android debug build running on RN 0.87.1 with every nati
 Session 01 — Native spike and toolchain lock.
 
 Read docs/OVERVIEW.md §3 (Styling, Navigation, Storage, Files), §4 (Packages — the version table is authoritative), §5 (project structure) and §11 (risks 1, 2 and 6).
-Reference (read-only): D:\zan-workspace — `src/constants/leadStatus.ts` and `src/constants/leadSourceStatus.ts` (the `*_META` Tailwind colour strings), `src/components/admin/operations/lead-sources/LeadSourceRow.tsx` (the hardest class strings in the repo: `dark:bg-emerald-500/15`, `bg-blue-50/80`, `dark:bg-rose-500/[0.07]`), `src/components/admin/operations/StatusBadge.tsx`, `src/components/admin/operations/AccessDenied.tsx` (ShieldAlert icon), `src/components/admin/operations/MobileNav.tsx` (the `navItems` array with its icons and role arrays).
+Reference (read-only): reference/zan-workspace — `src/constants/leadStatus.ts` and `src/constants/leadSourceStatus.ts` (the `*_META` Tailwind colour strings), `src/components/admin/operations/lead-sources/LeadSourceRow.tsx` (the hardest class strings in the repo: `dark:bg-emerald-500/15`, `bg-blue-50/80`, `dark:bg-rose-500/[0.07]`), `src/components/admin/operations/StatusBadge.tsx`, `src/components/admin/operations/AccessDenied.tsx` (ShieldAlert icon), `src/components/admin/operations/MobileNav.tsx` (the `navItems` array with its icons and role arrays).
 
 ## Goal
 

@@ -12,7 +12,7 @@ Read docs/API_CONTRACT.md — the seven lead rows in the endpoint table and "RES
 Read docs/CLIENT_SYSTEMS.md — "StatusContext" and "Phone input handling" (the recommendation to copy `lib/phone.ts` and rebuild only the field).
 Read docs/COMPONENTS.md — the rows for `LeadCard.tsx`, `LeadDetails.tsx`, `LeadForm.tsx` and `WhatsAppLink.tsx`.
 
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/app/admin/operations/leads/LeadsClient.tsx`, `src/components/admin/operations/LeadCard.tsx`,
 `src/components/admin/operations/skeletons/LeadCardSkeleton.tsx` and `skeletons/LeadDetailsSkeleton.tsx`,
 `src/app/admin/operations/leads/[leadId]/page.tsx`, `src/components/admin/operations/LeadDetails.tsx`,

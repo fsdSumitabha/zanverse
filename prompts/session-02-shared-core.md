@@ -7,7 +7,7 @@ At the end of this session `src/constants`, `src/types` and the pure helpers in 
 Session 02 — Foundation A: shared core copied from the web.
 
 Read docs/OVERVIEW.md §3 (Data, Forms, Region), §4 (packages), §5 (project structure) and §8 (the shared code rule), plus docs/SHARED_CODE.md in full — its per-file table says which of the 31 files copy clean and which need one line changed.
-Reference (read-only): D:\zan-workspace — `src/constants/` (18 files), `src/types/` (12 files + `types/facebook/facebook-leads.ts`), `src/lib/phone.ts`, `src/lib/region.ts`, `src/lib/lead-sources/day.ts`, `src/components/admin/operations/lead-sources/callback.ts`, `src/components/admin/operations/lead-sources/useNow.ts`, `src/components/admin/operations/dayjs/TimeAgo.tsx`.
+Reference (read-only): reference/zan-workspace — `src/constants/` (18 files), `src/types/` (12 files + `types/facebook/facebook-leads.ts`), `src/lib/phone.ts`, `src/lib/region.ts`, `src/lib/lead-sources/day.ts`, `src/components/admin/operations/lead-sources/callback.ts`, `src/components/admin/operations/lead-sources/useNow.ts`, `src/components/admin/operations/dayjs/TimeAgo.tsx`.
 
 ## Goal
 

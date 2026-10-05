@@ -9,7 +9,7 @@ Session 11 — Lead sources A: list and Today view.
 Read docs/OVERVIEW.md §3 (Data, Navigation, Styling, Region, Dialer, Offline), §4 (packages), §5 (structure), §8 (shared code rule) and §11 risks 4 and 6.
 Read docs/LEAD_SOURCES.md in full — it is the authoritative spec — especially "Status model", "Roles and access", the `/admin/operations/lead-sources` screen with its "On a phone" note, the flows "Cold call -> status change -> note", "Callback scheduling" and "Bulk actions", "Endpoints", and the Risks on the `today` contract, the callback day/time pair, 409s and retired code 60.
 Read docs/CLIENT_SYSTEMS.md on `useNow` and AppState-gated polling, and docs/API_CONTRACT.md on the response envelope and region transport.
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/app/admin/operations/lead-sources/LeadSourcesClient.tsx` (the whole screen: query building, `requestId`, the quiet 60 s reload, `onUpdated`, selection, empty states),
 `src/components/admin/operations/lead-sources/` — `ViewTabs.tsx`, `LeadSourceRow.tsx`, `StatusMenu.tsx`, `CallbackPicker.tsx`, `CallbackMenu.tsx`, `CallButton.tsx`, `dialer.ts`, `LeadSourceFilters.tsx`, `AssigneeSelect.tsx`, `BulkBar.tsx`, `ActionDialogs.tsx`, `DayChoice.tsx`, `StatusPill.tsx`, `api.ts`,
 `src/lib/lead-sources/listQuery.ts` (how the server sorts and sections Today), `src/constants/leadSourceStatus.ts`, `src/constants/leadSourceRoles.ts`, `src/types/leadSource.ts`.

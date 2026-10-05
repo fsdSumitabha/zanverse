@@ -10,7 +10,7 @@ Read docs/OVERVIEW.md §3 (Data, Navigation, Styling, Region, Offline), §4 (pac
 Read docs/SCREENS.md on `/admin/operations` (the dashboard feed, its "On a phone" note) and on the operations layout shell — the paragraph explaining that StatsPanel and UpcomingMeetingsPanel live in a desktop-only sticky aside and belong on the Dashboard tab instead, and that the layout SearchBar must split into a per-list field and a separate global-search screen.
 Read docs/API_CONTRACT.md rows for `GET /api/admin/operations`, `/stats`, `/overall-stats`, `/search` and `/meetings`, plus the "NAVIGATION TARGETS ARE WEB PATHS" note on mapping `href` strings to screens.
 Read docs/BACKEND_CHANGES.md "Strongly recommended — paginate the dashboard feed".
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/app/admin/operations/page.tsx` (the feed screen, its loading / error / empty states),
 `src/components/admin/operations/EntityCard.tsx`, `InteractionCard.tsx`, `StatusChangeItem.tsx`, `skeletons/EntityCardSkeleton.tsx`,
 `src/components/admin/operations/StatsPanel.tsx`, `UpcomingMeetingsPanel.tsx`,

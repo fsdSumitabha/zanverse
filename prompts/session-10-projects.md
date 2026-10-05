@@ -12,7 +12,7 @@ and `/admin/operations/projects/create` (the retired one), plus its closing note
 Read docs/API_CONTRACT.md rows for `/api/admin/operations/projects*` and the "response shape inconsistencies" note.
 Read docs/COMPONENTS.md rows for `ProjectCard.tsx`, `ServiceBadge.tsx`, `StatusBadge.tsx`, `ProjectCardSkeleton.tsx`, `tooltip/Tooltip.tsx`.
 
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/app/admin/operations/projects/ProjectsClient.tsx`, `src/components/admin/operations/ProjectCard.tsx`,
 `src/components/admin/operations/skeletons/ProjectCardSkeleton.tsx`,
 `src/app/admin/operations/projects/[projectId]/page.tsx`, `src/components/admin/operations/ProjectDetail.tsx`,

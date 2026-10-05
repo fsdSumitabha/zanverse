@@ -10,8 +10,9 @@ screen is **Lead Sources** — the cold-calling list an agent works through all 
 web never could: tap a row and the dialer opens.
 
 - **This repo (`D:\zanverse`)** — the mobile app. React Native 0.87.1, React 19.2.3, TypeScript, New Architecture on.
-- **The web app (`D:\zan-workspace`, branch `main`)** — read-only reference **and the live backend**. Its Next.js API
-  routes stay exactly as they are; the mobile app is another client of them.
+- **The web app** — the live backend, and the read-only reference for every screen. Source:
+  `github.com/fsdSumitabha/zan-workspace`, branch `main`, read locally at `reference/zan-workspace` (cloned on first
+  use, gitignored). Its Next.js API routes stay exactly as they are; the mobile app is another client of them.
 
 ## 2. Platforms
 

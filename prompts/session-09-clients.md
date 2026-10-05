@@ -14,7 +14,7 @@ Read docs/API_CONTRACT.md rows for `/api/admin/operations/clients*` and `POST /a
 Read docs/COMPONENTS.md rows for `ClientCard.tsx`, `ClientDetails.tsx`, `ClientForm.tsx`, `ClientInfoCard.tsx`,
 `ClientProjectPreviewCard.tsx`, `button/WhatsAppLink.tsx`, `AccessDenied.tsx`.
 
-Reference (read-only): D:\zan-workspace —
+Reference (read-only): reference/zan-workspace —
 `src/app/admin/operations/clients/ClientsClient.tsx`, `src/app/admin/operations/clients/[clientId]/page.tsx`,
 `src/app/admin/operations/clients/[clientId]/edit/page.tsx`, `src/app/admin/operations/clients/[clientId]/projects/page.tsx`,
 `src/app/admin/operations/clients/[clientId]/projects/create/page.tsx`,

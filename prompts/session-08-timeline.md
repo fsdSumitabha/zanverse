@@ -11,7 +11,7 @@ Read docs/OVERVIEW.md §3, §4, §5, §6 and §8, plus SCREENS.md `/admin/operat
 API_CONTRACT.md rows for `/notes`, `/calls`, `/quotations`, `/meetings`, `/users/picker`, `/interactions/:id` and
 `/leads/:id/interactions`, and SHARED_CODE.md on `INTERACTION_TYPE` / `STATUS_META_BY_ENTITY`.
 
-Reference (read-only): D:\zan-workspace — `src/components/admin/operations/interactions/` (InteractionTimeline,
+Reference (read-only): reference/zan-workspace — `src/components/admin/operations/interactions/` (InteractionTimeline,
 InteractionItem, InteractionEditor, EditHistory, AnimatedItem, `types/NoteItem|CallItem|MeetingItem|QuotationItem|StatusChangeItem`),
 `src/components/admin/operations/InteractionModal/` (InteractionInlineForm, NoteForm, CallForm, MeetingForm, QuotationForm),
 `src/components/admin/operations/LeadInteractionActions.tsx`, `MeetingLinkButton.tsx`, `dropzone/FileUpload.tsx`,
