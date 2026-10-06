@@ -89,7 +89,9 @@ export default function LeadSourceHeaderCard({ source, now, onOpen, onOpenUpload
                 </View>
                 <View className="flex-row flex-wrap items-center gap-2">
                     <StatusBadgeButton status={source.status} size="md" onPress={() => onOpen("status")} />
-                    {!isConverted && <CallButton name={source.name} phone={source.phone} size="md" />}
+                    {!isConverted && (
+                        <CallButton name={source.name} phone={source.phone} status={source.status} size="md" />
+                    )}
                 </View>
                 {!isConverted && (
                     <CallbackButton callbackAt={source.callbackAt} now={now} onPress={() => onOpen("callback")} />

@@ -37,6 +37,11 @@ interface Options<T> {
     pageSize?: number
     /** Extra query params sent as they are, such as the lead sources list's `today`. */
     extraParams?: Record<string, string>
+    /**
+     * Filter params that change, such as the activity log's `entityType`, `userId` and `q`. Sent after everything else,
+     * in their own order; a change goes back to page 1.
+     */
+    params?: Record<string, string>
     /** Starting filters, such as a default `view`. */
     initialQuery?: Partial<Omit<ListQuery, "page">>
     /** Reads the rows from the envelope. Defaults to `data`. */
@@ -59,16 +64,22 @@ const EMPTY_FILTERS: Omit<ListQuery, "page" | "search"> = {
     entityType: "",
 }
 
-function buildQuery(query: ListQuery, pageSize: number, extraParams: Record<string, string> = {}): string {
-    const params: [string, string][] = [
+function buildQuery(
+    query: ListQuery,
+    pageSize: number,
+    extraParams: Record<string, string> = {},
+    params: Record<string, string> = {},
+): string {
+    const list: [string, string][] = [
         ["page", String(query.page)],
         ["limit", String(pageSize)],
     ]
     for (const key of ["search", "status", "from", "to", "view", "sort", "range", "entityType"] as const) {
-        if (query[key]) params.push([key, query[key]])
+        if (query[key]) list.push([key, query[key]])
     }
-    for (const [key, value] of Object.entries(extraParams)) params.push([key, value])
-    return params.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join("&")
+    for (const [key, value] of Object.entries(extraParams)) list.push([key, value])
+    for (const [key, value] of Object.entries(params)) list.push([key, value])
+    return list.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join("&")
 }
 
 function mergeById<T extends { _id: string }>(current: T[], next: T[]): T[] {
@@ -85,7 +96,7 @@ function mergeById<T extends { _id: string }>(current: T[], next: T[]): T[] {
  * keep screens mounted and the list may have changed elsewhere.
  */
 export function useListQuery<T extends { _id: string }>(options: Options<T>) {
-    const { path, pageSize = DEFAULT_PAGE_SIZE, extraParams, initialQuery, selectItems } = options
+    const { path, pageSize = DEFAULT_PAGE_SIZE, extraParams, params, initialQuery, selectItems } = options
 
     const [query, setQuery] = useState<ListQuery>(() => ({ page: 1, search: "", ...EMPTY_FILTERS, ...initialQuery }))
     // Bumped to fetch the same query again (refresh, focus).
@@ -105,7 +116,14 @@ export function useListQuery<T extends { _id: string }>(options: Options<T>) {
     // Read inside the fetch without making it re-run.
     const latest = useRef({ extraParams, selectItems, items })
     latest.current = { extraParams, selectItems, items }
-    const queryString = buildQuery(query, pageSize, extraParams)
+    // A change in `params` is a new list: back to page 1, decided during render so the old page is never fetched.
+    const paramsKey = JSON.stringify(params ?? {})
+    const [appliedParamsKey, setAppliedParamsKey] = useState(paramsKey)
+    if (paramsKey !== appliedParamsKey) {
+        setAppliedParamsKey(paramsKey)
+        if (query.page !== 1) setQuery((current) => ({ ...current, page: 1 }))
+    }
+    const queryString = buildQuery(query, pageSize, extraParams, params)
 
     useEffect(() => {
         const controller = new AbortController()

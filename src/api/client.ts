@@ -32,6 +32,11 @@ export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
 export interface SendOptions {
     /** Cancels the request. The promise then rejects with an AbortError, which `isAbortError` recognises. */
     signal?: AbortSignal
+    /**
+     * A 401 with exactly this message is an ordinary error, not the end of the session. The password route answers
+     * "Old password is incorrect" with 401; that must not log the person out.
+     */
+    keepSessionOn401Message?: string
 }
 
 /** The fields every route's JSON can carry. `sendRaw` callers extend it with their own extras. */
@@ -133,7 +138,7 @@ async function request<T>(path: string, method: HttpMethod, body: unknown, optio
     }
 
     const json = (await res.json().catch(() => null)) as (ErrorBody & T) | null
-    return readApiResult<T>(res.status, json, token)
+    return readApiResult<T>(res.status, json, token, options.keepSessionOn401Message)
 }
 
 /**
@@ -141,12 +146,18 @@ async function request<T>(path: string, method: HttpMethod, body: unknown, optio
  * throws ApiError with the server's message. Exported for the react-native-blob-util upload, which cannot use fetch
  * because it needs upload progress.
  */
-export async function readApiResult<T>(status: number, json: unknown, token: string | null): Promise<T> {
+export async function readApiResult<T>(
+    status: number,
+    json: unknown,
+    token: string | null,
+    keepSessionOn401Message?: string,
+): Promise<T> {
     const body = json as (ErrorBody & T) | null
+    const isExpected401 = keepSessionOn401Message !== undefined && body?.message === keepSessionOn401Message
 
     // Only a request that carried the current token can end the session. A login attempt has no token, so its
     // 401 "Invalid credentials" is just an error. A late 401 for a token already replaced is ignored.
-    if (status === HTTP_UNAUTHORIZED && token !== null && getToken() === token) {
+    if (status === HTTP_UNAUTHORIZED && !isExpected401 && token !== null && getToken() === token) {
         await handleUnauthorized(body?.message)
     }
 

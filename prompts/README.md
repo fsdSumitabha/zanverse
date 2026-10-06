@@ -1074,6 +1074,11 @@ One-tap dialing now exists. The status list still has no distinct "Do not call":
 Under TCPA-style rules a number that asked not to be called must never be dialed again. Whether to add a DNC status
 (and block the call button for it) is a backend decision. Nothing on the phone changes until the web adds it.
 
+**Decided after session 15:** the phone disables calling for Not Interested (50), the status whose definition covers
+"do not call". The button turns grey with a crossed-out phone (`PhoneOff`), reads "Do not call" on the detail screen,
+and does nothing when pressed. `isCallBlocked(status)` in `src/lib/dialer.ts` holds the one list; a real do-not-call
+code from the backend goes there. Changing the status back re-enables the button.
+
 ### Device checklist
 
 - [ ] The call button on a list row and on the detail screen opens the dialer with the number filled in.
@@ -1298,3 +1303,354 @@ package.
 - [ ] Mark all read clears every bold row with one toast; two taps do not stack two toasts.
 - [ ] The bell shows the unseen count on every tab, and opening the inbox clears it.
 - [ ] Home button, then back into the app: exactly one immediate fetch, and no poll while in the background.
+
+## Session 16 — users module
+
+**Status: done, except the device checks.** The Users tab, the create form and the edit form are built and tested
+inside the whole app against a mocked API, with the image picker mocked. Real data needs the session 4 backend patch;
+the cloud container has no Android SDK. No new package.
+
+### What is in it
+
+- Screens (`src/screens/users/`): `UsersListScreen`, `UserCreateScreen`, `UserEditScreen`, registered in `UsersStack`.
+- Components (`src/components/users/`): `UserCard` (+ `UserListItem`), `UserCardSkeleton`, `UserForm`, `RegionSelect`,
+  `AvatarField`.
+- `src/lib/userDiff.ts`: `getUserFormEntries` (the web's create fields and edit diff) and `buildUserFormData`.
+- `src/lib/pickAvatar.ts`: `pickAvatarImage`, `getAvatarRejection`, `formatSize`. In `src/lib/` because session 17's
+  profile avatar uses it too.
+- `jest/setup.js` mocks `react-native-image-picker`.
+- The App test that opened a placeholder now opens the real lead source detail screen with its params, since the
+  placeholders are going away.
+
+### Decisions
+
+- **RegionBadge** already existed (`src/components/region/RegionBadges.tsx`, session 4); it is reused.
+- **UserPickerSheet is not built.** Session 8's `AttendeePickerScreen` already lists `GET /users/picker` with a search
+  for the meeting form. A second picker would be unused.
+- **The edit pencil** is a 44 dp button in the card's header, shown when `canOpen("UserEdit", role)` (10, 20). The
+  create button and the floating button show for `canOpen("UserCreate", role)` (10, 20, 69), the web's own list.
+- **The card's avatar** falls back to the first letter of the name, as on the web, not the generic person icon.
+- **The edit diff** is the web's, kept exactly: regions go only when the sorted set changed. An empty diff toasts
+  "Nothing changed yet" with no request.
+- **Create asks first** ("Create this account? The password is emailed to them."). The server does email the
+  password (`sendRegistrationMail`). The toast chain runs on one id: "Creating user..." → "<name> has been created"
+  with the email, or "Failed to create user" with the reason.
+- **"Email already exists"** comes back as a 409 with no `field`, so the screen routes it to the email box. Other errors
+  with a `field` go under that field. A 403 ("You cannot change your own role") is a toast; the form stays.
+- **Client checks** are the ones the browser does on the web: empty name or email → "Please fill out this field.";
+  a password under 6 characters (or none on create) → the server's "Password must be at least 6 characters"; no region
+  → "Pick at least one region".
+- **The avatar** is checked in the app with the server's words: "Invalid file type" (not JPEG or PNG) and "File too
+  large (max 5MB)". The MIME type falls back to the file extension when the picker gives none.
+- Known gap, unchanged: `GET /users` allows role 15, which `permissions.ts` does not list, and role 45 is listed but
+  the API refuses it with a 403 (shown as AccessDenied).
+
+### What was verified
+
+- `__tests__/users.test.tsx` (9 tests, the whole app): the list request `?page=1&limit=10`, "2 users found", the
+  Active / Inactive pills, "Disabled", the red "No region", "No login yet", "Created by", the pencil and both create
+  entry points; no pencil and AccessDenied on the edit screen for role 69; a create with a region and a JPEG avatar
+  sending the web's parts in order, after the confirm, with the success toast and the list again; "Pick at least one
+  region" with no dialog, then "Email already exists" on the field; a 6 MB image and a GIF refused in the app; a
+  single-region manager with US preselected and IN / AE disabled; "Nothing changed yet" with no PATCH; your own
+  account with the locked regions line, sending only `name`; the could-not-load card and "Back to users".
+- `__tests__/userDiff.test.ts` (7 tests): the edit diff and the create fields.
+- `npm test`: 39 suites, 374 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] The Users tab lists users, appends on scroll and refreshes on pull; a 2-character search goes back to page 1.
+- [ ] An inactive user's card is dimmed with "Inactive" and "Disabled", and real region badges.
+- [ ] The floating button clears the tab bar at 360 dp and is absent outside roles 10, 20, 69.
+- [ ] Creating a user with a JPEG avatar from the gallery works, and the new row appears.
+- [ ] A duplicate email shows "Email already exists" and creates nothing.
+- [ ] A 6 MB image or a non-JPEG/PNG file is refused with no request.
+- [ ] Saving an untouched edit shows "Nothing changed yet" with no request (Metro network log).
+- [ ] Editing only your own name sends `name` and no `regions`; your regions row is locked with the web's text.
+- [ ] A region the edited account holds that you cannot grant is ticked, locked and not removable.
+- [ ] The image picker returns `type` and `fileSize` on Android 13+ (the photo picker); if not, the extension
+      fallback covers the type.
+
+## Session 17 — profile
+
+**Status: done, except the device checks.** Profile and Edit profile are built and tested inside the whole app against
+a mocked API, with the image picker mocked. Step 1 (the curl check of the Bearer fallback on the dev API) cannot run:
+the dev API still lacks BACKEND_CHANGES rows 1–2, which these three routes depend on. No new package.
+
+### What is in it
+
+- Screens (`src/screens/profile/`): `ProfileScreen` and `ProfileEditScreen`, in `MoreStack` (`ProfileEdit` is new,
+  deep link `profile/edit`).
+- Components: `src/components/profile/` `ProfileCard` (+ `getRoleLabel`), `ProfileFacts` (+ `formatFactDate`),
+  `PasswordField`, `PhotoSourceSheet`, `HeaderAvatar`; `src/components/activityLog/` `MyActivityList` and a short
+  `ActivityLogItem` (session 18 replaces its body).
+- Types: `src/types/authProfile.ts` (copied unchanged) and `src/types/activityLog.ts` (copied from the web's
+  `activityLog/types.ts`, the only place the web keeps them).
+- `src/api/endpoints.ts`: `AUTH_API.PROFILE`, `PROFILE_AVATAR`, `PROFILE_PASSWORD`, and `ACTIVITY_LOGS_API`.
+- `src/api/client.ts`: `SendOptions.keepSessionOn401Message`. A 401 with exactly that message is an ordinary error.
+- `src/lib/pickAvatar.ts`: takes `{ source: "library" | "camera", invalidTypeMessage }`.
+- Every stack header now shows the bell and the profile photo; the photo opens the web top bar's menu (Signed in,
+  Profile, Edit profile, Logout).
+
+### Decisions
+
+- **A wrong current password keeps the session.** The password route answers "Old password is incorrect" with 401,
+  which the client's global handler would treat as an expired session. The edit screen passes
+  `keepSessionOn401Message: "Old password is incorrect"`; a 401 "Unauthorized" there still logs out as usual.
+- **Profile layout**: one FlatList of activity rows with the profile card in the list header, so the profile scrolls
+  away and pull-to-refresh reloads the profile and the first activity page together.
+- **"My activity"** uses `useListQuery` with `userId=<signed-in id>` and 15 a page, appended on scroll. No filters, as on
+  the web's profile page.
+- **Dates** use dayjs `D MMM YYYY, h:mm A`, with "—" for null, in place of the web's `toLocaleString`.
+- **The photo** comes from the camera or the gallery through a three-row sheet. JPEG and PNG up to 5 MB are checked in
+  the app with this route's words ("Invalid file type (JPEG or PNG only)", "File too large (max 5MB)"). After the
+  upload the profile reloads and `refreshUser()` updates the header photo.
+- **No CAMERA permission is declared.** react-native-image-picker opens the camera app through an intent, which needs
+  no permission; declaring CAMERA would make the intent fail until the person grants it.
+- **The avatar on the profile card** is the session 3 `Avatar` inside the web's rounded emerald square, with the
+  person icon when there is no photo.
+
+### What was verified
+
+- `__tests__/profile.test.tsx` (8 tests, the whole app): the card (name, email, "Admin", "Active"), the facts as
+  "1 Sep 2026, 3:07 PM", "—" for no login, "Created by Root Admin", and "My activity" from `?page=1&limit=15&userId=u1`
+  with "Created" and "Updated Status" rows; "Nothing yet."; the header menu opening Profile; the three password checks
+  with the web's toasts and no request; a wrong current password toasting "Old password is incorrect" with the token
+  kept and the screen still open, then a correct one sending `{ oldPassword, newPassword }`, toasting "Password updated
+  successfully" and going back; each eye toggle showing only its own field; a gallery photo posting one `avatarFile`
+  part, asking `/api/auth/me` again and toasting the server's message; a 6 MB camera photo and a GIF refused with no
+  request.
+- `npm test`: 40 suites, 382 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] With the backend patch on the dev API: `GET /api/auth/profile` with only the Bearer header returns the profile,
+      and a bad token returns 401 "Unauthorized" (step 1).
+- [ ] The header photo opens the menu, and Profile shows the real avatar, name, email, role and dates.
+- [ ] "My activity" lists 15 rows and appends on scroll; pull-to-refresh reloads the profile and the list.
+- [ ] A camera photo and a gallery JPEG both upload; the new photo shows on Profile and in the header at once.
+- [ ] The camera opens on a device where the camera permission was never granted.
+- [ ] A wrong current password does not log out; a correct one returns to Profile.
+- [ ] The keyboard never covers "Update password".
+
+## Session 18 — activity logs
+
+**Status: done, except the device checks.** Activity Logs is built and tested inside the whole app against a mocked
+API, and the Profile screen's "My activity" now uses the same list. Real data needs the session 4 backend patch; the
+cloud container has no Android SDK. No new package.
+
+### What is in it
+
+- Screen: `src/screens/activityLogs/ActivityLogsScreen.tsx`, as `ActivityLogs` in `MoreStack`.
+- Components (`src/components/activityLog/`): `ActivityLogList`, `ActivityLogItem` (the row shell, replacing session
+  17's short one), `ActivityDiff`, `InteractionLine` (+ `InteractionDetailBlock`), `entityTarget.ts` (`ENTITY_BADGE`,
+  `getEntityTarget`, `getInteractionParentTarget`, `openActivityTarget`), `ActivityLogFilterSheet`
+  (+ `hasActiveFilters`), `UserPickerModal`, `FilterButton`, `RestrictedArea`. Session 17's `MyActivityList` is gone.
+- Libs (`src/lib/activityLog/`): `formatActivityValue.ts` (copied, dates through dayjs `DD MMM YYYY, hh:mm A`) and
+  `buildActivityParams.ts` (the web `buildQuery` rules).
+- `useListQuery` takes `params`: sent after everything else in their own order, and a change goes back to page 1.
+
+### Decisions
+
+- **A status change shows the status's own colour** from `STATUS_META_BY_ENTITY` (the comment in that constants file
+  says the activity log uses it this way). The web's diff pills are red and green with the label; every other field
+  change keeps those red and green tones.
+- **The filter sheet** applies each change at once, as the web's filters do. The entity picker is a wrap of chips
+  ("All entities" first) rather than a second sheet, so only the user picker opens on top of the sheet. The name search
+  is debounced 300 ms; the other filters fire at once. The search box is disabled while a user is chosen.
+- **The profile list** has a filter button too, with entity and dates only, as the web passes `isAdmin={false}` there.
+  Its empty text is now the web list's "No activity matches the current filters." (session 17 said "Nothing yet.").
+- **Badges navigate** through `openActivityTarget`: Lead, Client, Project, User (to UserEdit), Lead Source and Lead
+  Source Upload (to the report) open in their tab; a role without that tab or screen gets the web's 403 toast.
+  Interaction, Meeting and the rest stay plain pills.
+- **The admin gate** is `[10, 20]` from the auth context. Everyone else sees the Restricted-area card with an "Open my
+  profile" button; no request is sent. More shows the row only to its own role list, as before.
+- `ActivityHeatmap.tsx` is not ported, as the prompt says.
+
+### What was verified
+
+- `__tests__/activityLogs.test.tsx` (5 tests, the whole app): the first request `?page=1&limit=15`; "8 entries"; a
+  status change as "New Lead" → "Contacted" with the Contacted pill in LEAD_STATUS_META's colour; a role change as
+  labels; an ObjectId shortened; Created and Deleted chips; an interaction row with "Status Changed", "on", "Lead —
+  Acme", the status pills and "Remarks: "; page 2 appended with the repeated row dropped; a Lead badge opening the lead
+  and a Meeting badge disabled; entity Lead sending `entityType=0`, a To date sent as that day's 23:59:59.999 in ISO,
+  and the user picker sending `userId` while the name search is disabled, then cleared; role 60 seeing the Restricted
+  area with no request, and its button opening Profile with `userId=u2` and no user picker.
+- `src/lib/activityLog/__tests__/activityLog.test.ts` (6 tests): the formatter cases from the prompt and the param
+  rules. The profile test now expects the shared list.
+- `npm test`: 42 suites, 393 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] More → Activity Logs shows 15 rows newest first and appends the next 15, with no repeated row.
+- [ ] Status rows show coloured pills; role, ObjectId and date values read as the web shows them.
+- [ ] An interaction row shows its type chip, "on Lead — <name>", and for a 2510 row the pills and the remarks.
+- [ ] Lead, Client, Project and Lead Source badges open their screens; Interaction and Meeting badges do nothing.
+- [ ] Entity "Lead" filters; a To date includes that day; a user disables the name search.
+- [ ] A role-60 account sees the Restricted-area card, and its button opens Profile.
+- [ ] Profile's "My activity" shows only that user's rows, with no user picker.
+
+## Session 19 — dashboard and search
+
+**Status: done, except the device checks.** The Dashboard tab is a real screen: four counters, the next four meetings
+and the Lead / Client / Project feed in one list. A search icon in its header opens a global Search screen. It is
+built and tested inside the whole app against a mocked API. Real data needs the session 4 backend patch; the cloud
+container has no Android SDK. No new package.
+
+### What is in it
+
+- Screens: `src/screens/dashboard/DashboardScreen.tsx` and `SearchScreen.tsx`, as `Dashboard` and `Search` in
+  `DashboardStack` (the placeholder is gone there). `DASHBOARD_SCREEN_OPTIONS` in `stackOptions.ts` puts the search
+  icon before the bell and the profile menu on the Dashboard only.
+- Components (`src/components/dashboard/`): `EntityCard`, `LastInteraction`, `EntityCardSkeleton`, `StatsCards`,
+  `UpcomingMeetingsCard` (+ `smartDate`), `SearchResultRow`, `HeaderSearchButton`.
+- Hooks: `useDashboardFeed.ts` (the feed, both paging branches) and `useRouteFilterParams.ts` (applies a list filter
+  from route params once, then clears them).
+- `src/lib/entityNav.ts`: `navigateToEntity`, `openTabScreen` and `hrefToScreen`. `hrefToScreen` reuses
+  `resolveNotificationPath` for leads, clients and projects, and sends `/admin/operations/meetings` to Meetings.
+- `src/types/search.ts` copied from the web. `endpoints.ts` gains `DASHBOARD_API`, `STATS_API` and `SEARCH_API`.
+- Route params: `ClientsList` takes `{ status }` and `Meetings` takes `{ range }`. `SearchField` takes `autoFocus`.
+
+### Decisions
+
+- **Paging.** The hook sends `?page=<n>&limit=20`. When the reply has `pagination`, it appends the next page and drops
+  a row it already has. When it has no `pagination` (the backend change has not landed), it keeps the whole array and
+  shows it 20 rows at a time behind the same `loadMore`. No second request is sent in that case.
+- **403.** `AccessDenied` with the API's message takes the feed's place. The counters and the meetings card stay above
+  it and stay silent: a failed `/stats` shows "—", as on the web.
+- **Errors.** The web's red box ("Failed to load data", the message, Retry) and its toast "Failed to load operations
+  data" are kept. Retry repeats the request that failed. With rows already on screen, the box shows under them instead
+  of replacing them.
+- **Meetings card.** It asks for `range=upcoming&limit=20`, sorts soonest first and keeps 4, as the web does. A row
+  with a lead, client or project opens it; "View all" opens Meetings on the upcoming range; "View pipeline overview"
+  opens Overall stats.
+- **Stat tiles** open the Leads, Clients (status 1), Projects and Meetings lists. A role without that tab gets the
+  web's 403 toast.
+- **Search** sends `&limit=10`, as the prompt says (the web sends no limit, so the route's default of 5 applies there).
+  A hit clears the box, as the web does. An href the app does not know is logged and ignored. A short query also
+  drops any answer still on its way, so old results never come back after the box is cleared.
+- **Bottom padding.** The feed uses the same `p-4` as every other list. The session 1 finding applies: a tab screen
+  already ends at the tab bar, so `useBottomTabBarHeight() + insets.bottom` would count the inset twice.
+- **Older tests.** The Dashboard now fetches on app start, so four suites look for calls by URL and for lists inside
+  their own screen. No behaviour changed.
+
+### What was verified
+
+- `__tests__/dashboard.test.tsx` (14 tests, the whole app): lead, client and project cards with phone, email, source,
+  company and description; a 2510 row as "Status Changed" with "New Lead" → "Contacted" and the META underline; a
+  2110 row with its label; each card opening its own detail screen; 25 rows shown as 20 then 25 with one request; page
+  2 asked for when `pagination` is present, with the repeated row dropped; one pull re-asking for the feed, `/stats`
+  and the meetings; the error box, the toast and Retry; "No data found"; role 20 seeing "Access Denied" with the API's
+  message and "—" with no feed toast; the four tiles, and Active Clients opening clients with `status=1`; the meetings
+  card as "Today, 3:00 PM · Acme Lead", "Tomorrow, 9:00 AM", "Fri, 2:30 PM" and "Oct 21, 11:00 AM", soonest first,
+  with the fifth left out, and a row opening its lead; View all opening Meetings with `range=upcoming`; search with one
+  character sending nothing, two characters sending `?search=ac&limit=10`, Leads / Clients / Meetings sections with no
+  empty Projects section, and a hit opening its lead; "No results for “zz”"; the server's message on a failure.
+- `npm test`: 43 suites, 407 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] The Dashboard opens on the four counters, the meetings card and the feed from the dev API.
+- [ ] Lead, Client and Project cards open their detail screens in their own tabs.
+- [ ] Scrolling to the end adds 20 rows; the Metro log shows one feed request per page, or one in total without
+      the backend change. Record the payload size and the row count of `GET /api/admin/operations`.
+- [ ] One pull reloads the feed, the counters and the meetings.
+- [ ] Active Clients opens the clients list on status 1.
+- [ ] The meetings card shows at most four, soonest first, and each opens its parent.
+- [ ] Search: two characters show grouped hits, one character sends nothing, a hit opens its screen, no match says
+      "No results for …", and a failure shows the server's message.
+- [ ] A role-20 account sees Access Denied in place of the feed.
+- [ ] After a region switch, the feed, the counters, the meetings and the search use the new region.
+
+## Session 20 — overall stats and charts
+
+**Status: done, except the Android build and the device checks.** "Pipeline overview" is built with native charts
+from `react-native-gifted-charts` and tested inside the whole app against a mocked API. The cloud container has no
+Android SDK, so the native build of the two new packages is not proven yet. Real data needs the session 4 backend
+patch.
+
+### Packages
+
+| Package | Version | Note |
+|---|---|---|
+| `react-native-gifted-charts` | 1.4.81 | pulls `gifted-charts-core` 0.1.83; pure JS on `react-native-svg` |
+| `react-native-linear-gradient` | 2.8.3 | the only native code added; autolinked (`LinearGradientPackage`) |
+
+- Both are pinned exactly, like every other package. `docs/OVERVIEW.md` §4 said `^1.4` for both; it now names these
+  two versions.
+- `react-native-linear-gradient` 2.8.3 is an old-style view manager with no codegen. On the New Architecture it runs
+  through React Native's interop layer. This screen never draws it: the area fill is an SVG gradient inside
+  gifted-charts. The JS package must stay installed: gifted-charts loads it as soon as the library is imported and
+  throws if it is missing. If its native side fails to build on 0.87, turn off only its Android autolinking in
+  `react-native.config.js` (`dependencies: { "react-native-linear-gradient": { platforms: { android: null } } }`).
+  The import then still works, and this screen never renders the native view.
+- **The spike.** In place of a throwaway screen, a Jest render of a `PieChart` with `donut`, `innerRadius` and
+  `focusOnPress` proved it renders on this React and React Native. The Android production bundle builds and
+  `hermesc` compiles it with gifted-charts inside. The device build is still to do (checklist below).
+
+### What is in it
+
+- Screen: `src/screens/stats/OverallStatsScreen.tsx`, as `OverallStats` in `MoreStack`. The More row "Overall Stats"
+  already pointed there. `src/screens/PlaceholderScreen.tsx` is deleted: no screen uses it any more.
+- Components (`src/components/stats/`): `KpiRow` (+ `getConversionLabel`), `StatusPieCard`, `StatsCardHeader`,
+  `BudgetCard`, `RoleCountsCard` (+ `getRoleCountLabel`), `LeadsOverTimeCard`, `MonthTable`, `LeadsMonthlyChart`,
+  `statsTones.ts` (the web's `TONE` map and card classes).
+- `src/types/overallStats.ts` (copied; `conversionRate` is `number | null`), `src/constants/statsPalette.ts` (the
+  four palettes), `src/lib/statsChart.ts` (`toPieData`, `getPercent`, `formatInrCompact`, `fillMonths`,
+  `MONTH_NAMES`, `getConvertedLine`). `endpoints.ts` gains `OVERALL_STATS_API`.
+
+### Decisions
+
+- **Palette names.** The four palettes keep the web's names and values, but they are exported together as
+  `STATS_PALETTE.LEAD_STATUS_META` and so on. The plain names already belong to the numeric maps in
+  `src/constants`, and two different `LEAD_STATUS_META` exports would be easy to mix up.
+- **Conversion.** The rate is the API's: converted ÷ (converted + lost). `null` shows "—" in the KPI and the donut
+  centre, and the Leads card then has no accent. The Leads accent is the computed `N% converted`, not the web's
+  hard-coded "89% converted". The KPI subtitle stays the web's "`converted` of `total` leads".
+- **Pie cards.** The legend sits under the chart, so each row has the full card width at 360dp; "Maintenance" and the
+  other long labels fit. A tap lifts a slice on every card. Only the donut has a centre: the tapped slice's value
+  and "label · share", and a second tap brings back the conversion. A plain pie has no hole for a centre label, so
+  its readout is the legend.
+- **Budget and team cards** are new on the phone, as the prompt asks. The web panel has neither. The budget card's
+  line names the four running statuses the route sums.
+- **Leads over time.** The year accordion, `fillMonths` and the mobile three-column table port as they are. The month
+  chart measures its width, so the 12 points always fit. A tap shows the month, its two counts and
+  "N% converted" or "No leads"; the readout stays until the next tap. The pointer does the tap readout, so
+  `focusEnabled` is not set: the two would both answer the same touch.
+- **States.** The web returns nothing on a failure. A whole screen needs more, so a failure shows "Could not load the
+  overview" with the server's message and Try again; a reply with no data says "No stats yet".
+- **Access.** The route accepts any signed-in role, and the screen has no role gate. The More menu row keeps the
+  web's role list, as before.
+
+### What was verified
+
+- `__tests__/overallStats.test.tsx` (9 tests, the whole app, as role 60): one request; the title, the subtitle and
+  "Updated 2 minutes ago"; the KPIs "75%", "3 of 20 leads", "₹12.50 L", "4 projects running", "2 this week · 1 today"
+  and "10 total · 2 inactive"; "—" and no "NaN" for a null rate; each card's slice colours equal its legend swatches;
+  shares such as "New 40%"; a status with 0 left out; "No activity yet" for a card of zeros; a real tap on the first
+  donut slice showing "8" and "New · 40%", and a second tap restoring "75%" and "conversion"; the budget card and the
+  team card in count order with "Role 25" for an unknown code; 2026 open first with 12 rows and "—" for empty months,
+  2026 closing and 2025 opening; the chart's labels "JFMAMJJASOND" and its readout for March and for an empty
+  January; one more request on pull-to-refresh; the Clients title opening the clients list; the error state and Try
+  again.
+- `__tests__/statsChart.test.ts` (7 tests): the Cr / L / k thresholds, `toPieData`, `getPercent`, `fillMonths`,
+  `getConvertedLine`, "—" for a null rate, and the role fallback.
+- `npm test`: 45 suites, 423 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The Android production
+  bundle builds with the new classes compiled, `hermesc` compiles it, and `react-native config` lists the gradient
+  package for Android autolinking. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] `npm run android` builds and installs with gifted-charts and linear-gradient linked.
+- [ ] More → Overall Stats opens "Pipeline overview" with real data for a non-admin account.
+- [ ] The four KPIs match the web screen for the same data; a database with no converted or lost lead shows "—".
+- [ ] Each chart's slice colours match its legend; a card of zeros says "No activity yet".
+- [ ] A tap on a Leads slice names it in the centre; a second tap brings back the conversion.
+- [ ] The budget headline matches the web's Cr / L / k text.
+- [ ] Leads over time opens the latest year, toggles on tap, shows 12 rows with "—", and the chart's readout names the
+      tapped month. Scrolling the screen with a finger on the chart still scrolls.
+- [ ] Nothing scrolls sideways at 360dp, and every legend row reads well in light and dark.

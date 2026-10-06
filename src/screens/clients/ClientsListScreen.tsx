@@ -5,6 +5,7 @@ import ClientCard from "@/components/clients/ClientCard"
 import ListScreen from "@/components/list/ListScreen"
 import { CLIENT_STATUS_META } from "@/constants/clientStatus"
 import { useListQuery } from "@/hooks/useListQuery"
+import { useRouteFilterParams } from "@/hooks/useRouteFilterParams"
 import type { ClientsStackParamList } from "@/navigation/types"
 import type { Client } from "@/types/clients"
 
@@ -23,6 +24,7 @@ function getCountLabel(total: number): string {
 export default function ClientsListScreen() {
     const navigation = useNavigation<Navigation>()
     const query = useListQuery<Client>({ path: CLIENTS_API })
+    useRouteFilterParams(["status"], query.setFilters)
 
     return (
         <ListScreen

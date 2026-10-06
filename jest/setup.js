@@ -50,6 +50,12 @@ jest.mock("@react-native-documents/picker", () => ({
     isErrorWithCode: jest.fn(() => false),
 }))
 
+// The real module calls into native code. Tests that pick a photo give launchImageLibrary its answer.
+jest.mock("react-native-image-picker", () => ({
+    launchImageLibrary: jest.fn(() => Promise.resolve({ didCancel: true })),
+    launchCamera: jest.fn(() => Promise.resolve({ didCancel: true })),
+}))
+
 // MMKV switches to its own in-memory mock under Jest, but still imports Nitro, which needs its native module.
 jest.mock("react-native-nitro-modules", () => ({
     NitroModules: { createHybridObject: jest.fn() },

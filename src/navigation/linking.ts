@@ -140,11 +140,12 @@ const MORE_PATHS: PathConfig<MoreStackParamList> = {
         ActivityLogs: "activity-logs",
         Notifications: "notifications",
         Profile: "profile",
+        ProfileEdit: "profile/edit",
     },
 }
 
 const DASHBOARD_PATHS: PathConfig<DashboardStackParamList> = {
-    screens: { Dashboard: "" },
+    screens: { Dashboard: "", Search: "search" },
 }
 
 /**
