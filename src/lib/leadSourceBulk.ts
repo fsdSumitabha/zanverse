@@ -3,6 +3,7 @@ import { LEAD_SOURCES_API } from "@/api/endpoints"
 
 import { todayString } from "./leadSourceDay"
 import { notify } from "./notify"
+import { cancelCallbackReminder } from "./push/reminders"
 
 /** What the bulk route reports. */
 export interface BulkResult {
@@ -15,6 +16,8 @@ export interface BulkResult {
 }
 
 export type BulkAction = "assign" | "day" | "status" | "delete"
+
+const REMINDER_CLEARING_ACTIONS: BulkAction[] = ["day", "status", "delete"]
 
 /** The bulk route's limit (BULK_MAX in the web's mutations.ts). */
 export const BULK_MAX = 200
@@ -40,7 +43,16 @@ export async function runBulk(
     if (ids.length > BULK_MAX) {
         throw new Error(`Select ${BULK_MAX} or fewer lead sources at a time.`)
     }
-    return send<BulkResult>(`${LEAD_SOURCES_API}/bulk`, "POST", { ...body, action, ids, today: todayString() })
+    const result = await send<BulkResult>(`${LEAD_SOURCES_API}/bulk`, "POST", {
+        ...body,
+        action,
+        ids,
+        today: todayString(),
+    })
+    // A new day or status clears callbackAt server-side, and a deleted source has no callback: every reminder for
+    // the selection goes. Assign leaves the callback as it is.
+    if (REMINDER_CLEARING_ACTIONS.includes(action)) ids.forEach((id) => cancelCallbackReminder(id))
+    return result
 }
 
 /** "3 lead sources marked Not Reached. 1 already set. 2 skipped." as a success toast. */

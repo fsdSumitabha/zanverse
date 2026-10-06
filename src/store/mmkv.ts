@@ -9,7 +9,8 @@ import { ALL_REGIONS, REGION_CODES, type ActiveRegion } from "@/lib/region"
  * - the session: the last `/api/auth/me` payload and the active region. Both go on logout and on login.
  * - the region-keyed cache: anything fetched under one region, stored as `cache.<region>.<key>`. It goes on a region
  *   switch, because it no longer matches what the person is looking at.
- * - preferences that outlive a session: only the last login email, so Login can prefill it.
+ * - preferences that outlive a session: the last login email, so Login can prefill it, and the two push settings
+ *   (whether the notification permission was asked, and whether callback reminders are on).
  */
 
 const storage = createMMKV({ id: "zanverse" })
@@ -18,6 +19,8 @@ const KEY = {
     ME: "session.me",
     ACTIVE_REGION: "session.activeRegion",
     LAST_EMAIL: "prefs.lastEmail",
+    PUSH_PERMISSION_ASKED: "push.permissionAsked",
+    PUSH_REMINDERS_ENABLED: "push.remindersEnabled",
 } as const
 
 const CACHE_PREFIX = "cache."
@@ -75,6 +78,26 @@ export function getLastEmail(): string {
 /** Remembers the email after a successful login. */
 export function saveLastEmail(email: string): void {
     storage.set(KEY.LAST_EMAIL, email)
+}
+
+/** True once the app has asked for the notification permission. It asks once, ever, on the first callback saved. */
+export function wasPushPermissionAsked(): boolean {
+    return storage.getBoolean(KEY.PUSH_PERMISSION_ASKED) === true
+}
+
+/** Remembers that the notification permission was asked, whatever the answer. */
+export function markPushPermissionAsked(): void {
+    storage.set(KEY.PUSH_PERMISSION_ASKED, true)
+}
+
+/** The Profile screen's "Callback reminders" switch. On unless turned off. */
+export function getRemindersEnabled(): boolean {
+    return storage.getBoolean(KEY.PUSH_REMINDERS_ENABLED) !== false
+}
+
+/** Stores the "Callback reminders" switch. */
+export function saveRemindersEnabled(isEnabled: boolean): void {
+    storage.set(KEY.PUSH_REMINDERS_ENABLED, isEnabled)
 }
 
 /** Reads a cached value fetched under the current region. */

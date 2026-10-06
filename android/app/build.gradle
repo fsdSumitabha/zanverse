@@ -2,6 +2,12 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Firebase Cloud Messaging reads android/app/google-services.json (gitignored; copy the .example and fill it from the
+// Firebase console). Without the file the app builds and runs with the device-only callback reminders: no push token.
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}
+
 // Sentry: uploads the release source maps and native symbols. Only with SENTRY_AUTH_TOKEN set (CI secrets, never a
 // file in git); without it the upload would fail, so a local or fresh-clone build skips this.
 if (System.getenv("SENTRY_AUTH_TOKEN")) {

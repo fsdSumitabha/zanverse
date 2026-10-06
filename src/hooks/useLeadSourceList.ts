@@ -12,6 +12,7 @@ import {
     isPlainToday,
     type LeadSourceFilters,
 } from "@/lib/leadSourceQuery"
+import { syncCallbackReminders } from "@/lib/push/reminders"
 import { readLeadSourcesToday, writeLeadSourcesToday } from "@/store/cache"
 import type { LeadSourceCounts, LeadSourceListResponse, LeadSourceRow } from "@/types/leadSource"
 
@@ -85,6 +86,8 @@ export function useLeadSourceList({ isPaused }: { isPaused: boolean }) {
             setCounts(json.counts)
             setProgress(json.progress)
             setTotal(json.pagination.total)
+            // A callback set or cleared on the web reaches this phone's reminders on the next load.
+            syncCallbackReminders(json.data)
         } catch (error) {
             if (!isMounted.current || id !== requestId.current) return
             if (error instanceof ApiError && error.status === 401) return

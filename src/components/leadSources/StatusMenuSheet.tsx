@@ -6,23 +6,24 @@ import { Pressable, Text, View } from "react-native"
 import { ApiError, send } from "@/api/client"
 import { LEAD_SOURCES_API } from "@/api/endpoints"
 import { Button, Sheet } from "@/components/ui"
+import { SheetScrollView } from "@/components/ui/sheetScrollables"
 import {
     LEAD_SOURCE_PICKABLE_STATUSES,
     LEAD_SOURCE_STATUS,
     LEAD_SOURCE_STATUS_META,
     type LeadSourceStatus,
 } from "@/constants/leadSourceStatus"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 import { callbackPayload, formatCallback } from "@/lib/callback"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { todayString } from "@/lib/leadSourceDay"
 import { toNativeClasses } from "@/lib/nativeClasses"
 import { notify } from "@/lib/notify"
+import { scheduleCallbackReminder } from "@/lib/push/reminders"
 import type { LeadSourceRow } from "@/types/leadSource"
 
 import CallbackPicker, { EMPTY_CHOICE, resolveChoice, type CallbackChoice } from "./CallbackPicker"
 import NoteBox from "./NoteBox"
-import { SheetScrollView } from "@/components/ui/sheetScrollables"
-import { useOfflineReason } from "@/hooks/useIsOnline"
 
 const UNKNOWN_META = { label: "Unknown", color: "bg-gray-500 text-white" }
 const HTTP_CONFLICT = 409
@@ -117,6 +118,9 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
                 today: todayString(),
                 ...(at ? callbackPayload(at) : {}),
             })
+            // Call Back sets the phone's reminder (and asks for the permission the first time); any other status
+            // clears callbackAt on the server, so the reminder goes.
+            scheduleCallbackReminder(updated, { askPermission: isCallBack })
             onUpdated(updated)
             notify.success(
                 updated.callbackAt && isCallBack

@@ -17,6 +17,22 @@ jest.mock("@sentry/react-native", () => ({
     reactNavigationIntegration: jest.fn(() => ({ name: "ReactNavigation", registerNavigationContainer: jest.fn() })),
 }))
 
+// Notifee talks to native code. The stand-in keeps scheduled reminders in memory.
+jest.mock("@notifee/react-native", () => require("./notifeeMock"))
+
+// Firebase is not configured in tests (no google-services.json), as on a build without it: no app, so no token.
+jest.mock("@react-native-firebase/app", () => ({ getApps: jest.fn(() => []), getApp: jest.fn() }))
+jest.mock("@react-native-firebase/messaging", () => ({
+    getMessaging: jest.fn(() => ({})),
+    getToken: jest.fn(() => Promise.resolve("fcm-token")),
+    deleteToken: jest.fn(() => Promise.resolve()),
+    onTokenRefresh: jest.fn(() => jest.fn()),
+    onMessage: jest.fn(() => jest.fn()),
+    onNotificationOpenedApp: jest.fn(() => jest.fn()),
+    getInitialNotification: jest.fn(() => Promise.resolve(null)),
+    setBackgroundMessageHandler: jest.fn(),
+}))
+
 // The real sheets need Reanimated and native gestures. The stand-in keeps present / dismiss / onDismiss.
 jest.mock("@gorhom/bottom-sheet", () => require("./bottomSheetMock"))
 

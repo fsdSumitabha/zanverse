@@ -35,6 +35,8 @@ local.properties
 !debug.keystore
 *.jks
 android/keystore.properties
+# Firebase config for this app: each developer and CI supplies it (see google-services.json.example).
+android/app/google-services.json
 .kotlin/
 
 # node.js

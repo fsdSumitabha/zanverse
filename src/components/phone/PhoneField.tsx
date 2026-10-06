@@ -5,12 +5,12 @@ import { useState, type ComponentRef, type RefObject } from "react"
 import { Pressable, Text, TextInput, View } from "react-native"
 
 import { FIELD_CLASSES } from "@/components/ui"
+import SheetTextInput from "@/components/ui/SheetTextInput"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { PHONE_MESSAGES, checkPastedPhone, getPhonePlaceholder } from "@/lib/phone"
 import { PALETTE } from "@/theme"
 
 import CountrySheet from "./CountrySheet"
-import SheetTextInput from "@/components/ui/SheetTextInput"
 
 // Phone input with a country picker. Use it with useEditablePhone():
 // <PhoneField {...phone.fieldProps} />. Ported from the web's PhoneField.tsx.

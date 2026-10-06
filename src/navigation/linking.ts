@@ -12,31 +12,49 @@ import type {
     MoreStackParamList,
     ProjectsStackParamList,
     RootStackParamList,
-    TabParamList,
     UsersStackParamList,
 } from "./types"
 
 export const DEEP_LINK_PREFIX = "zanverse://"
 
-/** Where a web path or a notification's `url` leads in the app. */
-export interface LinkTarget {
-    tab: keyof TabParamList
+/** A lead, client or project, opened by its `id`. */
+interface RecordTarget {
+    tab: "LeadsTab" | "ClientsTab" | "ProjectsTab"
     screen: "LeadDetail" | "ClientDetail" | "ProjectDetail"
     params: { id: string }
 }
 
+/** A lead source, opened by its `sourceId`: the target of a callback reminder. */
+interface LeadSourceTarget {
+    tab: "CallsTab"
+    screen: "LeadSourceDetail"
+    params: { sourceId: string }
+}
+
+/** Where a web path or a notification's `url` leads in the app. */
+export type LinkTarget = RecordTarget | LeadSourceTarget
+
 const OBJECT_ID = /^[a-f0-9]{24}$/i
 
 // The three shapes a notification row's `url` takes (the web's src/lib/notifications/render.ts).
-const RECORD_PATHS: { prefix: string; tab: LinkTarget["tab"]; screen: LinkTarget["screen"] }[] = [
+const RECORD_PATHS: { prefix: string; tab: RecordTarget["tab"]; screen: RecordTarget["screen"] }[] = [
     { prefix: "/admin/operations/leads/", tab: "LeadsTab", screen: "LeadDetail" },
     { prefix: "/admin/operations/clients/", tab: "ClientsTab", screen: "ClientDetail" },
     { prefix: "/admin/operations/projects/", tab: "ProjectsTab", screen: "ProjectDetail" },
 ]
 
+// A callback reminder's `url`, and the shape the backend's due-callback push will use.
+const LEAD_SOURCE_PREFIX = "/admin/operations/lead-sources/"
+
+function readId(path: string, prefix: string): string | null {
+    const id = path.slice(prefix.length).replace(/\/+$/, "")
+    return OBJECT_ID.test(id) ? id : null
+}
+
 /**
  * Maps a notification's web path to a screen: `/admin/operations/leads/:id`, `/clients/:id` and `/projects/:id` go to
- * LeadDetail, ClientDetail and ProjectDetail. Anything else, including a missing id, gives `null`.
+ * LeadDetail, ClientDetail and ProjectDetail, and `/lead-sources/:id` to LeadSourceDetail. Anything else, including a
+ * missing id, gives `null`.
  */
 export function resolveNotificationPath(url: string | null | undefined): LinkTarget | null {
     if (!url) return null
@@ -44,8 +62,12 @@ export function resolveNotificationPath(url: string | null | undefined): LinkTar
 
     for (const { prefix, tab, screen } of RECORD_PATHS) {
         if (!path.startsWith(prefix)) continue
-        const id = path.slice(prefix.length).replace(/\/+$/, "")
-        return OBJECT_ID.test(id) ? { tab, screen, params: { id } } : null
+        const id = readId(path, prefix)
+        return id ? { tab, screen, params: { id } } : null
+    }
+    if (path.startsWith(LEAD_SOURCE_PREFIX)) {
+        const sourceId = readId(path, LEAD_SOURCE_PREFIX)
+        return sourceId ? { tab: "CallsTab", screen: "LeadSourceDetail", params: { sourceId } } : null
     }
     return null
 }

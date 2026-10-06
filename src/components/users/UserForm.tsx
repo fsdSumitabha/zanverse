@@ -4,11 +4,11 @@ import { Switch, Text, View } from "react-native"
 import { Button, Card, Input, SelectSheet, type SelectOption } from "@/components/ui"
 import { USER_ROLE_META, type UserRole } from "@/constants/userRoles"
 import { useAuth } from "@/contexts/AuthContext"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 import type { LoadedUser, UserFormValues } from "@/lib/userDiff"
 
 import AvatarField from "./AvatarField"
 import RegionSelect from "./RegionSelect"
-import { useOfflineReason } from "@/hooks/useIsOnline"
 
 interface Props {
     mode: "create" | "edit"

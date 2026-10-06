@@ -1,14 +1,16 @@
+import notifee from "@notifee/react-native"
 import { Linking, Text } from "react-native"
 import type ReactTestRenderer from "react-test-renderer"
 
 import { notify } from "@/lib/notify"
 import { clearToken, saveToken } from "@/store/keychain"
 import LeadSourceDetailScreen from "@/screens/leadSources/LeadSourceDetailScreen"
-import { saveActiveRegion } from "@/store/mmkv"
+import { clearAll, saveActiveRegion } from "@/store/mmkv"
 
 import {
     findPressable,
     findPressableByText,
+    flush,
     getCalls,
     getTexts,
     installFetchMock,
@@ -147,11 +149,23 @@ function getDetailCalls(): string[] {
     return getCalls(fetchMock).filter((call) => call === `GET ${DETAIL_PATH}`)
 }
 
+// Reminders are set behind the save, through a few awaits: let them finish.
+async function settle() {
+    for (let i = 0; i < 5; i += 1) await flush()
+}
+
+// What the Notifee stand-in has scheduled (jest/notifeeMock.js).
+const { scheduledTriggers } = jest.requireMock("@notifee/react-native") as {
+    scheduledTriggers: Map<string, object>
+}
+
 beforeEach(async () => {
     jest.clearAllMocks()
     fetchMock = installFetchMock()
     detail = makeDetail()
+    scheduledTriggers.clear()
     await clearToken()
+    clearAll()
     saveActiveRegion(null)
 })
 
@@ -254,11 +268,17 @@ describe("lead source detail", () => {
 
         expect(bodies[0].callbackDay).toBe(TODAY)
         expect(success).toHaveBeenCalledWith(expect.stringMatching(/^Callback set for /))
+        // The phone's own reminder is set, asking for the permission this first time.
+        await settle()
+        expect(scheduledTriggers.has("callback-s1")).toBe(true)
+        expect(notifee.requestPermission).toHaveBeenCalledTimes(1)
         const button = findPressable(detailOf(app), /^Callback .*, in 1 hr?/)
         await press(button)
         await press(findPressableByText(detailOf(app), "Clear callback"))
         expect(bodies[1]).toEqual({ callbackAt: null })
         expect(success).toHaveBeenCalledWith("Callback cleared")
+        await settle()
+        expect(scheduledTriggers.has("callback-s1")).toBe(false)
         await unmountApp(app)
     })
 
@@ -340,11 +360,15 @@ describe("lead source detail", () => {
                 "It is assigned to Ravi Kumar.",
             ]),
         )
+        scheduledTriggers.set("callback-s1", { notification: {}, trigger: {} })
         await press(findPressableByText(detailOf(app), "Create lead"))
 
         expect(getCalls(fetchMock)).toEqual(
             expect.arrayContaining([`POST ${DETAIL_PATH}/convert`, `GET /api/admin/operations/leads/${LEAD_ID}`]),
         )
+        // Converted is final: no reminder is left to ring.
+        await settle()
+        expect(scheduledTriggers.has("callback-s1")).toBe(false)
         expect(success).toHaveBeenCalledWith("Lead created")
         expect(getTexts(app)).toContain("Lead source")
         await unmountApp(app)

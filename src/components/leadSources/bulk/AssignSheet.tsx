@@ -2,10 +2,10 @@ import { useState } from "react"
 
 import AssigneeSelect from "@/components/leadSources/AssigneeSelect"
 import { Button, Dialog } from "@/components/ui"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 import { pluralSources } from "@/lib/leadSourceBulk"
 
 import { useBulkSave, type BulkSheetProps } from "./useBulkSave"
-import { useOfflineReason } from "@/hooks/useIsOnline"
 
 /** Gives every selected row to one person, or to nobody. Ported from the web's AssignDialog. */
 export default function AssignSheet(props: BulkSheetProps & { regions: string[] }) {

@@ -65,6 +65,8 @@ Already installed: `react-native@0.87.1`, `react@19.2.3`, `typescript@^6.0.3`, `
 | `@react-native-community/netinfo` | `^12` | offline banner |
 | `@sentry/react-native` | `^7` | crash reporting |
 | `react-native-gifted-charts` + `react-native-linear-gradient` | `1.4.81` + `2.8.3` (pinned in session 20) | session 20 only |
+| `@notifee/react-native` | `9.1.8` (pinned in session 23) | device callback reminders, foreground display of pushes, tap events |
+| `@react-native-firebase/app` + `@react-native-firebase/messaging` | `26.4.0` + `26.4.0` (pinned in session 23) | FCM token and messages; inert without `android/app/google-services.json` |
 | `react-native-reanimated` + `react-native-worklets` + `@gorhom/bottom-sheet` | `^4.7` + `^0.13` + `^5` | Reanimated + Worklets are installed in session 1, because `nativewind/babel` loads their Babel plugin. Bottom sheet stays session 21. |
 
 **Deliberately not used:** TanStack Query, react-hook-form, client-side zod, Redux/Zustand, react-native-windows, Skia,

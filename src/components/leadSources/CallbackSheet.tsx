@@ -5,15 +5,16 @@ import { Pressable, Text, View } from "react-native"
 import { send } from "@/api/client"
 import { LEAD_SOURCES_API } from "@/api/endpoints"
 import { Input, Sheet } from "@/components/ui"
+import { SheetScrollView } from "@/components/ui/sheetScrollables"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 import { useNow } from "@/hooks/useNow"
 import { callbackPayload, formatCallback, relativeCallback } from "@/lib/callback"
 import { notify } from "@/lib/notify"
+import { scheduleCallbackReminder } from "@/lib/push/reminders"
 import type { LeadSourceRow } from "@/types/leadSource"
 
 import CallbackPicker, { EMPTY_CHOICE, resolveChoice, type CallbackChoice } from "./CallbackPicker"
 import { NOTE_MAX_LENGTH } from "./NoteBox"
-import { SheetScrollView } from "@/components/ui/sheetScrollables"
-import { useOfflineReason } from "@/hooks/useIsOnline"
 
 interface Props {
     /** The source whose callback is set, or null when the sheet is closed. */
@@ -57,6 +58,8 @@ export default function CallbackSheet({ source, onClose, onUpdated }: Props) {
                 ...(at ? callbackPayload(at) : { callbackAt: null }),
                 note: note.trim() || undefined,
             })
+            // Set or moved: the reminder follows, asking for the permission the first time. Cleared: it goes.
+            scheduleCallbackReminder(row, { askPermission: at !== null })
             onUpdated(row)
             notify.success(at ? `Callback set for ${formatCallback(at.toISOString())}` : "Callback cleared")
             onClose()

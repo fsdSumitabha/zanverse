@@ -5,6 +5,8 @@ import { Pressable, Text, View } from "react-native"
 
 import DateField from "@/components/list/DateField"
 import { Button, FIELD_BOX_CLASSES, FIELD_CLASSES, Sheet } from "@/components/ui"
+import { SheetScrollView } from "@/components/ui/sheetScrollables"
+import SheetTextInput from "@/components/ui/SheetTextInput"
 import { ENTITY_TYPE_META, type EntityType } from "@/constants/entityTypes"
 import { formatLocalDate } from "@/lib/dates"
 import { enableIconClassNames } from "@/lib/iconClassName"
@@ -12,8 +14,6 @@ import { PALETTE } from "@/theme"
 import { EMPTY_FILTERS, type ActivityLogFilterState } from "@/types/activityLog"
 
 import UserPickerModal from "./UserPickerModal"
-import SheetTextInput from "@/components/ui/SheetTextInput"
-import { SheetScrollView } from "@/components/ui/sheetScrollables"
 
 interface Props {
     visible: boolean

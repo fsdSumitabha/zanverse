@@ -2,11 +2,11 @@ import { useState } from "react"
 
 import DayChoice from "@/components/leadSources/DayChoice"
 import { Button, Dialog } from "@/components/ui"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 import { pluralSources } from "@/lib/leadSourceBulk"
 import { formatDay, todayString } from "@/lib/leadSourceDay"
 
 import { useBulkSave, type BulkSheetProps } from "./useBulkSave"
-import { useOfflineReason } from "@/hooks/useIsOnline"
 
 /** Moves every selected row to one day, or to no day. Ported from the web's DayDialog. */
 export default function DaySheet(props: BulkSheetProps) {

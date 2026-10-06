@@ -1878,3 +1878,130 @@ debug: Keychain and MMKV (Nitro) first, then blob-util, then gifted-charts' grad
 - [ ] `adb push .maestro/fixtures/lead-sources-seed.xlsx /sdcard/Download/`, then
       `maestro test -e WORK_EMAIL=… -e WORK_PASSWORD=… .maestro/login-status-save.yaml` and
       `maestro test -e MANAGE_EMAIL=… -e MANAGE_PASSWORD=… .maestro/upload-report.yaml` against the release build.
+
+## Session 23 — push notifications for due callbacks
+
+**Status: the device reminder and the push wiring are built and tested in Jest. Nothing was built or run on a phone.**
+There is no Android SDK here, no Firebase project, and no backend half yet. The device-only reminder, the part that
+cannot slip, does not need Firebase. **The server half is still open:** `docs/BACKEND_CHANGES.md` "Phase 2" is now the
+exact spec for the backend owner.
+
+### Packages
+
+| Package | Version | Note |
+|---|---|---|
+| `@notifee/react-native` | 9.1.8 | newest release (December 2024); its notes do not name RN 0.87, so its build is the first device check |
+| `@react-native-firebase/app` | 26.4.0 | September 2026 |
+| `@react-native-firebase/messaging` | 26.4.0 | September 2026 |
+
+Recorded in `docs/OVERVIEW.md` §4. Notifee adds its own Maven repo. Its manifest already declares
+`POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM` and `RECEIVE_BOOT_COMPLETED`, so the app's manifest is unchanged.
+
+### What is in it
+
+- `src/lib/push/`:
+  - `channels.ts`: the `callbacks` channel (high importance, sound, vibration) and the `crm` channel, created once.
+  - `permission.ts`: `ensureNotificationPermission`, which asks once ever. The MMKV flag is `push.permissionAsked`.
+  - `reminders.ts`: `scheduleCallbackReminder`, `cancelCallbackReminder`, `syncCallbackReminders` and
+    `cancelAllCallbackReminders`.
+  - `token.ts`: `registerDeviceToken`, `unregisterDeviceToken`, `onTokenRefresh`, `useIsPushRegistered` and
+    `isFirebaseConfigured`.
+  - `remoteMessage.ts`: shows an FCM message through Notifee on `crm`.
+  - `openPushUrl.ts`: the single route for every tap.
+  - `background.ts`: Notifee's background event and FCM's background handler, registered from `index.js`.
+- `src/contexts/PushContext.tsx` (`PushProvider`) is mounted inside `NotificationProvider`, above the tabs.
+  - It creates the channels.
+  - It shows a foreground FCM message and refreshes the bell.
+  - It routes Notifee's foreground press, FCM's opened-app message, and the notification that launched the app.
+- The reminder:
+  - Id `callback-<sourceId>`, title `Call back <name>`, body `<formatted phone> · <last note or "no notes yet">`.
+  - Channel `callbacks`, data `{ url: "/admin/operations/lead-sources/<id>", local: "1" }`.
+  - A `TimestampTrigger` at `callbackAt`.
+- Sync points:
+  - The status save. The permission is asked here on Call Back.
+  - The callback sheet set or clear. The permission is asked here on set.
+  - `runBulk` for day, status and delete.
+  - Convert on the detail screen.
+  - Every Lead Sources load.
+- `resolveNotificationPath` maps `/admin/operations/lead-sources/:id` to `LeadSourceDetail` `{ sourceId }`. The bell's
+  rows and global search gain that path too.
+- Under the callback picker: "Reminder on this phone", or "Reminder on this phone and by push" once the backend holds
+  this phone's token. If reminders are off, it says so.
+- Profile gets a "Callback reminders" switch (`push.remindersEnabled`, on by default). Off cancels every reminder. On
+  sets them again from the next list load.
+- `AuthContext` registers the token after `/api/auth/me` (so after login and on a cold start). Logout unregisters it
+  before the session is wiped.
+- Android:
+  - `android/build.gradle` adds `com.google.gms:google-services:4.4.2`.
+  - `android/app/build.gradle` applies it only when `android/app/google-services.json` exists. That file is
+    gitignored; `google-services.json.example` is committed.
+  - `proguard-rules.pro` gets the Firebase-messaging and Notifee keep rules the prompt asked for, marked as not yet
+    proven by the walk.
+
+### Decisions
+
+- **The reminder follows `callbackAt`, not the status name.** The server sets `callbackAt` to null for every status
+  but Call Back (`changeStatus` in the web's `mutations.ts`), and convert clears it too. So this is the same as
+  "schedule on Call Back, cancel on every other status". It also covers a callback set from the standalone sheet.
+- **A load reconciles only the rows it returned.** One page is not every source, so reminders for sources outside the
+  page are left alone.
+- **Exact when allowed.** The trigger uses `SET_EXACT_AND_ALLOW_WHILE_IDLE` when Android grants exact alarms. Otherwise
+  it uses `SET_AND_ALLOW_WHILE_IDLE`, which still fires in Doze but may be a few minutes late. Android 14 denies exact
+  alarms by default for new installs; Notifee's `openAlarmPermissionSettings()` opens that screen. The app does not
+  push the agent there yet.
+- **No Firebase file, no push, no error.** Without `google-services.json`:
+  - the Gradle plugin is not applied;
+  - `getApps()` is empty;
+  - the token, foreground and background FCM paths do nothing;
+  - the picker line stays "Reminder on this phone".
+  - A fresh clone and CI keep building.
+- **A tap waits for the tabs.** A tap before navigation is ready, or while on Splash or Login, is held. It opens on the
+  container's `ready` event or when the tabs mount. This covers a cold start from a locked screen. The role comes from
+  the cached user.
+- **Token calls are fire-and-forget.** A 404 while `/api/notifications/devices` does not exist is logged once and
+  changes nothing on screen. The platform sent is `Platform.OS`, so iOS will send `"ios"`.
+
+### What was verified
+
+- `src/lib/push/__tests__/reminders.test.ts` (8 tests):
+  - The reminder's id, title, body, data, channel and trigger.
+  - The fallback to the inexact idle alarm.
+  - Cancel for a cleared, past or converted callback.
+  - The permission asked exactly once.
+  - Nothing set with reminders off.
+  - A Notifee failure never reaching the save.
+  - Sync leaving out-of-page sources alone.
+  - Cancel one, and cancel all callback reminders and nothing else.
+- `__tests__/push.test.tsx` (8 tests, the whole app):
+  - A list load schedules a due row and cancels a cleared one.
+  - Not Interested cancels the reminder.
+  - The picker line reads "Reminder on this phone".
+  - A bulk day change cancels the selection's reminders.
+  - The Profile switch cancels everything and turns back on.
+  - A foreground tap opens `LeadSourceDetail`.
+  - A background tap before launch opens it once the app starts.
+  - With Firebase present: the token is POSTed after sign-in, the line reads "… and by push", a foreground push shows
+    on `crm`, and logout DELETEs the token.
+- `__tests__/leadSourceDetail.test.tsx`: the callback set schedules `callback-s1` and asks the permission once; the
+  clear cancels it; convert cancels it.
+- `__tests__/navigation/navigation.test.ts` covers the lead-source path.
+- `npm test`: 51 suites, 462 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The release bundle builds and
+  `hermesc` compiles it. Both Gradle scripts still compile with Gradle's Groovy.
+
+### Device checklist
+
+- [ ] `npm run android` builds with Notifee and both Firebase packages, first without `google-services.json`, then
+      with it. If Notifee fails on 0.87, record the Gradle error. Its trigger notifications need no Firebase.
+- [ ] Register a Firebase Android app for `com.zanverse`, put its `google-services.json` in `android/app/`, rebuild.
+- [ ] Set a callback 2 minutes ahead and close the app from recents. A high-priority "Call back <name>" with the
+      number arrives on time. On Android 14, try once with "Alarms & reminders" allowed and once without.
+- [ ] Tap it from a locked screen and from a cold start: it opens `LeadSourceDetail` for that source.
+- [ ] Clear the callback, set Not Interested, run a bulk day change, and convert: each cancels it.
+      `adb shell dumpsys alarm | grep zanverse` shows nothing left.
+- [ ] The permission dialog appears on the first callback save and never again. Declining it leaves the list, the
+      dialer and status saves working.
+- [ ] A Firebase-console test message shows in the foreground on "CRM updates", and the bell refreshes.
+- [ ] The picker line reads "Reminder on this phone" with no token, and "… and by push" once the backend route
+      exists.
+- [ ] Profile → Callback reminders off cancels the pending reminders; on reschedules from the next list load.
+- [ ] A release build from session 22 fires a reminder and opens the right screen, so the keep rules hold.
