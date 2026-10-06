@@ -1,7 +1,8 @@
+import { API_BASE_URL } from "@/api/endpoints"
 import { getImagekitUrl } from "@/lib/imagekitUrl"
 
 const AVATAR = "https://ik.imagekit.io/zan/avatars/priya_x1.jpg"
-const DEV_BASE = "http://10.0.2.2:3000"
+const DEV_BASE = API_BASE_URL
 
 describe("getImagekitUrl", () => {
     test("asks ImageKit for twice the rendered size, in the best format", () => {
@@ -24,9 +25,9 @@ describe("getImagekitUrl", () => {
 
     test("puts the API base in front of a relative legacy URL, without an ImageKit transformation", () => {
         expect(getImagekitUrl("/uploads/avatars/legacy.jpg", 40, DEV_BASE)).toBe(
-            "http://10.0.2.2:3000/uploads/avatars/legacy.jpg",
+            `${API_BASE_URL}/uploads/avatars/legacy.jpg`,
         )
-        expect(getImagekitUrl("uploads/a.jpg", 40, `${DEV_BASE}/`)).toBe("http://10.0.2.2:3000/uploads/a.jpg")
+        expect(getImagekitUrl("uploads/a.jpg", 40, `${DEV_BASE}/`)).toBe(`${API_BASE_URL}/uploads/a.jpg`)
     })
 
     test("a relative URL without a base cannot load", () => {

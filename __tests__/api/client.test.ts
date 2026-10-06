@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/api/endpoints"
 import { ApiError, isNetworkError, send, sendRaw } from "@/api/client"
 import { handleAuthError } from "@/api/handleAuthError"
 import { resetToLogin } from "@/api/navigationRef"
@@ -48,7 +49,7 @@ describe("send", () => {
 
         await expect(send("/api/admin/operations/leads/l1", "GET")).resolves.toEqual({ id: "l1" })
 
-        expect(fetchMock.mock.calls[0][0]).toBe("http://10.0.2.2:3000/api/admin/operations/leads/l1")
+        expect(fetchMock.mock.calls[0][0]).toBe(`${API_BASE_URL}/api/admin/operations/leads/l1`)
         expect(getSentHeaders()).toMatchObject({ Authorization: "Bearer jwt-1", "X-Active-Region": "US" })
         expect(getSentHeaders()["Content-Type"]).toBeUndefined()
     })

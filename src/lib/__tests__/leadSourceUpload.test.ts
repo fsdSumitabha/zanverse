@@ -2,6 +2,7 @@ import { keepLocalCopy, pick } from "@react-native-documents/picker"
 import { Platform } from "react-native"
 import ReactNativeBlobUtil from "react-native-blob-util"
 
+import { API_BASE_URL } from "@/api/endpoints"
 import { ApiError } from "@/api/client"
 import { downloadXlsx } from "@/lib/downloadFile"
 import { getSheetRejection, pickSheetFile, sizeText, uploadSheet } from "@/lib/leadSourceUpload"
@@ -98,7 +99,7 @@ describe("uploadSheet", () => {
         expect(result).toEqual({ uploadId: "up1", counts })
         expect(progress).toEqual([0.5, 1])
         const [method, url, headers, parts] = blob.fetch.mock.calls[0]
-        expect([method, url]).toEqual(["POST", "http://10.0.2.2:3000/api/admin/operations/lead-sources/uploads"])
+        expect([method, url]).toEqual(["POST", `${API_BASE_URL}/api/admin/operations/lead-sources/uploads`])
         expect(headers).toMatchObject({ Authorization: "Bearer jwt-1", "Content-Type": "multipart/form-data" })
         expect(parts.map((part: { name: string }) => part.name)).toEqual(["file", "today", "region", "allottedDay"])
         expect(parts[0]).toEqual({

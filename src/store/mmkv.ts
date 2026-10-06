@@ -21,6 +21,7 @@ const KEY = {
     LAST_EMAIL: "prefs.lastEmail",
     PUSH_PERMISSION_ASKED: "push.permissionAsked",
     PUSH_REMINDERS_ENABLED: "push.remindersEnabled",
+    INSTALL_SEEN: "prefs.installSeen",
 } as const
 
 const CACHE_PREFIX = "cache."
@@ -98,6 +99,19 @@ export function getRemindersEnabled(): boolean {
 /** Stores the "Callback reminders" switch. */
 export function saveRemindersEnabled(isEnabled: boolean): void {
     storage.set(KEY.PUSH_REMINDERS_ENABLED, isEnabled)
+}
+
+/**
+ * True once this install has stored or read a token. MMKV goes with the app on uninstall, but the iOS Keychain does
+ * not, so a missing marker at boot means any token in the Keychain belongs to an earlier install.
+ */
+export function wasInstallSeen(): boolean {
+    return storage.getBoolean(KEY.INSTALL_SEEN) === true
+}
+
+/** Marks this install as seen. */
+export function markInstallSeen(): void {
+    storage.set(KEY.INSTALL_SEEN, true)
 }
 
 /** Reads a cached value fetched under the current region. */

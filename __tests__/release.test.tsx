@@ -1,3 +1,4 @@
+import { Platform } from "react-native"
 import ReactTestRenderer from "react-test-renderer"
 
 import { API_BASE_URL } from "@/api/endpoints"
@@ -75,8 +76,8 @@ beforeEach(async () => {
 })
 
 describe("release build", () => {
-    it("talks to the dev API in a debug build", () => {
-        expect(API_BASE_URL).toBe("http://10.0.2.2:3000")
+    it("talks to the dev machine in a debug build: localhost on iOS, 10.0.2.2 on the Android emulator", () => {
+        expect(API_BASE_URL).toBe(Platform.OS === "ios" ? "http://localhost:3000" : "http://10.0.2.2:3000")
     })
 
     it("carries every id the two Maestro flows tap", async () => {

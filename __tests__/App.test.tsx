@@ -1,5 +1,6 @@
 import ReactTestRenderer from "react-test-renderer"
 
+import { API_BASE_URL } from "@/api/endpoints"
 import { navigationRef } from "@/api/navigationRef"
 import { clearToken, getToken, saveToken } from "@/store/keychain"
 import { getActiveRegion, saveActiveRegion, saveLastEmail } from "@/store/mmkv"
@@ -75,7 +76,7 @@ describe("boot", () => {
     it("with a valid token goes to the tabs and seeds the region from /api/auth/me", async () => {
         const renderer = await signInAs(ADMIN)
 
-        expect(fetchMock.mock.calls[0][0]).toBe("http://10.0.2.2:3000/api/auth/me")
+        expect(fetchMock.mock.calls[0][0]).toBe(`${API_BASE_URL}/api/auth/me`)
         expect(getTexts(renderer)).toContain("Dashboard")
         expect(getActiveRegion()).toBe("ALL")
         await unmountApp(renderer)
@@ -134,7 +135,7 @@ describe("More", () => {
         await press(findPressableByText(renderer, "United States"))
 
         const [url, init] = getForegroundCalls()[1]
-        expect(url).toBe("http://10.0.2.2:3000/api/auth/region")
+        expect(url).toBe(`${API_BASE_URL}/api/auth/region`)
         expect(init.method).toBe("POST")
         expect(init.body).toBe(JSON.stringify({ region: "US" }))
         expect(getActiveRegion()).toBe("US")
@@ -167,7 +168,7 @@ describe("More", () => {
         await press(findPressable(renderer, "Logout"))
 
         const calls = getForegroundCalls()
-        expect(calls[1][0]).toBe("http://10.0.2.2:3000/api/auth/logout")
+        expect(calls[1][0]).toBe(`${API_BASE_URL}/api/auth/logout`)
         expect(getToken()).toBeNull()
         expect(getActiveRegion()).toBeNull()
         expect(getTexts(renderer)).toContain("Admin Login")
@@ -205,7 +206,7 @@ describe("screen guard", () => {
         await flush()
 
         const calls = fetchMock.mock.calls.map(([url]) => url)
-        expect(calls).toContain("http://10.0.2.2:3000/api/admin/operations/lead-sources/64b7f0c2a1b2c3d4e5f60718")
+        expect(calls).toContain(`${API_BASE_URL}/api/admin/operations/lead-sources/64b7f0c2a1b2c3d4e5f60718`)
         await unmountApp(renderer)
     })
 })

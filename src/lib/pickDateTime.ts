@@ -1,9 +1,19 @@
 import { DateTimePickerAndroid, type DateTimePickerEvent } from "@react-native-community/datetimepicker"
+import { Platform } from "react-native"
+
+/**
+ * True where the system has its own date and time dialogs (Android). Elsewhere (iOS) a picker draws inline. The one
+ * place screens and components learn which platform they are on, so they stay free of Platform checks.
+ */
+export function hasSystemDateDialogs(): boolean {
+    return Platform.OS === "android"
+}
 
 interface Options {
     /** Where the dialogs start. */
     value: Date
     minimumDate?: Date
+    maximumDate?: Date
     onPicked: (value: Date) => void
 }
 
@@ -32,6 +42,19 @@ export function pickDateTimeAndroid({ value, minimumDate, onPicked }: Options): 
                     if (timeEvent.type === "set" && time) onPicked(combineDayAndTime(day, time))
                 },
             })
+        },
+    })
+}
+
+/** Android's day dialog alone. Cancelling it picks nothing. */
+export function pickDateAndroid({ value, minimumDate, maximumDate, onPicked }: Options): void {
+    DateTimePickerAndroid.open({
+        value,
+        mode: "date",
+        minimumDate,
+        maximumDate,
+        onChange: (event: DateTimePickerEvent, day?: Date) => {
+            if (event.type === "set" && day) onPicked(day)
         },
     })
 }

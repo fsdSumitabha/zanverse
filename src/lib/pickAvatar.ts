@@ -6,6 +6,8 @@ import type { PickedImage } from "./userDiff"
 const ACCEPTED_TYPES = ["image/jpeg", "image/png"]
 const MAX_BYTES = 5 * 1024 * 1024
 const TYPE_BY_EXTENSION: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png" }
+// iOS photos are often HEIC, which the server refuses: "compatible" hands over a JPEG copy. Android ignores it.
+const LIBRARY_OPTIONS = { mediaType: "photo", selectionLimit: 1, assetRepresentationMode: "compatible" } as const
 
 /** "820 B", "48.2 KB", "1.3 MB". Verbatim from the web's AvatarPreview. */
 export function formatSize(bytes: number): string {
@@ -46,7 +48,7 @@ export async function pickAvatarImage({
     const result =
         source === "camera"
             ? await launchCamera({ mediaType: "photo", saveToPhotos: false })
-            : await launchImageLibrary({ mediaType: "photo", selectionLimit: 1 })
+            : await launchImageLibrary(LIBRARY_OPTIONS)
     if (result.didCancel) return null
     if (result.errorCode) throw new Error(result.errorMessage || "Could not open the photos")
 

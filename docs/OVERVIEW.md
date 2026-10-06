@@ -20,7 +20,7 @@ web never could: tap a row and the dialer opens.
 |---|---|
 | **Android** | The target. Everything ships here first. |
 | **iOS** | Same `src/`, built in session 24. Needs a Mac. |
-| **Windows** | **Use the existing web app.** `react-native-windows` is at 0.84 (0.85 preview) and requires RN 0.84.1, so it cannot build against 0.87. Session 24 records this decision; it is not a build. |
+| **Windows** | **Use the existing web app.** `react-native-windows` is at 0.84 (0.85 preview) and requires RN 0.84.1, so it cannot build against 0.87. Session 24 recorded this decision, with the evidence and the conditions to reopen it, in [`docs/WINDOWS.md`](WINDOWS.md). It is not a build. |
 
 ## 3. Architecture (already decided)
 
@@ -138,8 +138,8 @@ A few copies carry small RN edits (no mongoose, no server imports, type-only luc
 
 Each session is one prompt file in `prompts/`, ends with a working app, and finishes when its Definition of Done is met.
 
-| # | Session | Size | Depends on |
-|---|---|---|---|
+| # | Session | Size | Depends on | Status |
+|---|---|---|---|---|
 | 1 | Native spike and toolchain lock | M | — |
 | 2 | Foundation A — shared core copied verbatim | M | 1 |
 | 3 | Foundation B — design system primitives | M | 2 |
@@ -163,7 +163,7 @@ Each session is one prompt file in `prompts/`, ends with a working app, and fini
 | 21 | Polish — sheets, caching, offline, Sentry | M | 20 |
 | 22 | Android release build | M | 21 |
 | 23 | Push notifications for due callbacks | L | 22 + backend work |
-| 24 | iOS build and the Windows decision | M | 22 |
+| 24 | iOS build and the Windows decision | M | 22 | ✅ Windows decision done ([`docs/WINDOWS.md`](WINDOWS.md)); the iOS code and project changes are in, but the build needs a Mac |
 
 ## 10. Decisions still open
 
@@ -175,6 +175,7 @@ Each session is one prompt file in `prompts/`, ends with a working app, and fini
 | Automatic call logging on Android | Ship the manual "log this call" sheet first. Never attempt in-app call recording: Android 10+ blocks it and Play removes apps that work around it. |
 | Distribution to staff | Play Store internal testing track — automatic updates, Play App Signing, no review wait. Decide before session 22. |
 | Due-callback reminders | Local notification first (no backend work), real push in session 23 once the scheduled job exists. |
+| A Windows app | Decided in session 24: Windows uses the web app. See [`docs/WINDOWS.md`](WINDOWS.md) for the evidence and the conditions to reopen it. |
 
 ## 11. Top risks
 

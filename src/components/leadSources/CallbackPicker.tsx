@@ -2,12 +2,12 @@ import DateTimePicker from "@react-native-community/datetimepicker"
 import clsx from "clsx"
 import { AlarmClock, CalendarClock } from "lucide-react-native"
 import { useState } from "react"
-import { Platform, Pressable, Text, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 
 import { useNow } from "@/hooks/useNow"
 import { CALLBACK_PRESETS, formatCallback, relativeCallback, toDateTimeLocal } from "@/lib/callback"
 import { enableIconClassNames } from "@/lib/iconClassName"
-import { pickDateTimeAndroid } from "@/lib/pickDateTime"
+import { hasSystemDateDialogs, pickDateTimeAndroid } from "@/lib/pickDateTime"
 import { useIsPushRegistered } from "@/lib/push/token"
 import { getRemindersEnabled } from "@/store/mmkv"
 
@@ -64,7 +64,7 @@ export default function CallbackPicker({ value, onChange }: Props) {
     }
 
     function openExact() {
-        if (Platform.OS === "android") {
+        if (hasSystemDateDialogs()) {
             pickDateTimeAndroid({ value: at ?? new Date(now), minimumDate: new Date(now), onPicked: setExact })
             return
         }
@@ -123,7 +123,7 @@ export default function CallbackPicker({ value, onChange }: Props) {
                 </Pressable>
             </View>
 
-            {Platform.OS === "ios" && isIosPickerOpen && (
+            {!hasSystemDateDialogs() && isIosPickerOpen && (
                 <DateTimePicker
                     mode="datetime"
                     display="inline"

@@ -2005,3 +2005,95 @@ Recorded in `docs/OVERVIEW.md` §4. Notifee adds its own Maven repo. Its manifes
       exists.
 - [ ] Profile → Callback reminders off cancels the pending reminders; on reschedules from the next list load.
 - [ ] A release build from session 22 fires a reminder and opens the right screen, so the keep rules hold.
+
+## Session 24 — iOS build and the Windows decision
+
+**Status: the Windows half is done; the iOS build is not.** This container has no Mac, so no `pod install`, no Xcode
+build and no simulator. As the prompt's follow-up says, the Windows half came first: `docs/WINDOWS.md`, the
+`Platform.OS` audit, and `docs/OVERVIEW.md`. Then every iOS change that does not need a Mac. The exact Mac steps left
+are at the end of this section.
+
+### Windows
+
+- `docs/WINDOWS.md` records the decision: Windows uses the web app.
+  - Evidence (npm, 2026-10-06): `react-native-windows` latest is 0.84.0, with a peer dependency of
+    `react-native: 0.84.1`. The newest preview is 0.85.0-preview.2. There is no 0.86 or 0.87 line.
+  - It notes that a Tauri or Electron wrapper of the web app buys packaging, not features.
+  - It gives the conditions to reopen the decision.
+- `docs/OVERVIEW.md` links to it from §2 (Windows row), §9 (the session 24 row, marked done for Windows) and §10.
+- **The audit.** `grep -rn "Platform.OS" src/screens/` returns nothing. The two branches that lived in other
+  components (`CallbackPicker`, list `DateField`) now ask `hasSystemDateDialogs()` in `src/lib/pickDateTime.ts`.
+  Every `Platform.OS` left is in `src/components/ui/`, `src/lib/` or `src/api/endpoints.ts`. The list is in
+  `docs/WINDOWS.md`.
+
+### iOS changes made without a Mac
+
+- **Info.plist:**
+  - `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` (the avatar picker).
+  - `LSApplicationQueriesSchemes`: `tel`, `telprompt`, `whatsapp`, `mailto`.
+  - `UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace`, so downloads show in the Files app.
+  - The template's empty `NSLocationWhenInUseUsageDescription` is removed; the app never uses location.
+  - `NSPhotoLibraryAddUsageDescription` and `NSMicrophoneUsageDescription` are left out: nothing is saved to Photos,
+    and recordings are picked, never captured.
+  - App Transport Security: still `NSAllowsArbitraryLoads` false. The one exception, `NSAllowsLocalNetworking`, is now
+    commented as the dev API on the Mac.
+- **Bundle id:** `com.zanverse`, the same as Android. It was the template's `org.reactjs.native.example.zanverse`. The
+  Maestro flows' `appId` and Firebase now match on both platforms.
+- **Keychain:**
+  - `ios/zanverse/zanverse.entitlements` adds Keychain Sharing with one group, `$(AppIdentifierPrefix)com.zanverse`.
+    `CODE_SIGN_ENTITLEMENTS` is set in both build configurations.
+  - `src/store/keychain.ts` passes no `accessGroup`. With the entitlement, the default group is that one group, and an
+    explicit value would need the Team ID prefix, which is not known here.
+  - It keeps `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`, not the prompt's `WHEN_UNLOCKED_THIS_DEVICE_ONLY`. Both never sync
+    to iCloud. "After first unlock" also lets a background start read the token on a locked phone (session 23's
+    reminder taps and pushes), which "when unlocked" refuses.
+- **A token left by a deleted app.** iOS keeps Keychain entries after the app is deleted; MMKV goes with the app. So
+  `loadToken` now clears a token found while MMKV has no install marker (`prefs.installSeen`). `saveToken` sets the
+  marker.
+  - Android removes both on uninstall, so the rule never fires there.
+  - One side effect: an existing install that updates to this version is signed out once.
+- **Dev host:** the iOS simulator reaches the Mac at `http://localhost:3000`. The Android emulator keeps `10.0.2.2`.
+  Release builds use the production host on both.
+- **Downloads:** on iOS the `.xlsx` goes to the app's Documents folder (it was the cache) and opens in the system
+  preview, which has Share (Numbers, Excel, Files). Android is unchanged.
+- **Avatar:** the library picker asks for `assetRepresentationMode: "compatible"`. iPhones store HEIC, which the
+  server refuses; this hands over a JPEG copy. The multipart field (`avatarFile`) and the type checks are unchanged.
+- **Already fine on iOS, no change:**
+  - `src/lib/contact.ts` opens `tel:`, `https://wa.me/…` and `mailto:` directly, with a toast on failure.
+  - `src/lib/leadSourceUpload.ts` copies the picked file with `keepLocalCopy` and strips `file://`. That works for
+    both Android's `content://` and iOS's `file://`.
+
+### What was verified
+
+- `src/store/__tests__/keychain.test.ts` (1 test): a token left by an earlier install is cleared on the first boot,
+  and a token this install saved is kept.
+- `__tests__/release.test.tsx` checks the dev host per platform. Seven test files now compare request URLs against
+  `API_BASE_URL`, not the Android literal: Jest runs as iOS, so they now cover the iOS host. The report download test
+  accepts the cache or the Documents path.
+- `npm test`: 52 suites, 463 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass.
+- **Both** the Android and the iOS production bundles build, and `hermesc` compiles both. The iOS release bundle
+  contains the production host and no `localhost`.
+- `Info.plist` and the entitlements file parse as plists.
+
+### The Mac steps left (in order)
+
+1. `bundle install`, then `cd ios && bundle exec pod install`. New Architecture stays on. Fix pods one at a time,
+   starting with `react-native-svg`. Watch most closely: `react-native-gifted-charts` with
+   `react-native-linear-gradient`, `@gorhom/bottom-sheet` with Reanimated and Worklets, `@notifee/react-native`,
+   `@react-native-firebase/*` (needs `GoogleService-Info.plist` for push; the app runs without it), and Sentry.
+2. In Xcode, choose the Team on the `zanverse` target. That fills `$(AppIdentifierPrefix)` and signs the Keychain
+   Sharing entitlement. Then run `npm run ios` on a simulator, log in against the dev API on `localhost:3000`, kill the
+   app, and reopen it: the session survives. Log out: the Keychain entry is gone.
+3. Walk Lead Sources Today: Call opens the call sheet, the WhatsApp row opens WhatsApp, the email row opens Mail. With
+   an app missing, each shows its toast.
+4. Avatar from the library (PHPicker) and from the camera: the profile shows the new photo. Upload the seed
+   `.xlsx` from Files. Download the template and a report: each opens in the preview, Share works, and the file is in
+   Files → On My iPhone → zanverse.
+5. Overall stats charts and one bottom sheet (the status sheet) render. A callback reminder fires (Notifee asks for
+   permission on iOS too).
+6. Safe areas on a notched device: the tab bar, the floating buttons, the sheets and the notification inbox clear the
+   home indicator.
+7. `maestro test` both `.maestro` flows against the iOS build. Add a `testID` only where a selector does not resolve.
+   On iOS, the upload flow's file step taps the file in the Files picker.
+8. If a pod will not build on 0.87: try its latest release. If it still fails, put that feature behind a
+   `Platform.select` stub in `src/components/ui/`, so the rest runs, and record it.

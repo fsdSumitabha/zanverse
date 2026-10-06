@@ -57,7 +57,7 @@ jest.mock("react-native-keychain", () => {
 // Tests that upload or download give `fetch` and `config` their own implementations.
 jest.mock("react-native-blob-util", () => ({
     fs: {
-        dirs: { CacheDir: "/data/user/0/com.zanverse/cache" },
+        dirs: { CacheDir: "/data/user/0/com.zanverse/cache", DocumentDir: "/var/mobile/Containers/Data/Documents" },
         exists: jest.fn(() => Promise.resolve(true)),
         readFile: jest.fn(() => Promise.resolve("")),
         unlink: jest.fn(() => Promise.resolve()),
