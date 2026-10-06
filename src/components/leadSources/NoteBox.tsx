@@ -4,6 +4,8 @@ import { Button, Textarea } from "@/components/ui"
 import { useOfflineReason } from "@/hooks/useIsOnline"
 
 interface Props {
+    /** For the Maestro flows in .maestro/: the note field's id. */
+    testID?: string
     value: string
     onChangeText: (text: string) => void
     placeholder?: string
@@ -26,6 +28,7 @@ export default function NoteBox({
     onSave,
     saveLabel = "Add note",
     isSaving = false,
+    testID,
 }: Props) {
     const offlineReason = useOfflineReason()
     return (
@@ -35,6 +38,7 @@ export default function NoteBox({
                 onChangeText={onChangeText}
                 placeholder={placeholder ?? "What happened on the call? (optional)"}
                 accessibilityLabel="Note"
+                testID={testID}
                 maxLength={NOTE_MAX_LENGTH}
                 numberOfLines={3}
             />

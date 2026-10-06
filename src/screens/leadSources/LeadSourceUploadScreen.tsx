@@ -188,6 +188,7 @@ export default function LeadSourceUploadScreen() {
                 <Button label="Cancel" variant="quiet" onPress={() => navigation.goBack()} disabled={isUploading} />
                 <Button
                     disabledReason={offlineReason}
+                    testID="uploadSubmit"
                     label={isUploading ? "Checking and importing..." : "Upload and check"}
                     icon={Upload}
                     onPress={submit}

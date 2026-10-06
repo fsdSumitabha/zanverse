@@ -21,6 +21,8 @@ interface Props {
     /** Extra classes for the pressable container, such as "flex-1" or "self-start". */
     className?: string
     accessibilityLabel?: string
+    /** For the Maestro flows in .maestro/. */
+    testID?: string
 }
 
 // From the web: BUTTON_PRIMARY, BUTTON_DANGER and BUTTON_QUIET in lead-sources/Dialog.tsx, and the soft variant of
@@ -88,6 +90,7 @@ export default function Button({
     disabledReason,
     className,
     accessibilityLabel,
+    testID,
 }: Props) {
     const isDarkMode = useColorScheme() === "dark"
     const isBlocked = disabled || loading || Boolean(disabledReason)
@@ -106,6 +109,7 @@ export default function Button({
         <Pressable
             onPress={onPress}
             disabled={isBlocked}
+            testID={testID}
             accessibilityRole="button"
             accessibilityLabel={
                 disabledReason ? `${accessibilityLabel ?? label}, ${disabledReason}` : accessibilityLabel ?? label

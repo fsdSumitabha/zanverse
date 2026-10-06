@@ -54,6 +54,7 @@ export function StatusBadgeButton({
             onPress={onPress}
             disabled={isLocked}
             hitSlop={8}
+            testID="statusMenuTrigger"
             accessibilityRole="button"
             accessibilityLabel={isConverted ? "Converted to a lead" : `Status: ${meta.label}. Press to change.`}
             accessibilityState={{ disabled: isLocked }}
@@ -158,6 +159,7 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
                                 accessibilityRole="radio"
                                 accessibilityState={{ checked: isActive }}
                                 accessibilityLabel={meta.label}
+                                testID={`statusOption-${option}`}
                                 className={clsx(
                                     "min-h-[44px] w-[49%] flex-row items-center gap-2 rounded-lg border px-2.5 py-2",
                                     isActive
@@ -185,7 +187,7 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
 
                 {isCallBack && <CallbackPicker value={choice} onChange={setChoice} />}
 
-                <NoteBox value={note} onChangeText={setNote} />
+                <NoteBox value={note} onChangeText={setNote} testID="statusNote" />
 
                 {conflict && (
                     <Text accessibilityRole="alert" className="text-xs text-rose-600 dark:text-rose-400">
@@ -201,6 +203,7 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
                         <Button label="Cancel" variant="quiet" onPress={onClose} disabled={saving} />
                         <Button
                             disabledReason={offlineReason}
+                            testID="statusSave"
                             label={saving ? "Saving..." : "Save"}
                             onPress={save}
                             disabled={!canSave}

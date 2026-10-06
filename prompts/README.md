@@ -1784,3 +1784,97 @@ adds the Worklets plugin (session 1 note).
 - [ ] Set `SENTRY_DSN` and the org in `android/sentry.properties`. Then press "Send a test error" in the kitchen sink.
       It should appear in Sentry with file and line, and with no token. Then build a release with
       `SENTRY_AUTH_TOKEN` set and check that the mapped frames upload.
+
+## Session 22 — release
+
+**Status: the configuration is written and checked as far as this container allows. No release was built.** The
+container has no Android SDK, and Google's Maven host is blocked (`dl.google.com`, HTTP 403), so Gradle cannot load
+the Android plugin. Every step that needs a device, a keystore, the Play Console or the GitHub secrets is yours.
+**Blocker:** the production API host is not recorded anywhere (docs, web source, `.env.example`). Release builds
+point at `https://CHANGE-ME.invalid` until `PRODUCTION_API_BASE_URL` in `src/api/endpoints.ts` is set.
+
+### What is in it
+
+- `android/app/build.gradle`:
+  - `signingConfigs.release` reads `MYAPP_UPLOAD_STORE_FILE`, `MYAPP_UPLOAD_KEY_ALIAS`, `MYAPP_UPLOAD_STORE_PASSWORD`
+    and `MYAPP_UPLOAD_KEY_PASSWORD`. Each comes from a Gradle property (`~/.gradle/gradle.properties`) or, failing
+    that, the environment (CI).
+  - When any of the four is missing, release falls back to debug signing, so a fresh clone still builds. Play rejects
+    that bundle, which is the intent.
+  - `minifyEnabled true` + `shrinkResources true` with `proguard-android-optimize.txt` and `proguard-rules.pro`.
+  - `versionName` comes from `package.json` (now `0.0.1`). `versionCode` comes from `BUILD_NUMBER`, or `1` for a
+    local build.
+  - Release `ndk.abiFilters` is `arm64-v8a`, `armeabi-v7a`. Debug keeps the x86 ABIs from `gradle.properties`.
+  - New Architecture, Hermes and edge-to-edge are untouched.
+- `android/app/src/main/AndroidManifest.xml` has no cleartext setting. `android/app/src/debug/AndroidManifest.xml`
+  allows plain HTTP for debug only. `src/api/endpoints.ts` uses the dev URL when `__DEV__`, else the production one.
+  The release bundle contains only the production host; Metro strips the dev URL.
+- `android/app/proguard-rules.pro` holds the rule for adding keep rules, and no rules yet (see below).
+- `.gitignore` adds `*.jks` and `android/keystore.properties`. `*.keystore` (except `debug.keystore`) was already
+  there.
+- `.github/workflows/android-release.yml` runs on a `v*` tag, or by hand to build only. Its steps:
+  - Node 22 with the npm cache, Temurin JDK 17 and `gradle/actions/setup-gradle`.
+  - `npm ci`, lint, `tsc --noEmit`, and Jest. Jest is added to the prompt's list, because it is cheap.
+  - The keystore is decoded from its secret; the job stops if the secret is missing.
+  - `./gradlew bundleRelease` with `BUILD_NUMBER` set to the run number. The keystore is then removed.
+  - The AAB and `mapping.txt` are uploaded as an artifact.
+  - On a tag, `r0adkll/upload-google-play@v1` sends both to the `internal` track. The mapping file lets Play
+    deobfuscate crashes.
+- `.maestro/login-status-save.yaml` and `.maestro/upload-report.yaml`, with `.maestro/fixtures/lead-sources-seed.xlsx`.
+  The seed has three rows with name, company, email, phone and city, and `read-excel-file`, the web's own parser,
+  reads it correctly.
+- Test IDs: `loginEmail`, `loginPassword`, `loginSubmit`, `leadSourceRow`, `statusMenuTrigger`, `statusOption-20`,
+  `statusNote`, `statusSave`, `uploadSheetButton`, `uploadSubmit` and `reportTileImported`. One more,
+  `uploadPickFile` on the "Choose a file" button, because the upload flow taps it. `Button` and `NoteBox` gain a
+  `testID` prop.
+
+### Keystore and secrets
+
+- Generate the upload key once, outside the repo:
+  `keytool -genkeypair -v -storetype PKCS12 -keystore ~/keys/zanverse-upload.keystore -alias zanverse-upload
+  -keyalg RSA -keysize 2048 -validity 10000`.
+- Locally, put these in `~/.gradle/gradle.properties`:
+  `MYAPP_UPLOAD_STORE_FILE=/home/<you>/keys/zanverse-upload.keystore`, `MYAPP_UPLOAD_KEY_ALIAS=zanverse-upload`, and
+  the two passwords.
+- Add these GitHub secrets:
+  - `ANDROID_KEYSTORE_BASE64`: the output of `base64 -w0 zanverse-upload.keystore`.
+  - `MYAPP_UPLOAD_KEY_ALIAS`, `MYAPP_UPLOAD_STORE_PASSWORD`, `MYAPP_UPLOAD_KEY_PASSWORD`.
+  - `PLAY_SERVICE_ACCOUNT_JSON`: a service account with "Release to testing tracks".
+  - `SENTRY_AUTH_TOKEN`: optional. With it, `sentry.gradle` uploads the source maps.
+- Play track: `internal`, with Play App Signing on. Google holds the app signing key; the upload key stays with you
+  and in CI.
+
+### Keep rules
+
+None yet, on purpose. The prompt allows a rule only where the release walk proved it was needed, and that walk has not
+run. React Native, Hermes and every native library here ship consumer rules in their AARs. The file explains how to
+add a rule: one `-keep` per crash, with a comment naming the screen. Suspects if release behaves differently from
+debug: Keychain and MMKV (Nitro) first, then blob-util, then gifted-charts' gradient view.
+
+### What was verified
+
+- Both Gradle scripts compile with Gradle 9.4.1's Groovy (a syntax check; the Android plugin could not load).
+- The workflow and both Maestro flows parse as YAML. The seed sheet parses with `read-excel-file`.
+- `__tests__/release.test.tsx` (2 tests) checks that a debug build uses the dev API, and that all twelve test IDs are
+  on the screens the flows drive: Login, the list and its status sheet, the upload screen, and the report.
+- `npm test`: 49 suites, 445 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The release bundle builds
+  and `hermesc` compiles it.
+
+### Device checklist
+
+- [ ] Set `PRODUCTION_API_BASE_URL`, generate the keystore, and fill `~/.gradle/gradle.properties`.
+- [ ] `./gradlew assembleRelease` with R8 off once (set `enableProguardInReleaseBuilds = false` locally), install it,
+      and check that it is signed with the upload key. Then turn R8 back on.
+- [ ] `./gradlew bundleRelease`; `jarsigner -verify -verbose app-release.aab` names the upload key. Record the AAB
+      size.
+- [ ] Walk the minified release with `adb logcat *:E`: login, Lead Sources Today, status save, callback picker, lead
+      detail, notifications, overall-stats charts, profile avatar upload, an xlsx download. Add one keep rule per
+      crash.
+- [ ] The release build fails against `http://` and works against the production HTTPS API. `npm run android` still
+      reaches `http://10.0.2.2:3000`.
+- [ ] `adb shell dumpsys package com.zanverse | grep versionCode` shows `1` locally and the run number on a CI build.
+- [ ] Upload one AAB by hand to the internal track, accept Play App Signing, and install it from the tester link.
+- [ ] Add the secrets, push a `v0.0.1` tag, and check the run is green from lint to the Play upload.
+- [ ] `adb push .maestro/fixtures/lead-sources-seed.xlsx /sdcard/Download/`, then
+      `maestro test -e WORK_EMAIL=… -e WORK_PASSWORD=… .maestro/login-status-save.yaml` and
+      `maestro test -e MANAGE_EMAIL=… -e MANAGE_PASSWORD=… .maestro/upload-report.yaml` against the release build.

@@ -62,8 +62,20 @@ react {
 
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
+ * On since session 22: R8 shrinks the release. A missing keep rule shows as a crash in the release walk only, never in
+ * debug; android/app/proguard-rules.pro lists each rule with the screen that needed it.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
+
+// versionName follows package.json. versionCode is the CI build number (BUILD_NUMBER), or 1 for a local build.
+def packageJson = new groovy.json.JsonSlurper().parse(file("../../package.json"))
+def appVersionName = packageJson.version
+def appVersionCode = (System.getenv("BUILD_NUMBER") ?: "1").toInteger()
+
+// The upload key: from ~/.gradle/gradle.properties locally, from the environment in CI. Never from a file in git.
+def uploadSetting = { String name -> project.findProperty(name) ?: System.getenv(name) }
+def uploadKeyNames = ["MYAPP_UPLOAD_STORE_FILE", "MYAPP_UPLOAD_KEY_ALIAS", "MYAPP_UPLOAD_STORE_PASSWORD", "MYAPP_UPLOAD_KEY_PASSWORD"]
+def hasUploadKey = uploadKeyNames.every { uploadSetting(it) }
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -88,8 +100,8 @@ android {
         applicationId "com.zanverse"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
     }
     signingConfigs {
         debug {
@@ -98,17 +110,31 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasUploadKey) {
+            release {
+                storeFile file(uploadSetting("MYAPP_UPLOAD_STORE_FILE"))
+                storePassword uploadSetting("MYAPP_UPLOAD_STORE_PASSWORD")
+                keyAlias uploadSetting("MYAPP_UPLOAD_KEY_ALIAS")
+                keyPassword uploadSetting("MYAPP_UPLOAD_KEY_PASSWORD")
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // The upload key when its four settings are present. Without them a fresh clone still builds, signed with
+            // the debug key; Play rejects that bundle, which is the point.
+            signingConfig hasUploadKey ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
+            shrinkResources enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            // Phones only. The emulator's x86 builds stay on the debug path (reactNativeArchitectures in
+            // gradle.properties).
+            ndk {
+                abiFilters "arm64-v8a", "armeabi-v7a"
+            }
         }
     }
 }

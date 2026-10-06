@@ -52,7 +52,9 @@ export default function LeadSourcesHeader({ list, isManager, onShowDue, onOpenUp
                 </View>
             </View>
 
-            {isManager && <Button label="Upload sheet" icon={FileUp} onPress={onUploadSheet} />}
+            {isManager && (
+                <Button label="Upload sheet" icon={FileUp} onPress={onUploadSheet} testID="uploadSheetButton" />
+            )}
 
             {dueCount > 0 && (
                 <View className="flex-row items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 dark:border-rose-500/30 dark:bg-rose-500/10">
