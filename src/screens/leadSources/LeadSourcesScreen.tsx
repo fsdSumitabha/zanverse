@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { FlatList, RefreshControl, Text, View, useColorScheme, type LayoutChangeEvent } from "react-native"
 
 import BulkBar, { type BulkDialog } from "@/components/leadSources/BulkBar"
+import CallbackSheet from "@/components/leadSources/CallbackSheet"
 import AssignSheet from "@/components/leadSources/bulk/AssignSheet"
 import DaySheet from "@/components/leadSources/bulk/DaySheet"
 import DeleteSheet from "@/components/leadSources/bulk/DeleteSheet"
@@ -63,9 +64,11 @@ export default function LeadSourcesScreen() {
     const [selected, setSelected] = useState<Set<string>>(() => new Set())
     const [dialog, setDialog] = useState<BulkDialog | null>(null)
     const [statusTarget, setStatusTarget] = useState<{ row: Row; status: number } | null>(null)
+    const [callbackTarget, setCallbackTarget] = useState<Row | null>(null)
 
     // The quiet reload waits while the person is busy: a sheet open, or rows selected.
-    const list = useLeadSourceList({ isPaused: selected.size > 0 || dialog !== null || statusTarget !== null })
+    const isBusy = selected.size > 0 || dialog !== null || statusTarget !== null || callbackTarget !== null
+    const list = useLeadSourceList({ isPaused: isBusy })
     const view = list.filters.day ? "day" : list.filters.view
     const layout = useMemo(() => buildListLayout(list.rows, view, today), [list.rows, view, today])
 
@@ -83,8 +86,12 @@ export default function LeadSourcesScreen() {
             return next
         })
     }, [])
-    const openDetail = useCallback((row: Row) => navigation.navigate("LeadSourceDetail", { id: row._id }), [navigation])
+    const openDetail = useCallback(
+        (row: Row) => navigation.navigate("LeadSourceDetail", { sourceId: row._id }),
+        [navigation],
+    )
     const openStatus = useCallback((row: Row, status: number) => setStatusTarget({ row, status }), [])
+    const openCallback = useCallback((row: Row) => setCallbackTarget(row), [])
     const openConvertedLead = useCallback((leadId: string) => openLead(leadId, role), [role])
 
     function showDue() {
@@ -142,6 +149,7 @@ export default function LeadSourcesScreen() {
                 onOpen={openDetail}
                 onToggle={toggle}
                 onOpenStatus={openStatus}
+                onOpenCallback={openCallback}
                 onOpenLead={openConvertedLead}
             />
         )
@@ -225,6 +233,7 @@ export default function LeadSourcesScreen() {
                 onUpdated={list.onUpdated}
                 onConflict={list.reloadNow}
             />
+            <CallbackSheet source={callbackTarget} onClose={() => setCallbackTarget(null)} onUpdated={list.onUpdated} />
         </View>
     )
 }

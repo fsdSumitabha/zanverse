@@ -19,8 +19,10 @@ export type LeadsStackParamList = {
 
 export type CallsStackParamList = {
     LeadSources: undefined
-    LeadSourceDetail: IdParams
+    LeadSourceDetail: { sourceId: string }
     LeadSourceUploads: undefined
+    LeadSourceUpload: undefined
+    LeadSourceReport: { uploadId: string }
 }
 
 export type ClientsStackParamList = {

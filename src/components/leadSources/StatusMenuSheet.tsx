@@ -24,6 +24,7 @@ import NoteBox from "./NoteBox"
 
 const UNKNOWN_META = { label: "Unknown", color: "bg-gray-500 text-white" }
 const HTTP_CONFLICT = 409
+const BADGE_SIZE = { sm: "rounded-md px-2 py-1 text-[11px]", md: "rounded-lg px-3 py-2 text-sm" }
 
 enableIconClassNames(ChevronDown)
 
@@ -32,16 +33,19 @@ export function StatusBadgeButton({
     status,
     onPress,
     disabled = false,
+    size = "sm",
 }: {
     status: number
     onPress: () => void
     disabled?: boolean
+    /** "sm" on a row, "md" on the details screen. */
+    size?: "sm" | "md"
 }) {
     // A retired code, such as 60, shows a grey Unknown badge instead of crashing.
     const meta = LEAD_SOURCE_STATUS_META[status as LeadSourceStatus] ?? UNKNOWN_META
     const isConverted = status === LEAD_SOURCE_STATUS.CONVERTED
     const isLocked = disabled || isConverted
-    const classes = toNativeClasses(`rounded-md px-2 py-1 text-[11px] font-semibold ${meta.color}`)
+    const classes = toNativeClasses(`${BADGE_SIZE[size]} font-semibold ${meta.color}`)
 
     return (
         <Pressable
@@ -56,7 +60,7 @@ export function StatusBadgeButton({
             <Text numberOfLines={1} className={classes.text}>
                 {meta.label}
             </Text>
-            {!isLocked && <ChevronDown size={12} className={classes.text} />}
+            {!isLocked && <ChevronDown size={size === "sm" ? 12 : 16} className={classes.text} />}
         </Pressable>
     )
 }

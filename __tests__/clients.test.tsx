@@ -1,4 +1,4 @@
-import { Alert } from "react-native"
+import { Alert, Linking } from "react-native"
 
 import { notify } from "@/lib/notify"
 import { clearToken, saveToken } from "@/store/keychain"
@@ -151,6 +151,15 @@ describe("client detail", () => {
         )
         await press(findPressableByText(renderer, "View lead"))
         expect(getCalls(fetchMock)).toContain(`GET /api/admin/operations/leads/${LEAD_ID}`)
+        await unmountApp(renderer)
+    })
+
+    it("opens the mail app from the email line", async () => {
+        const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined)
+        const renderer = await openClient()
+
+        await press(findPressable(renderer, "Email hello@acme.test"))
+        expect(open).toHaveBeenCalledWith("mailto:hello@acme.test")
         await unmountApp(renderer)
     })
 

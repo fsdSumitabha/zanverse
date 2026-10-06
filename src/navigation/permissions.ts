@@ -20,6 +20,8 @@ export const SCREEN_ROLES: Partial<Record<AppScreenName, readonly number[]>> = {
     ProjectCreate: [10, 45, 60, 70],
     ProjectEdit: [10, 45, 60, 70],
     LeadSourceUploads: LEAD_SOURCE_MANAGE_ROLES,
+    LeadSourceUpload: LEAD_SOURCE_MANAGE_ROLES,
+    LeadSourceReport: LEAD_SOURCE_MANAGE_ROLES,
     LeadSources: LEAD_SOURCE_ACCESS_ROLES,
     LeadSourceDetail: LEAD_SOURCE_ACCESS_ROLES,
 }

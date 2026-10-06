@@ -95,8 +95,10 @@ const CALLS_PATHS: PathConfig<CallsStackParamList> = {
     initialRouteName: "LeadSources",
     screens: {
         LeadSources: "lead-sources",
+        LeadSourceUpload: "lead-sources/upload",
         LeadSourceUploads: "lead-sources/uploads",
-        LeadSourceDetail: "lead-sources/:id",
+        LeadSourceReport: "lead-sources/uploads/:uploadId",
+        LeadSourceDetail: "lead-sources/:sourceId",
     },
 }
 

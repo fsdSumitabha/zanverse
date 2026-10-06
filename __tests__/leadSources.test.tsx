@@ -233,6 +233,16 @@ describe("lead sources list", () => {
         await unmountApp(renderer)
     })
 
+    it("opens the callback sheet from a row's clock chip", async () => {
+        const renderer = await openCalls()
+
+        await press(findPressable(renderer, /^Callback /))
+        expect(getTexts(renderer)).toEqual(
+            expect.arrayContaining(["Callback reminder", "Clear callback", "Change time"]),
+        )
+        await unmountApp(renderer)
+    })
+
     it("keeps the sheet and the note open on a 409, shows the message and reloads", async () => {
         const message = "This lead source changed while you were saving. Reload it and try again."
         const renderer = await openCalls([

@@ -1,8 +1,8 @@
-import { Building2, Clock, Mail, RefreshCw } from "lucide-react-native"
+import { Building2, Clock, RefreshCw } from "lucide-react-native"
 import { Pressable, Text, View } from "react-native"
 
 import WhatsAppLink from "@/components/phone/WhatsAppLink"
-import { TimeAgo } from "@/components/ui"
+import { ContactRow, TimeAgo } from "@/components/ui"
 import { useAuth } from "@/contexts/AuthContext"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { canOpen } from "@/navigation/permissions"
@@ -23,7 +23,7 @@ const CLIENT_EDIT_ROLES = [10, 15, 60, 69, 45, 70]
 // The web's shadow-sm, as Android elevation.
 const CARD_SHADOW = { elevation: 1 }
 
-enableIconClassNames(Building2, Clock, Mail, RefreshCw)
+enableIconClassNames(Building2, Clock, RefreshCw)
 
 function Divider() {
     return <View className="h-px bg-neutral-100 dark:bg-neutral-800" />
@@ -71,14 +71,7 @@ export default function ClientHeaderCard({ client, onEdit, onStatusUpdated }: Pr
             <Divider />
 
             <View className="gap-3">
-                {!!client.email && (
-                    <View className="flex-row items-center gap-2">
-                        <Mail size={16} className="text-gray-400" />
-                        <Text selectable numberOfLines={1} className="flex-1 text-sm text-gray-600 dark:text-gray-300">
-                            {client.email}
-                        </Text>
-                    </View>
-                )}
+                {!!client.email && <ContactRow kind="email" value={client.email} />}
                 {!!client.phone && <WhatsAppLink phone={client.phone} />}
                 {!!client.company && (
                     <View className="flex-row items-center gap-2">

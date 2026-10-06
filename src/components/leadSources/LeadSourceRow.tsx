@@ -6,14 +6,14 @@ import { Pressable, Text, View } from "react-native"
 import { Avatar } from "@/components/ui"
 import { LEAD_SOURCE_STATUS } from "@/constants/leadSourceStatus"
 import { useRegion } from "@/contexts/RegionContext"
-import { callbackState, formatCallback, relativeCallback, type CallbackState } from "@/lib/callback"
+import { callbackState, formatCallback, relativeCallback } from "@/lib/callback"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { toNativeClasses } from "@/lib/nativeClasses"
 import { formatPhoneForDisplay } from "@/lib/phone"
 import type { LeadSourceRow as Row, LeadSourceView } from "@/types/leadSource"
 
 import CallButton from "./CallButton"
-import { getDayChip, getRowHeight, ROW_HEIGHT } from "./rowLayout"
+import { CALLBACK_TONES, getDayChip, getRowHeight, ROW_HEIGHT } from "./rowLayout"
 import { StatusBadgeButton } from "./StatusMenuSheet"
 
 interface Props {
@@ -29,14 +29,9 @@ interface Props {
     onToggle: (id: string) => void
     /** Opens the status sheet, starting on `status`. */
     onOpenStatus: (row: Row, status: number) => void
+    /** Opens the callback sheet, to change or clear the time. */
+    onOpenCallback: (row: Row) => void
     onOpenLead: (leadId: string) => void
-}
-
-// The web's callback chip tones.
-const CALLBACK_TONES: Record<CallbackState, string> = {
-    due: "border-rose-600 bg-rose-600 text-white",
-    soon: "border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-200",
-    later: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300",
 }
 
 const SKELETON_STYLE = { height: ROW_HEIGHT }
@@ -89,6 +84,7 @@ function LeadSourceRow({
     onOpen,
     onToggle,
     onOpenStatus,
+    onOpenCallback,
     onOpenLead,
 }: Props) {
     const { phoneCountry } = useRegion()
@@ -159,7 +155,7 @@ function LeadSourceRow({
                     <View className="mt-1 flex-row items-center gap-1.5">
                         {callbackTone && row.callbackAt && (
                             <Pressable
-                                onPress={() => onOpenStatus(row, LEAD_SOURCE_STATUS.CALL_BACK)}
+                                onPress={() => onOpenCallback(row)}
                                 disabled={isSelecting}
                                 accessibilityRole="button"
                                 accessibilityLabel={`Callback ${formatCallback(row.callbackAt)}, ${relativeCallback(

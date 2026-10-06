@@ -1013,3 +1013,76 @@ Android SDK. No new package.
       selected (Metro network log).
 - [ ] Long-press selects, a tap toggles, the X clears; the bulk bar clears the tab bar and the gesture bar.
 - [ ] A role-60 account sees no filters, avatars or Assign / Day / Delete; a role-10 account sees them all.
+
+## Session 12 — lead sources dialing, detail, convert
+
+**Status: done, except the device checks.** The call button now opens the phone's dialer, and the lead source detail
+screen works end to end in the whole-app tests against a mocked API. Real data needs the session 4 backend patch; the
+cloud container has no Android SDK. No new package.
+
+### What is in it
+
+- `src/lib/contact.ts`: `startCall` (`tel:` through `Linking.openURL`, and the web's toast with "Copy number" only
+  when no dialer opens), `openWhatsApp` (`https://wa.me/<digits>?text=`, nothing for an invalid number) and
+  `openEmail` (`mailto:`). `src/lib/dialer.ts` re-exports `startCall`, so session 11's imports are unchanged.
+- `AndroidManifest.xml`: a `<queries>` block inside `<manifest>` for DIAL + `tel`, VIEW + `https`, SENDTO + `mailto`,
+  `com.whatsapp` and `com.whatsapp.w4b`. The `mailto` intent is one more than the prompt lists; without it Android 11+
+  may not see the mail app.
+- `src/components/ui/ContactRow.tsx`: the tappable phone (WhatsApp green, grey for an invalid number) or email (blue,
+  Mail icon) line. `WhatsAppLink` now renders it. The email lines on the lead detail card and both client cards use it.
+- Screen: `src/screens/leadSources/LeadSourceDetailScreen.tsx` (route param `sourceId`), on `useDetailQuery`.
+- Components (`src/components/leadSources/`): `LeadSourceHeaderCard`, `CallbackButton`, `CallbackSheet`
+  (`PATCH /:id/callback` set / change / clear), `AddNote`, `ImportNotes`, `SheetData`, `ActivityTimeline`,
+  `ConvertSheet`. `StatusBadgeButton` and `CallButton` take `size="md"`.
+- `src/constants/leadSourceColumns.ts`: key, label and kind from the web's `src/config/leadSourceSheet.ts`.
+- Navigation: `LeadSourceDetail` takes `{ sourceId }` (deep link `lead-sources/:sourceId`). `LeadSourceUpload` and
+  `LeadSourceReport { uploadId }` are registered as placeholders, with MANAGE roles, so the detail screen's file line
+  can link to the report now. Session 13 builds them.
+
+### Decisions
+
+- **The row's clock chip** now opens `CallbackSheet`, as the web's chip opens its CallbackMenu. Session 11 opened the
+  status sheet on Call Back as a stand-in. The sheet also pauses the list's quiet reload.
+- **NoteBox stays the plain box** (session 11's status sheet uses it). `AddNote` wraps it with the web NoteBox's
+  `POST /:id/notes`, the "What did you learn on the call?" placeholder and the "Add note" button.
+- **Convert** lands on the lead through `openLead(leadId, role)`, in the Leads tab. The source reloads behind it, so
+  going back to the Calls tab shows it converted. A failure toasts the server's message and closes the sheet.
+- **Delete** goes back with `popTo("LeadSources")`; the list reloads on focus. Assign and Set day reload the source.
+- **The activity sentences** are the web's words. A status change is a wrapping row of words and pills, because a
+  pill cannot sit inside a `<Text>` on Android. `TimeAgo` follows the sentence.
+- **The source file line** links to the report only for managers, as on the web.
+
+### What was verified
+
+- `__tests__/leadSourceDetail.test.tsx` (10 tests, the whole app): every card's content (header, list info, status,
+  phone, email, assignee, "Sun 4 Oct" with "left over", "leads.xlsx, row 7", upload warnings, sheet values with a date
+  as "3 Apr 2021" and an "(extra column)", the activity); call → `tel:+919876543210`, WhatsApp →
+  `https://wa.me/919876543210?text=`, email → `mailto:`; a note posting `{ text }` trimmed, clearing the box, "Note
+  added" and a reload; a callback set from "1 hour" with today's `callbackDay`, then cleared with `{ callbackAt: null }`
+  and "Callback cleared"; Assign / Set day / Delete for a manager, and Delete posting `{ action, ids: ["s1"], today }`
+  and returning to the list; no manager row for role 60 and no Convert for role 65; convert posting to `/convert`,
+  "Lead created" and the lead screen; a 409 toasting the server's message and closing the sheet; the converted banner,
+  the locked "Converted to a lead" badge and no call, callback or note; the not-found card on a 404.
+- `src/lib/__tests__/contact.test.ts` (4) and `src/components/leadSources/__tests__/SheetData.test.tsx` (2). The
+  list test opens the callback sheet from a row's chip; the lead and client tests tap the email line.
+- `npm test`: 32 suites, 319 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, and
+  `hermesc` compiles it. Every source file is under 250 lines.
+
+### Open question: do-not-call
+
+One-tap dialing now exists. The status list still has no distinct "Do not call": it is folded into Not Interested.
+Under TCPA-style rules a number that asked not to be called must never be dialed again. Whether to add a DNC status
+(and block the call button for it) is a backend decision. Nothing on the phone changes until the web adds it.
+
+### Device checklist
+
+- [ ] The call button on a list row and on the detail screen opens the dialer with the number filled in.
+- [ ] The WhatsApp line opens a chat when WhatsApp is installed, and the browser when it is not.
+- [ ] The email line on the lead source, lead and client screens opens the mail app.
+- [ ] A source with sheet data and several activity entries shows all seven cards, with no clipped text at 360 dp.
+- [ ] A note saves, clears, toasts "Note added" and appears in the activity.
+- [ ] Set callback, Change time and Clear callback all work from the header button and from a row's chip.
+- [ ] A manager can Assign, Set day and Delete; Delete returns to the list and the row is gone.
+- [ ] Convert creates the lead and opens it; the source then shows the blue banner with the controls hidden.
+- [ ] Converting an already converted source toasts the server's 409 message.
+- [ ] A source assigned to someone else shows "Lead source not found".

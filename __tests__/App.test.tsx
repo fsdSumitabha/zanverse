@@ -186,14 +186,14 @@ describe("screen guard", () => {
 
         await ReactTestRenderer.act(async () => {
             navigationRef.navigate("App", {
-                screen: "CallsTab",
-                params: { screen: "LeadSourceDetail", params: { id: "64b7f0c2a1b2c3d4e5f60718" } },
+                screen: "UsersTab",
+                params: { screen: "UserEdit", params: { id: "64b7f0c2a1b2c3d4e5f60718" } },
             })
         })
         await flush()
 
         const texts = getTexts(renderer)
-        expect(texts).toContain("LeadSourceDetail")
+        expect(texts).toContain("UserEdit")
         expect(texts.some((text) => text.includes("64b7f0c2a1b2c3d4e5f60718"))).toBe(true)
         await unmountApp(renderer)
     })
