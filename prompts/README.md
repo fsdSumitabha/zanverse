@@ -1303,3 +1303,71 @@ package.
 - [ ] Mark all read clears every bold row with one toast; two taps do not stack two toasts.
 - [ ] The bell shows the unseen count on every tab, and opening the inbox clears it.
 - [ ] Home button, then back into the app: exactly one immediate fetch, and no poll while in the background.
+
+## Session 16 — users module
+
+**Status: done, except the device checks.** The Users tab, the create form and the edit form are built and tested
+inside the whole app against a mocked API, with the image picker mocked. Real data needs the session 4 backend patch;
+the cloud container has no Android SDK. No new package.
+
+### What is in it
+
+- Screens (`src/screens/users/`): `UsersListScreen`, `UserCreateScreen`, `UserEditScreen`, registered in `UsersStack`.
+- Components (`src/components/users/`): `UserCard` (+ `UserListItem`), `UserCardSkeleton`, `UserForm`, `RegionSelect`,
+  `AvatarField`.
+- `src/lib/userDiff.ts`: `getUserFormEntries` (the web's create fields and edit diff) and `buildUserFormData`.
+- `src/lib/pickAvatar.ts`: `pickAvatarImage`, `getAvatarRejection`, `formatSize`. In `src/lib/` because session 17's
+  profile avatar uses it too.
+- `jest/setup.js` mocks `react-native-image-picker`.
+- The App test that opened a placeholder now opens the real lead source detail screen with its params, since the
+  placeholders are going away.
+
+### Decisions
+
+- **RegionBadge** already existed (`src/components/region/RegionBadges.tsx`, session 4); it is reused.
+- **UserPickerSheet is not built.** Session 8's `AttendeePickerScreen` already lists `GET /users/picker` with a search
+  for the meeting form. A second picker would be unused.
+- **The edit pencil** is a 44 dp button in the card's header, shown when `canOpen("UserEdit", role)` (10, 20). The
+  create button and the floating button show for `canOpen("UserCreate", role)` (10, 20, 69), the web's own list.
+- **The card's avatar** falls back to the first letter of the name, as on the web, not the generic person icon.
+- **The edit diff** is the web's, kept exactly: regions go only when the sorted set changed. An empty diff toasts
+  "Nothing changed yet" with no request.
+- **Create asks first** ("Create this account? The password is emailed to them."). The server does email the
+  password (`sendRegistrationMail`). The toast chain runs on one id: "Creating user..." → "<name> has been created"
+  with the email, or "Failed to create user" with the reason.
+- **"Email already exists"** comes back as a 409 with no `field`, so the screen routes it to the email box. Other errors
+  with a `field` go under that field. A 403 ("You cannot change your own role") is a toast; the form stays.
+- **Client checks** are the ones the browser does on the web: empty name or email → "Please fill out this field.";
+  a password under 6 characters (or none on create) → the server's "Password must be at least 6 characters"; no region
+  → "Pick at least one region".
+- **The avatar** is checked in the app with the server's words: "Invalid file type" (not JPEG or PNG) and "File too
+  large (max 5MB)". The MIME type falls back to the file extension when the picker gives none.
+- Known gap, unchanged: `GET /users` allows role 15, which `permissions.ts` does not list, and role 45 is listed but
+  the API refuses it with a 403 (shown as AccessDenied).
+
+### What was verified
+
+- `__tests__/users.test.tsx` (9 tests, the whole app): the list request `?page=1&limit=10`, "2 users found", the
+  Active / Inactive pills, "Disabled", the red "No region", "No login yet", "Created by", the pencil and both create
+  entry points; no pencil and AccessDenied on the edit screen for role 69; a create with a region and a JPEG avatar
+  sending the web's parts in order, after the confirm, with the success toast and the list again; "Pick at least one
+  region" with no dialog, then "Email already exists" on the field; a 6 MB image and a GIF refused in the app; a
+  single-region manager with US preselected and IN / AE disabled; "Nothing changed yet" with no PATCH; your own
+  account with the locked regions line, sending only `name`; the could-not-load card and "Back to users".
+- `__tests__/userDiff.test.ts` (7 tests): the edit diff and the create fields.
+- `npm test`: 39 suites, 374 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] The Users tab lists users, appends on scroll and refreshes on pull; a 2-character search goes back to page 1.
+- [ ] An inactive user's card is dimmed with "Inactive" and "Disabled", and real region badges.
+- [ ] The floating button clears the tab bar at 360 dp and is absent outside roles 10, 20, 69.
+- [ ] Creating a user with a JPEG avatar from the gallery works, and the new row appears.
+- [ ] A duplicate email shows "Email already exists" and creates nothing.
+- [ ] A 6 MB image or a non-JPEG/PNG file is refused with no request.
+- [ ] Saving an untouched edit shows "Nothing changed yet" with no request (Metro network log).
+- [ ] Editing only your own name sends `name` and no `regions`; your regions row is locked with the web's text.
+- [ ] A region the edited account holds that you cannot grant is ticked, locked and not removable.
+- [ ] The image picker returns `type` and `fileSize` on Android 13+ (the photo picker); if not, the extension
+      fallback covers the type.

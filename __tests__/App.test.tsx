@@ -184,20 +184,19 @@ describe("screen guard", () => {
         await unmountApp(renderer)
     })
 
-    it("opens the placeholder with its params when the role may open it", async () => {
+    it("opens a screen with its params when the role may open it", async () => {
         const renderer = await signInAs(ADMIN)
 
         await ReactTestRenderer.act(async () => {
             navigationRef.navigate("App", {
-                screen: "UsersTab",
-                params: { screen: "UserEdit", params: { id: "64b7f0c2a1b2c3d4e5f60718" } },
+                screen: "CallsTab",
+                params: { screen: "LeadSourceDetail", params: { sourceId: "64b7f0c2a1b2c3d4e5f60718" } },
             })
         })
         await flush()
 
-        const texts = getTexts(renderer)
-        expect(texts).toContain("UserEdit")
-        expect(texts.some((text) => text.includes("64b7f0c2a1b2c3d4e5f60718"))).toBe(true)
+        const calls = fetchMock.mock.calls.map(([url]) => url)
+        expect(calls).toContain("http://10.0.2.2:3000/api/admin/operations/lead-sources/64b7f0c2a1b2c3d4e5f60718")
         await unmountApp(renderer)
     })
 })
