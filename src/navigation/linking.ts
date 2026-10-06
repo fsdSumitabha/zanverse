@@ -145,7 +145,7 @@ const MORE_PATHS: PathConfig<MoreStackParamList> = {
 }
 
 const DASHBOARD_PATHS: PathConfig<DashboardStackParamList> = {
-    screens: { Dashboard: "" },
+    screens: { Dashboard: "", Search: "search" },
 }
 
 /**

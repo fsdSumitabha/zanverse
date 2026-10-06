@@ -3,6 +3,7 @@ import ReactTestRenderer from "react-test-renderer"
 
 import { toDayString } from "@/lib/leadSourceDay"
 import { notify } from "@/lib/notify"
+import LeadSourcesScreen from "@/screens/leadSources/LeadSourcesScreen"
 import { clearToken, saveToken } from "@/store/keychain"
 import { saveActiveRegion } from "@/store/mmkv"
 
@@ -140,7 +141,9 @@ describe("lead sources list", () => {
             ]),
         )
         // Header, section 0, a, section 1, b, c, section 2, d: the list header counts as item 0.
-        expect(renderer.root.findByType(FlatList).props.stickyHeaderIndices).toEqual([1, 3, 6])
+        expect(renderer.root.findByType(LeadSourcesScreen).findByType(FlatList).props.stickyHeaderIndices).toEqual([
+            1, 3, 6,
+        ])
         await unmountApp(renderer)
     })
 

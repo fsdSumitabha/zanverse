@@ -1492,3 +1492,76 @@ cloud container has no Android SDK. No new package.
 - [ ] Entity "Lead" filters; a To date includes that day; a user disables the name search.
 - [ ] A role-60 account sees the Restricted-area card, and its button opens Profile.
 - [ ] Profile's "My activity" shows only that user's rows, with no user picker.
+
+## Session 19 — dashboard and search
+
+**Status: done, except the device checks.** The Dashboard tab is a real screen: four counters, the next four meetings
+and the Lead / Client / Project feed in one list. A search icon in its header opens a global Search screen. It is
+built and tested inside the whole app against a mocked API. Real data needs the session 4 backend patch; the cloud
+container has no Android SDK. No new package.
+
+### What is in it
+
+- Screens: `src/screens/dashboard/DashboardScreen.tsx` and `SearchScreen.tsx`, as `Dashboard` and `Search` in
+  `DashboardStack` (the placeholder is gone there). `DASHBOARD_SCREEN_OPTIONS` in `stackOptions.ts` puts the search
+  icon before the bell and the profile menu on the Dashboard only.
+- Components (`src/components/dashboard/`): `EntityCard`, `LastInteraction`, `EntityCardSkeleton`, `StatsCards`,
+  `UpcomingMeetingsCard` (+ `smartDate`), `SearchResultRow`, `HeaderSearchButton`.
+- Hooks: `useDashboardFeed.ts` (the feed, both paging branches) and `useRouteFilterParams.ts` (applies a list filter
+  from route params once, then clears them).
+- `src/lib/entityNav.ts`: `navigateToEntity`, `openTabScreen` and `hrefToScreen`. `hrefToScreen` reuses
+  `resolveNotificationPath` for leads, clients and projects, and sends `/admin/operations/meetings` to Meetings.
+- `src/types/search.ts` copied from the web. `endpoints.ts` gains `DASHBOARD_API`, `STATS_API` and `SEARCH_API`.
+- Route params: `ClientsList` takes `{ status }` and `Meetings` takes `{ range }`. `SearchField` takes `autoFocus`.
+
+### Decisions
+
+- **Paging.** The hook sends `?page=<n>&limit=20`. When the reply has `pagination`, it appends the next page and drops
+  a row it already has. When it has no `pagination` (the backend change has not landed), it keeps the whole array and
+  shows it 20 rows at a time behind the same `loadMore`. No second request is sent in that case.
+- **403.** `AccessDenied` with the API's message takes the feed's place. The counters and the meetings card stay above
+  it and stay silent: a failed `/stats` shows "—", as on the web.
+- **Errors.** The web's red box ("Failed to load data", the message, Retry) and its toast "Failed to load operations
+  data" are kept. Retry repeats the request that failed. With rows already on screen, the box shows under them instead
+  of replacing them.
+- **Meetings card.** It asks for `range=upcoming&limit=20`, sorts soonest first and keeps 4, as the web does. A row
+  with a lead, client or project opens it; "View all" opens Meetings on the upcoming range; "View pipeline overview"
+  opens Overall stats.
+- **Stat tiles** open the Leads, Clients (status 1), Projects and Meetings lists. A role without that tab gets the
+  web's 403 toast.
+- **Search** sends `&limit=10`, as the prompt says (the web sends no limit, so the route's default of 5 applies there).
+  A hit clears the box, as the web does. An href the app does not know is logged and ignored. A short query also
+  drops any answer still on its way, so old results never come back after the box is cleared.
+- **Bottom padding.** The feed uses the same `p-4` as every other list. The session 1 finding applies: a tab screen
+  already ends at the tab bar, so `useBottomTabBarHeight() + insets.bottom` would count the inset twice.
+- **Older tests.** The Dashboard now fetches on app start, so four suites look for calls by URL and for lists inside
+  their own screen. No behaviour changed.
+
+### What was verified
+
+- `__tests__/dashboard.test.tsx` (14 tests, the whole app): lead, client and project cards with phone, email, source,
+  company and description; a 2510 row as "Status Changed" with "New Lead" → "Contacted" and the META underline; a
+  2110 row with its label; each card opening its own detail screen; 25 rows shown as 20 then 25 with one request; page
+  2 asked for when `pagination` is present, with the repeated row dropped; one pull re-asking for the feed, `/stats`
+  and the meetings; the error box, the toast and Retry; "No data found"; role 20 seeing "Access Denied" with the API's
+  message and "—" with no feed toast; the four tiles, and Active Clients opening clients with `status=1`; the meetings
+  card as "Today, 3:00 PM · Acme Lead", "Tomorrow, 9:00 AM", "Fri, 2:30 PM" and "Oct 21, 11:00 AM", soonest first,
+  with the fifth left out, and a row opening its lead; View all opening Meetings with `range=upcoming`; search with one
+  character sending nothing, two characters sending `?search=ac&limit=10`, Leads / Clients / Meetings sections with no
+  empty Projects section, and a hit opening its lead; "No results for “zz”"; the server's message on a failure.
+- `npm test`: 43 suites, 407 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] The Dashboard opens on the four counters, the meetings card and the feed from the dev API.
+- [ ] Lead, Client and Project cards open their detail screens in their own tabs.
+- [ ] Scrolling to the end adds 20 rows; the Metro log shows one feed request per page, or one in total without
+      the backend change. Record the payload size and the row count of `GET /api/admin/operations`.
+- [ ] One pull reloads the feed, the counters and the meetings.
+- [ ] Active Clients opens the clients list on status 1.
+- [ ] The meetings card shows at most four, soonest first, and each opens its parent.
+- [ ] Search: two characters show grouped hits, one character sends nothing, a hit opens its screen, no match says
+      "No results for …", and a failure shows the server's message.
+- [ ] A role-20 account sees Access Denied in place of the feed.
+- [ ] After a region switch, the feed, the counters, the meetings and the search use the new region.

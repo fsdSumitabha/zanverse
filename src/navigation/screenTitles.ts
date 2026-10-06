@@ -3,6 +3,7 @@ import type { AppScreenName } from "./types"
 /** The header title of every screen inside a tab. */
 export const SCREEN_TITLES: Record<AppScreenName, string> = {
     Dashboard: "Dashboard",
+    Search: "Search",
     LeadsList: "Leads",
     LeadDetail: "Lead",
     LeadCreate: "Create Lead",

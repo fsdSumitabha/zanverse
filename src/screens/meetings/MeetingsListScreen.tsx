@@ -4,6 +4,7 @@ import MeetingCard, { type MeetingListItem } from "@/components/meetings/Meeting
 import MeetingCardSkeleton from "@/components/meetings/MeetingCardSkeleton"
 import MeetingFilters from "@/components/meetings/MeetingFilters"
 import { useListQuery } from "@/hooks/useListQuery"
+import { useRouteFilterParams } from "@/hooks/useRouteFilterParams"
 
 const PAGE_SIZE = 10
 
@@ -17,6 +18,7 @@ function getCountLabel(total: number): string {
  */
 export default function MeetingsListScreen() {
     const query = useListQuery<MeetingListItem>({ path: MEETINGS_API, pageSize: PAGE_SIZE })
+    useRouteFilterParams(["range"], query.setFilters)
 
     return (
         <ListScreen

@@ -5,6 +5,7 @@ import { navigationRef } from "@/api/navigationRef"
 import DateField from "@/components/list/DateField"
 import { INTERACTION_TYPE_META } from "@/constants/interactionTypes"
 import { LEAD_STATUS_META } from "@/constants/leadStatus"
+import ActivityLogsScreen from "@/screens/activityLogs/ActivityLogsScreen"
 import ProfileScreen from "@/screens/profile/ProfileScreen"
 import { clearToken, saveToken } from "@/store/keychain"
 import { saveActiveRegion } from "@/store/mmkv"
@@ -138,6 +139,13 @@ function getLogCalls(): string[] {
     return getCalls(fetchMock).filter((call) => call.startsWith(`GET ${ACTIVITY}?`))
 }
 
+// The Dashboard tab's feed is mounted too, so the list is looked for inside the screen.
+function getLogList(renderer: ReactTestRenderer.ReactTestRenderer) {
+    return renderer.root
+        .findByType(ActivityLogsScreen)
+        .findAll((node) => typeof node.props.onEndReached === "function")[0]
+}
+
 /** The last pressable holding this text: the filter sheet's chip, not a row's badge with the same word. */
 function findLastPressableByText(renderer: ReactTestRenderer.ReactTestRenderer, text: string) {
     const matches = renderer.root.findAllByType(Text).filter((node) => node.props.children === text)
@@ -190,11 +198,11 @@ describe("activity logs", () => {
 
     it("appends page 2 without repeating a row", async () => {
         const renderer = await openLogs()
-        const list = renderer.root.findAll((node) => typeof node.props.onEndReached === "function")[0]
+        const list = getLogList(renderer)
         await ReactTestRenderer.act(async () => list.props.onEndReached())
         await flush()
         expect(getLogCalls().at(-1)).toBe(`GET ${ACTIVITY}?page=2&limit=15`)
-        const data = renderer.root.findAll((node) => typeof node.props.onEndReached === "function")[0].props.data as {
+        const data = getLogList(renderer).props.data as {
             _id: string
         }[]
         expect(data.map((row) => row._id)).toEqual(["r1", "r2", "r3", "r4", "r5", "r6", "p2"])

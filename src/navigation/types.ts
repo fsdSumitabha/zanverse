@@ -7,6 +7,7 @@ export interface IdParams {
 
 export type DashboardStackParamList = {
     Dashboard: undefined
+    Search: undefined
 }
 
 export type LeadsStackParamList = {
@@ -27,7 +28,8 @@ export type CallsStackParamList = {
 }
 
 export type ClientsStackParamList = {
-    ClientsList: undefined
+    /** The dashboard's Active Clients tile opens the list on status 1. */
+    ClientsList: { status?: string } | undefined
     ClientDetail: IdParams
     ClientEdit: IdParams
     /** Every project of one client. */
@@ -50,7 +52,8 @@ export type UsersStackParamList = {
 
 export type MoreStackParamList = {
     More: undefined
-    Meetings: undefined
+    /** The dashboard's meetings card opens the list on the upcoming range. */
+    Meetings: { range?: string } | undefined
     OverallStats: undefined
     ActivityLogs: undefined
     Notifications: undefined

@@ -3,6 +3,7 @@ import ReactTestRenderer from "react-test-renderer"
 
 import DateTimeField from "@/components/ui/DateTimeField"
 import { notify } from "@/lib/notify"
+import MeetingsListScreen from "@/screens/meetings/MeetingsListScreen"
 import { clearToken, saveToken } from "@/store/keychain"
 import { saveActiveRegion } from "@/store/mmkv"
 
@@ -78,7 +79,8 @@ async function openMeetings(user: object = ADMIN, extra: FetchRoute[] = []) {
 }
 
 function getListCalls(): string[] {
-    return getCalls(fetchMock).filter((call) => call.startsWith(`GET ${MEETINGS}?`))
+    // The Dashboard's meetings card asks for `range=upcoming&limit=20` without a page; the list always sends one.
+    return getCalls(fetchMock).filter((call) => call.startsWith(`GET ${MEETINGS}?page=`))
 }
 
 beforeEach(async () => {
@@ -283,7 +285,9 @@ describe("meetings list", () => {
         await press(findPressable(renderer, "Join meeting"))
         expect(open).toHaveBeenCalledWith("https://meet.google.com/abc-defg-hij")
 
-        const list = renderer.root.findAll((node) => typeof node.props.onEndReached === "function")[0]
+        const list = renderer.root
+            .findByType(MeetingsListScreen)
+            .findAll((node) => typeof node.props.onEndReached === "function")[0]
         await ReactTestRenderer.act(async () => list.props.onEndReached())
         expect(getListCalls().at(-1)).toBe(`GET ${MEETINGS}?page=2&limit=10`)
 

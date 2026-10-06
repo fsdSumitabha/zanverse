@@ -10,6 +10,7 @@ interface Props {
     value: string
     onChangeText: (text: string) => void
     placeholder?: string
+    autoFocus?: boolean
 }
 
 enableIconClassNames(Search, X)
@@ -18,7 +19,7 @@ enableIconClassNames(Search, X)
  * The in-screen search box. The web searches from its header SearchBar, which has no place on a phone. The list hook
  * debounces what is typed here.
  */
-export default function SearchField({ value, onChangeText, placeholder = "Search" }: Props) {
+export default function SearchField({ value, onChangeText, placeholder = "Search", autoFocus = false }: Props) {
     return (
         <View className="justify-center">
             <View className="absolute left-3 z-10" pointerEvents="none">
@@ -32,6 +33,7 @@ export default function SearchField({ value, onChangeText, placeholder = "Search
                 autoCapitalize="none"
                 autoCorrect={false}
                 returnKeyType="search"
+                autoFocus={autoFocus}
                 accessibilityLabel={placeholder}
                 className={clsx(FIELD_CLASSES, "pl-9 pr-11")}
             />
