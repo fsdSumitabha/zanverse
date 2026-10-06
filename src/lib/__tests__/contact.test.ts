@@ -1,6 +1,7 @@
 import { Linking } from "react-native"
 
 import { openEmail, openWhatsApp, startCall } from "@/lib/contact"
+import { isCallBlocked } from "@/lib/dialer"
 import { notify } from "@/lib/notify"
 
 async function settle() {
@@ -49,5 +50,12 @@ describe("contact", () => {
         const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined)
         openEmail("hello@acme.test")
         expect(open).toHaveBeenCalledWith("mailto:hello@acme.test")
+    })
+})
+
+describe("isCallBlocked", () => {
+    it("blocks Not Interested only", () => {
+        expect(isCallBlocked(50)).toBe(true)
+        for (const status of [10, 20, 30, 40, 60, 70]) expect(isCallBlocked(status)).toBe(false)
     })
 })

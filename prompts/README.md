@@ -1074,6 +1074,11 @@ One-tap dialing now exists. The status list still has no distinct "Do not call":
 Under TCPA-style rules a number that asked not to be called must never be dialed again. Whether to add a DNC status
 (and block the call button for it) is a backend decision. Nothing on the phone changes until the web adds it.
 
+**Decided after session 15:** the phone disables calling for Not Interested (50), the status whose definition covers
+"do not call". The button turns grey with a crossed-out phone (`PhoneOff`), reads "Do not call" on the detail screen,
+and does nothing when pressed. `isCallBlocked(status)` in `src/lib/dialer.ts` holds the one list; a real do-not-call
+code from the backend goes there. Changing the status back re-enables the button.
+
 ### Device checklist
 
 - [ ] The call button on a list row and on the detail screen opens the dialer with the number filled in.

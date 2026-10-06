@@ -1,4 +1,4 @@
-import { AppState, FlatList } from "react-native"
+import { AppState, FlatList, Linking } from "react-native"
 import ReactTestRenderer from "react-test-renderer"
 
 import { toDayString } from "@/lib/leadSourceDay"
@@ -230,6 +230,20 @@ describe("lead sources list", () => {
         const at = new Date(bodies[0].callbackAt)
         expect(Math.abs(at.getTime() - Date.now() - 2 * 60 * 60_000)).toBeLessThan(1000)
         expect(bodies[0].callbackDay).toBe(toDayString(at))
+        await unmountApp(renderer)
+    })
+
+    it("greys out and disables the call button for a Not Interested row", async () => {
+        const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined)
+        rows = [makeRow("b"), makeRow("x", { status: 50 })]
+        const renderer = await openCalls()
+
+        const blocked = findPressable(renderer, "Do not call Source x")
+        expect(blocked.props.disabled).toBe(true)
+        expect(renderer.root.findAll((node) => node.props.accessibilityLabel === "Call Source x")).toHaveLength(0)
+        await press(findPressable(renderer, "Call Source b"))
+        expect(open).toHaveBeenCalledWith("tel:+919876543210")
+        expect(open).toHaveBeenCalledTimes(1)
         await unmountApp(renderer)
     })
 

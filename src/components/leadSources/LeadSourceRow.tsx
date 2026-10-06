@@ -191,7 +191,11 @@ function LeadSourceRow({
                     onPress={() => onOpenStatus(row, row.status)}
                 />
                 {/* Hidden while selecting, so a stray tap cannot start a call when the person meant to pick rows. */}
-                {isSelecting ? <View className="h-10 w-10" /> : <CallButton name={row.name} phone={row.phone} />}
+                {isSelecting ? (
+                    <View className="h-10 w-10" />
+                ) : (
+                    <CallButton name={row.name} phone={row.phone} status={row.status} />
+                )}
             </View>
         </Pressable>
     )
