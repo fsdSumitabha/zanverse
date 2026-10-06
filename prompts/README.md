@@ -937,3 +937,79 @@ package.
 - [ ] The client row opens the client.
 - [ ] Edit shows the client read-only and saves a new title and budget; the list and the workspace show them.
 - [ ] Amounts show Indian grouping (`₹2,50,000`) under Hermes, not plain digits.
+
+## Session 11 — lead sources list and Today
+
+**Status: done, except the device checks.** The Calls tab now opens the lead sources list. It is built and tested
+inside the whole app against a mocked API. Real data needs the session 4 backend patch; the cloud container has no
+Android SDK. No new package.
+
+### What is in it
+
+- Screen: `src/screens/leadSources/LeadSourcesScreen.tsx`, registered as `LeadSources` in `CallsStack`. The detail
+  and uploads screens stay placeholders until sessions 12 and 13.
+- Hooks: `useLeadSourceList` (filters, rows, counts, progress, paging, the request id, the quiet reloads, the 900 ms
+  re-sort) and `useAssignees` (+ `roleLabel`).
+- Components (`src/components/leadSources/`): `LeadSourcesHeader`, `ViewTabs`, `LeadSourceFilters`, `AssigneeSelect`,
+  `LeadSourceRow` (+ skeleton), `StatusMenuSheet` (+ `StatusBadgeButton`), `CallbackPicker`, `NoteBox`, `CallButton`,
+  `BulkBar`, `DayChoice`, `LeadSourcesEmpty`, `rowLayout.ts`, `listItems.ts`, and `bulk/` with the Status, Assign,
+  Day and Delete sheets on one `useBulkSave`.
+- Libs: `src/lib/dialer.ts` (`startCall`, a toast with a Copy action for now), `src/lib/leadSourceBulk.ts` (`runBulk`,
+  `reportBulkResult`, `BULK_MAX`), `src/lib/pickDateTime.ts` (the Android date-then-time dialogs, shared with
+  `DateTimeField`).
+
+### Decisions
+
+- **Sections without a SectionList.** On Today the rows are flattened into section and row items, exactly where the
+  web draws a header. `stickyHeaderIndices` gets each header's data index + 1, because the list header is item 0.
+  `getItemLayout` adds the measured list-header height to each item's offset.
+- **Two row heights, not one.** A row is 64 dp, or 88 dp when it has a callback chip or a day chip. Both come from the
+  data, so `getItemLayout` still needs no measuring. One fixed height could not hold the chips on a phone.
+- **Infinite scroll instead of pages.** Scrolling appends page n + 1. A quiet reload re-reads page 1 with
+  `limit = rows on screen` (50 to 100, the route's cap), so the rows already scrolled to stay.
+- **The quiet reload** runs every 60 s while `AppState.currentState === "active"`, at once on background → active,
+  and on a later focus of the tab. It skips while a sheet is open, rows are selected or `menusOpen > 0`. The 900 ms
+  re-sort after a write runs even then, as on the web. `today` is worked out at each request.
+- **One status sheet for the screen**, not one per row. A row calls `onOpenStatus(row, status)`; the callback chip
+  opens it on Call Back. A 409 keeps the sheet open with the note, shows the server's message and reloads the list.
+- **The bulk bar** sits 16 dp above the tab bar. The prompt's `useBottomTabBarHeight() + insets.bottom` would count
+  the gesture inset twice (session 1 finding). As on the web at phone width, its buttons show icons only, each with
+  its label for screen readers.
+- **"Show them"** shows when the view is not Today. With infinite scroll there is no page 2 to jump back from, so it
+  also scrolls to the top.
+- **The "Upload sheet" button** waits for session 13, which adds the `LeadSourceUpload` route. The "Uploads" row in
+  the manager filters opens the `LeadSourceUploads` placeholder now.
+- **The one-day filter and "Other day"** use the session 6 `DateField`. With no day chosen it shows today muted.
+- **Callback preset pills** are 36 dp tall with a 4 dp `hitSlop`, so the touch target is 44 dp.
+
+### What was verified
+
+- `__tests__/leadSources.test.tsx` (11 tests, the whole app): the first request is
+  `view=today&today=2026-10-06&page=1&limit=50`; the three section titles, the sticky indices `[1, 3, 6]`, the tab
+  counts, "3 of 10 for today called", "1 callback is due." and "Unknown" for code 60; no filters, no assignee chips
+  and no Assign / Day / Delete for role 60; the filters, people from `/assignees`, `assignee=none` and all four bulk
+  buttons for role 10; a status save sending `{ status, note, today }`, the badge changing at once, the toast, and one
+  reload 900 ms later; Call Back keeping Save disabled with "Pick when to call back." until "2 hours" is picked, then
+  `callbackAt` two hours ahead and a `callbackDay` that matches it; a 409 keeping the sheet and the note, with the
+  message and a reload; the 60 s poll firing once, not while a sheet is open or rows are selected, and once on
+  background → active; a bulk Status on three rows sending the web's body and toasting
+  "1 lead source marked Not Reached. 1 already set. 1 skipped."; a new tab going back to page 1 and clearing the
+  selection; "Show them"; the Today and filtered empty states; AccessDenied with the server's message on a 403.
+- `src/components/leadSources/__tests__/leadSourceList.test.ts` (10 tests): the query string and its order, the
+  one-day view, the bulk report text, the 200-id limit, the day chip rules, the row heights, the section flattening
+  and offsets, and `resolveChoice`.
+- `npm test`: 29 suites, 301 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] The Calls tab opens the list on the dev API; Today shows up to 50 rows and appends the next page on scroll.
+- [ ] The section headers stick while scrolling, and rows do not jump (check `getItemLayout` against real heights).
+- [ ] The tab counts match `counts`; a tab or status change goes back to the top of page 1.
+- [ ] A status save changes the badge at once; about a second later the row moves and the counts change.
+- [ ] Call Back with "2 hours" shows a violet chip; it turns amber inside 15 minutes, then rose with a rose left edge.
+- [ ] "or at" opens the date dialog, then the time dialog, on RN 0.87.
+- [ ] Backgrounding for two minutes and returning refetches once; no poll fires while a sheet is open or rows are
+      selected (Metro network log).
+- [ ] Long-press selects, a tap toggles, the X clears; the bulk bar clears the tab bar and the gesture bar.
+- [ ] A role-60 account sees no filters, avatars or Assign / Day / Delete; a role-10 account sees them all.
