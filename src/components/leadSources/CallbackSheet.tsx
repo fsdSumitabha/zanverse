@@ -1,6 +1,6 @@
 import clsx from "clsx"
 import { useEffect, useState } from "react"
-import { Pressable, ScrollView, Text, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 
 import { send } from "@/api/client"
 import { LEAD_SOURCES_API } from "@/api/endpoints"
@@ -12,6 +12,8 @@ import type { LeadSourceRow } from "@/types/leadSource"
 
 import CallbackPicker, { EMPTY_CHOICE, resolveChoice, type CallbackChoice } from "./CallbackPicker"
 import { NOTE_MAX_LENGTH } from "./NoteBox"
+import { SheetScrollView } from "@/components/ui/sheetScrollables"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 interface Props {
     /** The source whose callback is set, or null when the sheet is closed. */
@@ -27,6 +29,7 @@ const NOW_TICK_MS = 15_000
  * popover in the web's CallbackMenu.tsx. Sends `PATCH /:id/callback`.
  */
 export default function CallbackSheet({ source, onClose, onUpdated }: Props) {
+    const offlineReason = useOfflineReason()
     const now = useNow(NOW_TICK_MS)
     const [choice, setChoice] = useState<CallbackChoice>(EMPTY_CHOICE)
     const [note, setNote] = useState("")
@@ -41,6 +44,8 @@ export default function CallbackSheet({ source, onClose, onUpdated }: Props) {
 
     const callbackAt = source?.callbackAt ?? null
     const hasTime = !!resolveChoice(choice)
+    const isOffline = offlineReason !== undefined
+    const isSetBlocked = isSaving || !hasTime || isOffline
 
     async function submit(isClear: boolean) {
         if (!source) return
@@ -67,9 +72,8 @@ export default function CallbackSheet({ source, onClose, onUpdated }: Props) {
             visible={source !== null}
             onClose={onClose}
             accessibilityLabel={source ? `Callback for ${source.name}` : "Callback"}
-            avoidKeyboard
         >
-            <ScrollView contentContainerClassName="gap-3 px-5 pb-4 pt-3" keyboardShouldPersistTaps="handled">
+            <SheetScrollView contentContainerClassName="gap-3 px-5 pb-4 pt-3" keyboardShouldPersistTaps="handled">
                 <View className="flex-row items-baseline justify-between gap-2">
                     <Text className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
                         Callback reminder
@@ -99,31 +103,39 @@ export default function CallbackSheet({ source, onClose, onUpdated }: Props) {
                     {callbackAt ? (
                         <Pressable
                             onPress={() => submit(true)}
-                            disabled={isSaving}
+                            disabled={isSaving || isOffline}
                             accessibilityRole="button"
-                            className="min-h-[44px] justify-center rounded-lg px-2 active:bg-rose-50 dark:active:bg-rose-500/10"
+                            accessibilityState={{ disabled: isSaving || isOffline }}
+                            className={clsx(
+                                "min-h-[44px] justify-center rounded-lg px-2 active:bg-rose-50 dark:active:bg-rose-500/10",
+                                isOffline && "opacity-50",
+                            )}
                         >
-                            <Text className="text-sm font-medium text-rose-600 dark:text-rose-400">Clear callback</Text>
+                            <Text className="text-sm font-medium text-rose-600 dark:text-rose-400">
+                                {isOffline ? `Clear callback · ${offlineReason}` : "Clear callback"}
+                            </Text>
                         </Pressable>
                     ) : (
                         <View />
                     )}
                     <Pressable
                         onPress={() => submit(false)}
-                        disabled={isSaving || !hasTime}
+                        disabled={isSetBlocked}
                         accessibilityRole="button"
-                        accessibilityState={{ disabled: isSaving || !hasTime }}
+                        accessibilityState={{ disabled: isSetBlocked }}
                         className={clsx(
                             "min-h-[44px] justify-center rounded-lg bg-violet-600 px-3 active:bg-violet-500",
-                            (isSaving || !hasTime) && "opacity-50",
+                            isSetBlocked && "opacity-50",
                         )}
                     >
                         <Text className="text-sm font-medium text-white">
-                            {isSaving ? "Saving..." : callbackAt ? "Change time" : "Set callback"}
+                            {`${isSaving ? "Saving..." : callbackAt ? "Change time" : "Set callback"}${
+                                isOffline ? ` · ${offlineReason}` : ""
+                            }`}
                         </Text>
                     </Pressable>
                 </View>
-            </ScrollView>
+            </SheetScrollView>
         </Sheet>
     )
 }

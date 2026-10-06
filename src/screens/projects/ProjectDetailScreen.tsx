@@ -15,6 +15,7 @@ import { useInteractions } from "@/hooks/useInteractions"
 import { openClient } from "@/navigation/openRecord"
 import type { ProjectsStackParamList } from "@/navigation/types"
 import type { Project } from "@/types/projects"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 type Navigation = NativeStackNavigationProp<ProjectsStackParamList, "ProjectDetail">
 
@@ -27,6 +28,7 @@ const PROJECT_DELETE_ROLES = [10, 15, 60, 45, 70]
  * answers with the project itself in `data`, not nested like leads and clients.
  */
 export default function ProjectDetailScreen() {
+    const offlineReason = useOfflineReason()
     const navigation = useNavigation<Navigation>()
     const { id } = useRoute<RouteProp<ProjectsStackParamList, "ProjectDetail">>().params
     const { role } = useAuth()
@@ -79,6 +81,7 @@ export default function ProjectDetailScreen() {
             {role !== null && PROJECT_DELETE_ROLES.includes(role) && (
                 <View className="flex-row justify-end">
                     <Button
+                        disabledReason={offlineReason}
                         label={remove.isDeleting ? "Deleting..." : "Delete Project"}
                         variant="danger"
                         loading={remove.isDeleting}

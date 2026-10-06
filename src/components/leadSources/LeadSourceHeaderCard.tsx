@@ -14,6 +14,7 @@ import type { LeadSourceDetail } from "@/types/leadSource"
 import CallbackButton from "./CallbackButton"
 import CallButton from "./CallButton"
 import { StatusBadgeButton } from "./StatusMenuSheet"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 export type DetailPanel = "assign" | "day" | "delete" | "convert" | "status" | "callback"
 
@@ -67,6 +68,7 @@ function QuietButton({
  * manager and convert actions. Ported from the header card of the web's [sourceId]/page.tsx.
  */
 export default function LeadSourceHeaderCard({ source, now, onOpen, onOpenUpload }: Props) {
+    const offlineReason = useOfflineReason()
     const { role } = useAuth()
     const isManager = canManageLeadSources(role)
     const canConvert = canConvertLeadSources(role)
@@ -169,6 +171,7 @@ export default function LeadSourceHeaderCard({ source, now, onOpen, onOpenUpload
                     )}
                     {canConvert && !isConverted && (
                         <Button
+                            disabledReason={offlineReason}
                             label="Convert to lead"
                             icon={ArrowRight}
                             onPress={() => onOpen("convert")}

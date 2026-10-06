@@ -15,9 +15,10 @@ import LeadSourcesHeader from "@/components/leadSources/LeadSourcesHeader"
 import { buildListLayout, type ListItem } from "@/components/leadSources/listItems"
 import ListSectionHeader from "@/components/leadSources/ListSectionHeader"
 import StatusMenuSheet from "@/components/leadSources/StatusMenuSheet"
-import { AccessDenied } from "@/components/ui"
+import { AccessDenied, OfflineNotice } from "@/components/ui"
 import { canManageLeadSources } from "@/constants/leadSourceRoles"
 import { useAuth } from "@/contexts/AuthContext"
+import { useIsOnline } from "@/hooks/useIsOnline"
 import { useLeadSourceList } from "@/hooks/useLeadSourceList"
 import { useNow } from "@/hooks/useNow"
 import { todayString } from "@/lib/leadSourceDay"
@@ -57,6 +58,7 @@ export default function LeadSourcesScreen() {
     const { role } = useAuth()
     const isManager = canManageLeadSources(role)
     const isDarkMode = useColorScheme() === "dark"
+    const isOnline = useIsOnline()
     const now = useNow(NOW_TICK_MS)
     const today = todayString()
     const listRef = useRef<FlatList<ListItem>>(null)
@@ -176,11 +178,18 @@ export default function LeadSourcesScreen() {
                             onOpenUploads={() => navigation.navigate("LeadSourceUploads")}
                             onUploadSheet={() => navigation.navigate("LeadSourceUpload")}
                         />
+                        {list.isShowingSaved && (list.isOffline || !isOnline) && (
+                            <View className="px-3 pb-2">
+                                <OfflineNotice />
+                            </View>
+                        )}
                     </View>
                 }
                 ListEmptyComponent={
                     list.loading ? (
                         <SkeletonRows />
+                    ) : list.isOffline ? (
+                        <OfflineNotice variant="empty" onRetry={list.refresh} />
                     ) : (
                         <LeadSourcesEmpty view={view} isManager={isManager} isFiltered={isFiltered} />
                     )

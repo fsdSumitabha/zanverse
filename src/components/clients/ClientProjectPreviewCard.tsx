@@ -57,7 +57,9 @@ export default function ClientProjectPreviewCard({ project, onPress }: Props) {
                         className={`${PILL} border-violet-200 bg-violet-50 dark:border-violet-500/20 dark:bg-violet-500/10`}
                     >
                         <Tag size={12} className="text-violet-600 dark:text-violet-400" />
-                        <Text className="text-xs text-violet-600 dark:text-violet-400">{service.label}</Text>
+                        <Text numberOfLines={1} className="text-xs text-violet-600 dark:text-violet-400">
+                            {service.label}
+                        </Text>
                     </View>
                 )}
                 {project.budget != null && (

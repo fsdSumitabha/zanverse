@@ -13,6 +13,7 @@ import { notify } from "@/lib/notify"
 import { openClient } from "@/navigation/openRecord"
 import type { LeadsStackParamList } from "@/navigation/types"
 import type { Lead } from "@/types/lead"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 type Navigation = NativeStackNavigationProp<LeadsStackParamList, "LeadConvert">
 
@@ -23,6 +24,7 @@ const LEADS_API = "/api/admin/operations/leads"
  * page, without its 2-second wait: on success it opens the new client at once.
  */
 export default function LeadConvertScreen() {
+    const offlineReason = useOfflineReason()
     const navigation = useNavigation<Navigation>()
     const { id } = useRoute<RouteProp<LeadsStackParamList, "LeadConvert">>().params
     const { role } = useAuth()
@@ -80,6 +82,7 @@ export default function LeadConvertScreen() {
                             onSubmitEditing={handleConvert}
                         />
                         <Button
+                            disabledReason={offlineReason}
                             label={isSubmitting ? "Converting..." : "Convert to Client"}
                             onPress={handleConvert}
                             loading={isSubmitting}

@@ -6,7 +6,7 @@ import {
     ROW_HEIGHT_WITH_CHIPS,
     SECTION_HEIGHT,
 } from "@/components/leadSources/rowLayout"
-import { EMPTY_LEAD_SOURCE_FILTERS, buildLeadSourceQuery } from "@/hooks/useLeadSourceList"
+import { EMPTY_LEAD_SOURCE_FILTERS, buildLeadSourceQuery } from "@/lib/leadSourceQuery"
 import { BULK_MAX, reportBulkResult, runBulk } from "@/lib/leadSourceBulk"
 import { notify } from "@/lib/notify"
 import type { LeadSourceRow } from "@/types/leadSource"

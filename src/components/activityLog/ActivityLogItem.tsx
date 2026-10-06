@@ -95,7 +95,10 @@ function ActivityLogItem({ row }: { row: ActivityLogRow }) {
                             accessibilityLabel={target ? `Open ${entityLabel.toLowerCase()} detail` : entityLabel}
                             hitSlop={8}
                         >
-                            <Text className={clsx("rounded-md border px-2 py-0.5 text-[11px] font-medium", badge)}>
+                            <Text
+                                numberOfLines={1}
+                                className={clsx("rounded-md border px-2 py-0.5 text-[11px] font-medium", badge)}
+                            >
                                 {entityLabel}
                             </Text>
                         </Pressable>

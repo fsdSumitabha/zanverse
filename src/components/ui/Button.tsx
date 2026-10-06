@@ -15,20 +15,24 @@ interface Props {
     /** Shows a spinner in place of the icon and blocks presses. */
     loading?: boolean
     disabled?: boolean
+    /** Why the button cannot be used now, such as "Offline" from useOfflineReason. It disables the button and follows
+     * the label: "Save · Offline". */
+    disabledReason?: string
     /** Extra classes for the pressable container, such as "flex-1" or "self-start". */
     className?: string
     accessibilityLabel?: string
 }
 
-// Verbatim from the web: BUTTON_PRIMARY, BUTTON_DANGER and BUTTON_QUIET in lead-sources/Dialog.tsx, and the soft
-// variant of CreateActionButton.tsx (base classes, then the variant's). toNativeClasses drops hover, focus and
-// transition classes and splits the rest between the Pressable and its Text.
+// From the web: BUTTON_PRIMARY, BUTTON_DANGER and BUTTON_QUIET in lead-sources/Dialog.tsx, and the soft variant of
+// CreateActionButton.tsx (base classes, then the variant's), without the hover, focus, cursor and transition classes
+// a phone has no use for. The press feel is the ripple and active:scale below. toNativeClasses splits the rest
+// between the Pressable and its Text.
 const WEB_BUTTON_CLASSES: Record<ButtonVariant, string> = {
     primary:
-        "inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition",
-    danger: "inline-flex items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition",
-    quiet: "inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 dark:border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 transition",
-    soft: "group w-full flex items-center justify-center gap-2 px-4 py-3 rounded font-medium transition-all duration-200 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/40 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-800 dark:text-gray-100 shadow-sm hover:shadow-md hover:border-blue-500/50 dark:hover:border-blue-500/50 hover:bg-blue-50/60 dark:hover:bg-blue-500/10",
+        "inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50",
+    danger: "inline-flex items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50",
+    quiet: "inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 dark:border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 disabled:opacity-50",
+    soft: "w-full flex items-center justify-center gap-2 px-4 py-3 rounded font-medium active:scale-[0.98] bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-800 dark:text-gray-100 shadow-sm",
 }
 
 const BUTTON_CLASSES: Record<ButtonVariant, NativeClasses> = {
@@ -70,7 +74,10 @@ function getVariantColors(variant: ButtonVariant, isDarkMode: boolean): VariantC
     }
 }
 
-/** The four web button styles, with a spinner for `loading` and the Android ripple on press. */
+/**
+ * The four web button styles, with a spinner for `loading`, the Android ripple on press, and a printed reason when it
+ * cannot be used.
+ */
 export default function Button({
     label,
     onPress,
@@ -78,11 +85,13 @@ export default function Button({
     icon: Icon,
     loading = false,
     disabled = false,
+    disabledReason,
     className,
     accessibilityLabel,
 }: Props) {
     const isDarkMode = useColorScheme() === "dark"
-    const isBlocked = disabled || loading
+    const isBlocked = disabled || loading || Boolean(disabledReason)
+    const shownLabel = disabledReason ? `${label} · ${disabledReason}` : label
     const classes = BUTTON_CLASSES[variant]
     const colors = getVariantColors(variant, isDarkMode)
 
@@ -98,7 +107,9 @@ export default function Button({
             onPress={onPress}
             disabled={isBlocked}
             accessibilityRole="button"
-            accessibilityLabel={accessibilityLabel ?? label}
+            accessibilityLabel={
+                disabledReason ? `${accessibilityLabel ?? label}, ${disabledReason}` : accessibilityLabel ?? label
+            }
             accessibilityState={{ disabled: isBlocked, busy: loading }}
             android_ripple={{ color: colors.ripple }}
             className={clsx(classes.container, PRESSABLE_CLASSES, isBlocked && "opacity-50", className)}
@@ -106,7 +117,7 @@ export default function Button({
         >
             {renderLeading()}
             <Text numberOfLines={1} className={classes.text}>
-                {label}
+                {shownLabel}
             </Text>
         </Pressable>
     )

@@ -1,6 +1,5 @@
 import { createMMKV } from "react-native-mmkv"
 
-import type { AuthUser } from "@/contexts/AuthContext"
 import { ALL_REGIONS, REGION_CODES, type ActiveRegion } from "@/lib/region"
 
 /**
@@ -45,14 +44,14 @@ function isActiveRegion(value: unknown): value is ActiveRegion {
     return value === ALL_REGIONS || (REGION_CODES as readonly unknown[]).includes(value)
 }
 
-/** The last user `/api/auth/me` returned. Used when the app starts with no network. */
-export function getCachedMe(): AuthUser | null {
-    return readJson<AuthUser>(KEY.ME)
+/** The raw cached-user entry. Read it through `readCachedMe` in `src/store/cache.ts`, which checks its age. */
+export function getCachedMe<T>(): T | null {
+    return readJson<T>(KEY.ME)
 }
 
-/** Stores the `/api/auth/me` payload, or removes it for `null`. */
-export function saveCachedMe(user: AuthUser | null): void {
-    if (user) storage.set(KEY.ME, JSON.stringify(user))
+/** Stores the raw cached-user entry, or removes it for `null`. Written by `writeCachedMe` in `src/store/cache.ts`. */
+export function saveCachedMe(entry: unknown): void {
+    if (entry) storage.set(KEY.ME, JSON.stringify(entry))
     else storage.remove(KEY.ME)
 }
 

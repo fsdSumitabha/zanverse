@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native"
 
 import { SelectSheet, type SelectOption } from "@/components/ui"
 import { LEAD_SOURCE_STATUS_META, LEAD_SOURCE_STATUSES } from "@/constants/leadSourceStatus"
-import type { LeadSourceTab } from "@/hooks/useLeadSourceList"
+import type { LeadSourceTab } from "@/lib/leadSourceQuery"
 import type { LeadSourceCounts, LeadSourceView } from "@/types/leadSource"
 
 interface Props {

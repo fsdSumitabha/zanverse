@@ -9,6 +9,7 @@ import UserForm from "@/components/users/UserForm"
 import { notify } from "@/lib/notify"
 import { buildUserFormData, type UserFormValues } from "@/lib/userDiff"
 import type { UsersStackParamList } from "@/navigation/types"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 type Navigation = NativeStackNavigationProp<UsersStackParamList, "UserCreate">
 
@@ -23,6 +24,7 @@ const LOADING_DURATION = 60_000
  * web's users/create page: the same FormData and the same toasts.
  */
 export default function UserCreateScreen() {
+    const offlineReason = useOfflineReason()
     const navigation = useNavigation<Navigation>()
     const [pending, setPending] = useState<UserFormValues | null>(null)
     const [isSaving, setIsSaving] = useState(false)
@@ -60,7 +62,7 @@ export default function UserCreateScreen() {
                 footer={
                     <>
                         <Button label="Cancel" variant="quiet" onPress={() => setPending(null)} />
-                        <Button label="Create User" onPress={create} />
+                        <Button disabledReason={offlineReason} label="Create User" onPress={create} />
                     </>
                 }
             >

@@ -9,6 +9,7 @@ import WriteRegionField from "@/components/region/WriteRegionField"
 import { Button, Card, Field, Input } from "@/components/ui"
 import { useWriteRegion } from "@/hooks/useWriteRegion"
 import { notify } from "@/lib/notify"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 type ClientFormValues = {
     name: string
@@ -32,6 +33,7 @@ const CLIENTS_API = "/api/admin/operations/clients"
  * web's ClientForm.tsx: the same fields, body and messages. A `field: "phone"` error shows under the phone field.
  */
 export default function ClientForm({ mode = "edit", clientId, initialValues, onSaved }: ClientFormProps) {
+    const offlineReason = useOfflineReason()
     const [form, setForm] = useState<Omit<ClientFormValues, "phone">>({ name: "", company: "", email: "" })
     const phone = useEditablePhone(mode === "edit" ? initialValues?.phone : "")
     // Create only. A client's region does not change after it is saved.
@@ -124,6 +126,7 @@ export default function ClientForm({ mode = "edit", clientId, initialValues, onS
             />
             {!isEdit && <WriteRegionField region={region} />}
             <Button
+                disabledReason={offlineReason}
                 label={loading ? (isEdit ? "Updating..." : "Creating...") : isEdit ? "Update Client" : "Create Client"}
                 onPress={handleSubmit}
                 loading={loading}

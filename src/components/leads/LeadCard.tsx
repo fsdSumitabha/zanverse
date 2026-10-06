@@ -62,7 +62,9 @@ export default function LeadCard({ lead, company, onPress, onConvert }: Props) {
                     </Text>
                 )}
                 <View className="flex-row flex-wrap items-center gap-1">
-                    <Text className="text-xs text-neutral-500">{lead.source}</Text>
+                    <Text numberOfLines={1} className="text-xs text-neutral-500">
+                        {lead.source}
+                    </Text>
                     <Text className="text-xs text-neutral-500">•</Text>
                     <TimeAgo date={lead.createdAt} className="text-xs" />
                 </View>

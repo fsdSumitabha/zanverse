@@ -4,6 +4,7 @@ import { ApiError, sendRaw } from "@/api/client"
 import { MEETINGS_API } from "@/api/endpoints"
 import { Button, DateTimeField, Dialog, Textarea } from "@/components/ui"
 import { notify } from "@/lib/notify"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 interface Props {
     meetingId: string
@@ -25,6 +26,7 @@ function getStartDate(iso: string): Date | null {
  * client checks in the same order, then `PATCH /meetings/:id/reschedule`.
  */
 export default function RescheduleSheet({ meetingId, currentScheduledAt, onClose, onChanged }: Props) {
+    const offlineReason = useOfflineReason()
     const [scheduledAt, setScheduledAt] = useState<Date | null>(() => getStartDate(currentScheduledAt))
     const [reason, setReason] = useState("")
     const [isSaving, setIsSaving] = useState(false)
@@ -72,7 +74,12 @@ export default function RescheduleSheet({ meetingId, currentScheduledAt, onClose
             footer={
                 <>
                     <Button label="Cancel" variant="quiet" onPress={onClose} disabled={isSaving} />
-                    <Button label={isSaving ? "Saving…" : "Confirm"} onPress={submit} disabled={isSaving} />
+                    <Button
+                        disabledReason={offlineReason}
+                        label={isSaving ? "Saving…" : "Confirm"}
+                        onPress={submit}
+                        disabled={isSaving}
+                    />
                 </>
             }
         >

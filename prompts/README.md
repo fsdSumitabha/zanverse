@@ -1654,3 +1654,133 @@ patch.
 - [ ] Leads over time opens the latest year, toggles on tap, shows 12 rows with "—", and the chart's readout names the
       tapped month. Scrolling the screen with a finger on the chart still scrolls.
 - [ ] Nothing scrolls sideways at 360dp, and every legend row reads well in light and dark.
+
+## Session 21 — polish: sheets, caching, offline, Sentry
+
+**Status: done, except the Android build and the device checks.** Every sheet is now a `@gorhom/bottom-sheet` sheet,
+the app opens from a cached user and a cached Today page, offline is stated on screen with write buttons disabled,
+and Sentry is wired with a scrubber. It is tested in Jest; the cloud container has no Android SDK, so drag, snap and
+the keyboard are not proven on a device. Sentry stays off until a DSN is set.
+
+### Packages
+
+| Package | Version | Note |
+|---|---|---|
+| `@gorhom/bottom-sheet` | 5.2.14 | pulls `@gorhom/portal` 1.0.14; runs on Reanimated 4.7.1 + Worklets 0.13.0 from session 1 |
+| `@sentry/react-native` | 7.13.0 | native SDK, Metro debug IDs, `sentry.gradle` |
+
+Reanimated, Worklets and NetInfo were already installed. `babel.config.js` is unchanged: the NativeWind preset already
+adds the Worklets plugin (session 1 note).
+
+### What is in it
+
+- Sheets (`src/components/ui/`):
+  - `Sheet.tsx` is a `BottomSheetModal`. Its props are the same as before, so its consumers did not change.
+  - The sheet sizes to its content up to 85% of the screen, or uses fixed `snapPoints`. A drag down, the backdrop and
+    the Android back button close it. It rises with the keyboard (`interactive` + `adjustResize`).
+  - `SheetProvider.tsx` is mounted inside the `NavigationContainer` in `RootNavigator.tsx`, not in `App.tsx`. A
+    sheet's content draws at the provider, so this keeps the navigation context available to it.
+  - `SheetTextInput.tsx` makes `Input`, `SearchField`, `PhoneField` and the activity-log search use
+    `BottomSheetTextInput` inside a sheet.
+  - `sheetScrollables.ts` provides `SheetScrollView` and `SheetFlatList`. Eight sheets moved onto them, so a drag
+    scrolls the list or moves the sheet.
+  - `Dialog` and `SelectSheet` use the sheet's own scroll views.
+- `FormSheet.tsx`: the four timeline forms are a 90% sheet. Their routes are now `transparentModal`. The route names
+  and the submit code are unchanged. Each form has its own sheet provider, so a picker opened from the form draws above
+  it. `AttendeePicker` stays a normal modal screen.
+- Caches:
+  - `src/store/cache.ts`: `readCachedMe` / `writeCachedMe`, and `readLeadSourcesToday` / `writeLeadSourcesToday`.
+    Each entry has `savedAt`. A read older than 24 hours is ignored, and a Today page for another day is ignored.
+  - `AuthContext`: with a token and a cached user, the app opens at once and asks `/api/auth/me` behind it.
+    `data: null` from that call logs out and goes to Login.
+  - `useLeadSourceList` starts from the saved page and replaces it quietly, with no skeleton in between. It saves only
+    the plain Today page 1. Its query builder moved to `src/lib/leadSourceQuery.ts`.
+- Offline:
+  - `src/hooks/useIsOnline.ts`: `useIsOnline`, `getIsOnline` (used by the client) and `useOfflineReason`.
+  - `OfflineNotice.tsx`: a line, and an empty state with Retry.
+  - `Button` gains `disabledReason`.
+  - `client.ts` words a network failure while offline as "You're offline. Connect and try again.".
+  - `useListQuery` gains `isOffline`.
+- Sentry:
+  - `src/lib/sentry.ts`: `initSentry`, `scrubEvent` / `scrubBreadcrumb`, the navigation integration, and a test-error
+    function.
+  - `index.js` calls `initSentry()` before `AppRegistry` and wraps App with `Sentry.wrap`.
+  - `metro.config.js` adds `withSentryConfig`, inside `withNativeWind`.
+  - `android/app/build.gradle` applies `sentry.gradle`.
+  - `android/sentry.properties` sets the org (still `CHANGE_ME`) and the project.
+  - The kitchen sink gets a "Send a test error" button.
+
+### Decisions
+
+- **The cached user stays a session entry, not a region entry.** It lives at `session.me` with `savedAt`.
+  - A region switch rewrites its `activeRegion` (RegionContext), as before.
+  - Logout clears it.
+  - A region-keyed copy would vanish on every switch, and a cold start with no network would then land on Login while
+    a token still exists. The Today page is region-keyed: `cache.<region>.leadSourcesToday`, cleared by
+    `clearRegionCache()` and `clearAll()`.
+  - The prompt's `${activeRegion}:${key}` is the existing `cache.<region>.<key>` scheme.
+- **Unknown network counts as online.** NetInfo's `isConnected` is `null` for a moment at launch. Counting that as
+  offline would disable every write button for that moment. So the rule is: `isConnected !== false &&
+  isInternetReachable !== false`.
+- **An offline screen keeps its Retry.** The offline state comes from the failure being a network error. It does not
+  come from the live network flag. So when the radio comes back, the Retry stays until a load works.
+- **Write buttons disabled offline.** These are disabled and read "… · Offline":
+  - the status save, the callback set and clear, the lead-source note, the four bulk confirms;
+  - convert (both the opener and Create lead), the upload;
+  - every `FormActions` save, the lead, client and user forms, the interaction editor's Save;
+  - the status sheets, the meeting reschedule and complete;
+  - the three Delete buttons, Create User;
+  - the profile photo and password.
+  - Reads and scrolling keep working.
+- **Sentry is off until `SENTRY_DSN` in `src/lib/sentry.ts` is set.** A DSN only lets a client send events, so it can
+  live in the source.
+  - The scrubber replaces `Authorization`, `token`, `accessToken`, `refreshToken`, `jwt` and `password` with
+    "[redacted]" at any depth, in the request, the extra data, the contexts and the breadcrumbs.
+  - `sentry.gradle` is applied only when `SENTRY_AUTH_TOKEN` is set. Without the token its upload would fail the
+    build, so a local build skips it.
+- **`ellipsizeMode="tail"` is not written out.** It is React Native's default once `numberOfLines` is set, and the
+  rest of the code relies on it.
+- **The sweep.** The web-only classes are gone from `Button` and `Pagination`. Both already had pressed states.
+  `grep -r "hover:\|group-hover:\|cursor-" src/` now finds only the filter list in `src/lib/nativeClasses.ts`. That
+  list strips these classes from any web string copied in later.
+  - `numberOfLines={1}` was added to names, companies, emails, sources and titles in `LeadCard`, `MeetingCard`,
+    `NotificationRow`, `EntityCard`, `ActivityLogItem` and `ClientProjectPreviewCard`.
+  - The dashboard description gets `numberOfLines={2}`.
+
+### What was verified
+
+- `__tests__/polish.test.tsx` (10 tests, the whole app):
+  - A cold start with a cached user opens the tabs before `/me` answers, and `data: null` then logs out.
+  - A cold start with no network stays in the app.
+  - The saved Today row shows before the list answers, is replaced by the answer, and is saved again.
+  - The saved page stays under "Showing saved data — you're offline".
+  - With nothing saved, "You're offline" shows with a Retry that loads.
+  - Activity Logs shows the offline state, and its Retry works after the radio returns.
+  - The status save reads "Save · Offline" and is disabled.
+  - The offline wording of a failed request is correct, and so is the online wording.
+  - Add Note shows as a sheet with "Save Note · Offline", and its close leaves the route.
+  - Logout leaves no user, page or region in MMKV.
+- `src/store/__tests__/cache.test.ts` (6) tests the 24-hour and day guards, the region keying, and the two clears.
+  `src/lib/__tests__/sentry.test.ts` (3) tests the scrubber and a DSN-less `initSentry`.
+- The sheet unit tests run on a Jest stand-in for the package (`jest/bottomSheetMock.js`). They cover present and
+  dismiss, back through `BackHandler`, the backdrop, the X, a drag-close reported once, and an owner-close reported
+  never. The old Modal-only assertions were replaced. Two existing tests now find the network listener and the Retry
+  button in a stricter way.
+- `npm test`: 48 suites, 443 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass.
+- The Android production bundle builds with a Sentry debug ID in both the bundle and its source map, and `hermesc`
+  compiles it with Reanimated, Worklets and bottom-sheet inside. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] `npm run android` builds with Reanimated 4, Worklets and bottom-sheet. If it does not, see the session prompt's
+      fallback: revert the three, restore the Modal `Sheet.tsx` from git, keep the rest.
+- [ ] The Lead Sources status sheet drags, snaps, closes on the backdrop and on Back, and saves the same payload.
+- [ ] The callback picker's six presets and the exact date/time still send `callbackAt` + `callbackDay`.
+- [ ] In Log Call, typing in the notes keeps the Save button visible with the keyboard open.
+- [ ] Kill and reopen: the name is in the header with no skeleton, and Today shows its saved page first.
+- [ ] Airplane mode: Lead Sources shows the saved page under the offline line; Activity Logs shows the offline state,
+      and its Retry works when the radio is back; the write buttons read "· Offline".
+- [ ] A region switch clears the saved page and refetches; logout leaves nothing in MMKV.
+- [ ] Set `SENTRY_DSN` and the org in `android/sentry.properties`. Then press "Send a test error" in the kitchen sink.
+      It should appear in Sentry with file and line, and with no token. Then build a release with
+      `SENTRY_AUTH_TOKEN` set and check that the mapped frames upload.

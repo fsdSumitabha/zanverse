@@ -17,6 +17,7 @@ import { notify } from "@/lib/notify"
 import { pickAvatarImage } from "@/lib/pickAvatar"
 import type { MoreStackParamList } from "@/navigation/types"
 import type { AuthProfileUser } from "@/types/authProfile"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 type Navigation = NativeStackNavigationProp<MoreStackParamList, "ProfileEdit">
 
@@ -59,6 +60,7 @@ function Section({
  * read-only. Ported from the web's profile/edit page.
  */
 export default function ProfileEditScreen() {
+    const offlineReason = useOfflineReason()
     const navigation = useNavigation<Navigation>()
     const { refreshUser } = useAuth()
     const detail = useDetailQuery<AuthProfileUser>(AUTH_API.PROFILE)
@@ -163,6 +165,7 @@ export default function ProfileEditScreen() {
 
             <Section icon={Camera} title="Profile photo" subtitle="JPEG or PNG, up to 5 MB.">
                 <Button
+                    disabledReason={offlineReason}
                     label={isUploading ? "Uploading…" : "Change photo"}
                     variant="quiet"
                     onPress={() => setIsSheetOpen(true)}
@@ -198,6 +201,7 @@ export default function ProfileEditScreen() {
                 />
                 <View className="flex-row flex-wrap gap-3">
                     <Button
+                        disabledReason={offlineReason}
                         label={isSaving ? "Saving…" : "Update password"}
                         onPress={changePassword}
                         disabled={isSaving}

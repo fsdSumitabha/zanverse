@@ -9,6 +9,17 @@ jest.mock("react-native-safe-area-context", () => require("react-native-safe-are
 
 jest.mock("@react-native-community/netinfo", () => require("@react-native-community/netinfo/jest/netinfo-mock.js"))
 
+// The real SDK starts native crash reporting. Tests only need the calls the app makes.
+jest.mock("@sentry/react-native", () => ({
+    init: jest.fn(),
+    wrap: (component) => component,
+    captureException: jest.fn(),
+    reactNavigationIntegration: jest.fn(() => ({ name: "ReactNavigation", registerNavigationContainer: jest.fn() })),
+}))
+
+// The real sheets need Reanimated and native gestures. The stand-in keeps present / dismiss / onDismiss.
+jest.mock("@gorhom/bottom-sheet", () => require("./bottomSheetMock"))
+
 // An in-memory keystore with the calls src/store/keychain.ts makes, keyed by service as the real module is.
 jest.mock("react-native-keychain", () => {
     const entries = new Map()

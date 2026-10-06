@@ -1,6 +1,7 @@
 import { View, Text } from "react-native"
 
 import { Button, Textarea } from "@/components/ui"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 interface Props {
     value: string
@@ -26,6 +27,7 @@ export default function NoteBox({
     saveLabel = "Add note",
     isSaving = false,
 }: Props) {
+    const offlineReason = useOfflineReason()
     return (
         <View className="gap-1.5">
             <Textarea
@@ -42,6 +44,7 @@ export default function NoteBox({
                 </Text>
                 {onSave && (
                     <Button
+                        disabledReason={offlineReason}
                         label={isSaving ? "Adding..." : saveLabel}
                         onPress={onSave}
                         disabled={!value.trim() || isSaving}

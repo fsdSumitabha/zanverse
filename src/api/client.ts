@@ -1,5 +1,6 @@
 import { resolveApiUrl } from "@/api/endpoints"
 import { resetToLogin } from "@/api/navigationRef"
+import { getIsOnline } from "@/hooks/useIsOnline"
 import { notify } from "@/lib/notify"
 import { clearToken, getToken } from "@/store/keychain"
 import { clearAll, getActiveRegion } from "@/store/mmkv"
@@ -62,6 +63,7 @@ const SESSION_EXPIRED_MESSAGE = "Session expired. Please log in again."
 const FORBIDDEN_MESSAGE = "You aren't authorized to perform this action."
 const FALLBACK_MESSAGE = "Something went wrong. Try again."
 const NETWORK_MESSAGE = "No connection. Check your network and try again."
+const OFFLINE_MESSAGE = "You're offline. Connect and try again."
 
 const HTTP_UNAUTHORIZED = 401
 const HTTP_FORBIDDEN = 403
@@ -134,7 +136,8 @@ async function request<T>(path: string, method: HttpMethod, body: unknown, optio
         })
     } catch (error) {
         if (isAbortError(error)) throw error
-        throw new ApiError(NETWORK_MESSAGE, NETWORK_ERROR_STATUS)
+        // fetch's "Network request failed" while the phone is known to be offline says so plainly.
+        throw new ApiError(getIsOnline() ? NETWORK_MESSAGE : OFFLINE_MESSAGE, NETWORK_ERROR_STATUS)
     }
 
     const json = (await res.json().catch(() => null)) as (ErrorBody & T) | null

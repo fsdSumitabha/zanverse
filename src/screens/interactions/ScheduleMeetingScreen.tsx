@@ -11,7 +11,7 @@ import {
     DateTimeField,
     Field,
     FIELD_BOX_CLASSES,
-    FormScrollView,
+    FormSheet,
     Input,
     SelectSheet,
     Textarea,
@@ -86,7 +86,7 @@ export default function ScheduleMeetingScreen() {
     }
 
     return (
-        <FormScrollView>
+        <FormSheet title="Schedule Meeting" onClose={() => navigation.goBack()}>
             <Input label="Title" value={title} onChangeText={setTitle} placeholder="e.g. Discovery Call" />
             <Input label="Agenda" value={agenda} onChangeText={setAgenda} placeholder="Purpose of the meeting" />
             <Textarea label="Description" value={description} onChangeText={setDescription} numberOfLines={3} />
@@ -126,6 +126,6 @@ export default function ScheduleMeetingScreen() {
                 onSave={handleSubmit}
                 onCancel={() => navigation.goBack()}
             />
-        </FormScrollView>
+        </FormSheet>
     )
 }

@@ -1,10 +1,11 @@
 import clsx from "clsx"
 import { Search, X } from "lucide-react-native"
-import { Pressable, TextInput, View } from "react-native"
+import { Pressable, View } from "react-native"
 
 import { FIELD_CLASSES } from "@/components/ui"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { PALETTE } from "@/theme"
+import SheetTextInput from "@/components/ui/SheetTextInput"
 
 interface Props {
     value: string
@@ -25,7 +26,7 @@ export default function SearchField({ value, onChangeText, placeholder = "Search
             <View className="absolute left-3 z-10" pointerEvents="none">
                 <Search size={16} className="text-neutral-400" />
             </View>
-            <TextInput
+            <SheetTextInput
                 value={value}
                 onChangeText={onChangeText}
                 placeholder={placeholder}

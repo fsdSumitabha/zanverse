@@ -60,7 +60,7 @@ export default function SpikeHomeScreen() {
                             Selected row
                         </Text>
                     </View>
-                    {/* The web's hover: classes become active: (pressed) classes on a phone. */}
+                    {/* The web's mouse-over classes become active: (pressed) classes on a phone. */}
                     <Pressable className="mt-2 min-h-[44px] flex-row items-center gap-2.5 border-l-4 border-l-rose-500 bg-rose-50/60 py-2 pl-2 pr-2.5 active:bg-rose-50 dark:bg-rose-500/[0.07] dark:active:bg-rose-500/10">
                         <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                             Callback due row (press it)

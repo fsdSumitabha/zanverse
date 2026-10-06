@@ -10,6 +10,7 @@ import { PHONE_MESSAGES, checkPastedPhone, getPhonePlaceholder } from "@/lib/pho
 import { PALETTE } from "@/theme"
 
 import CountrySheet from "./CountrySheet"
+import SheetTextInput from "@/components/ui/SheetTextInput"
 
 // Phone input with a country picker. Use it with useEditablePhone():
 // <PhoneField {...phone.fieldProps} />. Ported from the web's PhoneField.tsx.
@@ -116,7 +117,7 @@ export default function PhoneField({
                 <ChevronDown size={14} className="text-neutral-400" />
             </Pressable>
             <View className="flex-1">
-                <TextInput
+                <SheetTextInput
                     ref={inputRef}
                     value={value}
                     onChangeText={handleChangeText}

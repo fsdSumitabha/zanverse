@@ -20,6 +20,7 @@ import { enableIconClassNames } from "@/lib/iconClassName"
 import { pickSheetFile, uploadSheet, type PickedSheet } from "@/lib/leadSourceUpload"
 import { notify } from "@/lib/notify"
 import type { CallsStackParamList } from "@/navigation/types"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 type Navigation = NativeStackNavigationProp<CallsStackParamList, "LeadSourceUpload">
 
@@ -34,6 +35,7 @@ function getProgressStyle(share: number) {
  * Ported from the web's UploadForm.tsx, with the dropzone replaced by the system file picker.
  */
 export default function LeadSourceUploadScreen() {
+    const offlineReason = useOfflineReason()
     const navigation = useNavigation<Navigation>()
     const region = useWriteRegion()
     const sheet = useSheetColumns()
@@ -185,6 +187,7 @@ export default function LeadSourceUploadScreen() {
             <View className="flex-row items-center justify-end gap-2">
                 <Button label="Cancel" variant="quiet" onPress={() => navigation.goBack()} disabled={isUploading} />
                 <Button
+                    disabledReason={offlineReason}
                     label={isUploading ? "Checking and importing..." : "Upload and check"}
                     icon={Upload}
                     onPress={submit}

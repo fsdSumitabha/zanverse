@@ -4,7 +4,7 @@ import { Pressable, Text, View } from "react-native"
 import DateField from "@/components/list/DateField"
 import { SelectSheet, type SelectOption } from "@/components/ui"
 import { useAssignees } from "@/hooks/useAssignees"
-import type { LeadSourceFilters as Filters } from "@/hooks/useLeadSourceList"
+import type { LeadSourceFilters as Filters } from "@/lib/leadSourceQuery"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { todayString } from "@/lib/leadSourceDay"
 

@@ -2,7 +2,7 @@ import { SlidersHorizontal } from "lucide-react-native"
 import { useState, type ComponentType, type ReactElement, type ReactNode } from "react"
 import { FlatList, Pressable, RefreshControl, Text, View, useColorScheme } from "react-native"
 
-import { AccessDenied, EmptyState, SkeletonList } from "@/components/ui"
+import { AccessDenied, EmptyState, OfflineNotice, SkeletonList } from "@/components/ui"
 import type { ListQueryResult } from "@/hooks/useListQuery"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { BRAND_COLOR, PALETTE } from "@/theme"
@@ -121,6 +121,8 @@ export default function ListScreen<T extends { _id: string }>({
                 <SkeletonComponent key={index} />
             ))}
         </View>
+    ) : query.isOffline ? (
+        <OfflineNotice variant="empty" onRetry={query.refresh} />
     ) : query.error ? (
         <EmptyState
             title="Could not load the list"

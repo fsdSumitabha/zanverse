@@ -12,7 +12,8 @@ import {
     type RegionCode,
     type RegionConfig,
 } from "@/lib/region"
-import { clearRegionCache, getCachedMe, saveActiveRegion, saveCachedMe } from "@/store/mmkv"
+import { readCachedMe, writeCachedMe } from "@/store/cache"
+import { clearRegionCache, saveActiveRegion } from "@/store/mmkv"
 
 import { useAuth } from "./AuthContext"
 
@@ -110,8 +111,8 @@ export function RegionProvider({ children }: { children: ReactNode }) {
 
                 // 1. Trust the server's answer, not the request, and send it on every request from now on.
                 saveActiveRegion(data.active)
-                const cached = getCachedMe()
-                if (cached) saveCachedMe({ ...cached, activeRegion: data.active })
+                const cached = readCachedMe()
+                if (cached) writeCachedMe({ ...cached, activeRegion: data.active })
 
                 // 2. Everything cached was fetched under the old region and is no longer what the person sees.
                 clearRegionCache()

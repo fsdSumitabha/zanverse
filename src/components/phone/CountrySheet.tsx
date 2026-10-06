@@ -2,12 +2,13 @@ import clsx from "clsx"
 import { getCountries, getCountryCallingCode, type CountryCode } from "libphonenumber-js"
 import { Check } from "lucide-react-native"
 import { useMemo, useState } from "react"
-import { FlatList, Pressable, Text, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 
 import SearchField from "@/components/list/SearchField"
 import { Sheet } from "@/components/ui"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { REGION_CODES, REGIONS } from "@/lib/region"
+import { SheetFlatList } from "@/components/ui/sheetScrollables"
 
 interface Props {
     visible: boolean
@@ -79,7 +80,7 @@ export default function CountrySheet({ visible, value, onSelect, onClose }: Prop
                 <Text className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Country</Text>
                 <SearchField value={search} onChangeText={setSearch} placeholder="Search countries" />
             </View>
-            <FlatList
+            <SheetFlatList
                 data={visibleRows}
                 keyExtractor={(row) => row.code}
                 keyboardShouldPersistTaps="handled"

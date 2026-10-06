@@ -1,7 +1,7 @@
 import clsx from "clsx"
 import { ChevronDown } from "lucide-react-native"
 import { useEffect, useState } from "react"
-import { Pressable, ScrollView, Text, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 
 import { ApiError, send } from "@/api/client"
 import { LEAD_SOURCES_API } from "@/api/endpoints"
@@ -21,6 +21,8 @@ import type { LeadSourceRow } from "@/types/leadSource"
 
 import CallbackPicker, { EMPTY_CHOICE, resolveChoice, type CallbackChoice } from "./CallbackPicker"
 import NoteBox from "./NoteBox"
+import { SheetScrollView } from "@/components/ui/sheetScrollables"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 const UNKNOWN_META = { label: "Unknown", color: "bg-gray-500 text-white" }
 const HTTP_CONFLICT = 409
@@ -81,6 +83,7 @@ interface Props {
  * Save sends `PATCH /:id/status` with today's local day.
  */
 export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, onConflict }: Props) {
+    const offlineReason = useOfflineReason()
     const [picked, setPicked] = useState<number>(LEAD_SOURCE_STATUS.NEW)
     const [note, setNote] = useState("")
     const [choice, setChoice] = useState<CallbackChoice>(EMPTY_CHOICE)
@@ -133,13 +136,8 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
     }
 
     return (
-        <Sheet
-            visible={row !== null}
-            onClose={onClose}
-            accessibilityLabel={row ? `Status of ${row.name}` : "Status"}
-            avoidKeyboard
-        >
-            <ScrollView contentContainerClassName="gap-3 px-5 pb-4 pt-3" keyboardShouldPersistTaps="handled">
+        <Sheet visible={row !== null} onClose={onClose} accessibilityLabel={row ? `Status of ${row.name}` : "Status"}>
+            <SheetScrollView contentContainerClassName="gap-3 px-5 pb-4 pt-3" keyboardShouldPersistTaps="handled">
                 <View className="flex-row items-baseline justify-between gap-2">
                     <Text className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
                         Result of the call
@@ -202,6 +200,7 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
                     <View className="flex-row gap-2">
                         <Button label="Cancel" variant="quiet" onPress={onClose} disabled={saving} />
                         <Button
+                            disabledReason={offlineReason}
                             label={saving ? "Saving..." : "Save"}
                             onPress={save}
                             disabled={!canSave}
@@ -209,7 +208,7 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
                         />
                     </View>
                 </View>
-            </ScrollView>
+            </SheetScrollView>
         </Sheet>
     )
 }

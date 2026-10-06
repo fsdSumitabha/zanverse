@@ -11,9 +11,10 @@ interface Props {
     onChange: (page: number) => void
 }
 
-// Verbatim from the web's Pagination.tsx. Lists normally load more with onEndReached; this is the fallback.
+// From the web's Pagination.tsx, without its hover and transition classes; a press darkens the button instead. Lists
+// normally load more with onEndReached; this is the fallback.
 const WEB_PAGE_BUTTON =
-    "px-3 py-1 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 disabled:opacity-50 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition"
+    "px-3 py-1 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 disabled:opacity-50"
 
 const PAGE_BUTTON = toNativeClasses(WEB_PAGE_BUTTON)
 
