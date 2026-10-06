@@ -27,6 +27,14 @@ export const LEAD_SOURCE_TEMPLATE_API = `${LEAD_SOURCES_API}/template`
 /** Not on the dev API yet: BACKEND_CHANGES.md item 6. The upload screen falls back on a 404. */
 export const LEAD_SOURCE_COLUMNS_API = `${LEAD_SOURCES_API}/columns`
 
+export const NOTIFICATIONS_API = {
+    FEED: "/api/notifications",
+    READ_ALL: "/api/notifications/read-all",
+    SEEN: "/api/notifications/seen",
+    /** `PATCH` marks one row read. */
+    read: (id: string) => `/api/notifications/${id}/read`,
+} as const
+
 /** Joins a path to the API base URL. An absolute URL is returned as it is. */
 export function resolveApiUrl(path: string): string {
     if (/^https?:\/\//i.test(path)) return path

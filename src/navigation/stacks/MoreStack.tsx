@@ -5,6 +5,7 @@ import { getStackScreenOptions } from "@/navigation/stackOptions"
 import type { MoreStackParamList } from "@/navigation/types"
 import MeetingsListScreen from "@/screens/meetings/MeetingsListScreen"
 import MoreScreen from "@/screens/more/MoreScreen"
+import NotificationsScreen from "@/screens/notifications/NotificationsScreen"
 import PlaceholderScreen from "@/screens/PlaceholderScreen"
 
 const Stack = createNativeStackNavigator<MoreStackParamList>()
@@ -17,7 +18,7 @@ export default function MoreStack() {
             <Stack.Screen name="Meetings" component={MeetingsListScreen} />
             <Stack.Screen name="OverallStats" component={PlaceholderScreen} />
             <Stack.Screen name="ActivityLogs" component={PlaceholderScreen} />
-            <Stack.Screen name="Notifications" component={PlaceholderScreen} />
+            <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="Profile" component={PlaceholderScreen} />
         </Stack.Navigator>
     )

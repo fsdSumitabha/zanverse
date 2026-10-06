@@ -1233,3 +1233,68 @@ No new package.
 - [ ] Join opens the Meet link; Copy puts it on the clipboard.
 - [ ] The entity row opens that lead, client or project.
 - [ ] A role outside `[10, 15, 60, 65, 69, 45, 70]` sees no Reschedule, Cancel or Completed.
+
+## Session 15 — notifications
+
+**Status: done, except the device checks.** The header bell and the inbox are built and tested inside the whole app
+against a mocked API. Real data needs the session 4 backend patch; the cloud container has no Android SDK. No new
+package.
+
+### What is in it
+
+- `src/types/notification.ts`: `NotificationRow` and `NotificationFeed` (app-local; the web has no shared type).
+- `src/api/endpoints.ts`: `NOTIFICATIONS_API` (`FEED`, `READ_ALL`, `SEEN`, `read(id)`).
+- `src/hooks/useNotificationFeed.ts`: cursor pages of 15 (`limit=15`, `before=<cursor>`, `unread=true`), append on
+  scroll, replace on a new filter or pull-to-refresh, `markOneRead`, `markAllRead`.
+- `src/screens/notifications/NotificationsScreen.tsx`, registered as `Notifications` in `MoreStack`.
+- `src/components/notifications/NotificationRow.tsx` (three states, `Swipeable` right action, Check button) and
+  `HeaderBell.tsx`.
+- `src/contexts/NotificationContext.tsx`: `NotificationProvider` around the tab navigator, and `useNotifications`
+  (`unseen`, `unread`, the 4 newest `rows`, `refreshBadge`, `markSeen`).
+- `src/navigation/stackOptions.ts`: every tab stack's header shows the bell on the right.
+
+### Decisions
+
+- **The badge icon** is the session 3 `src/components/ui/NotificationBadge.tsx`, already a verbatim port of the web's
+  `BADGE_MAP` and `EMOJI_TO_NAME` with the same sizes. No second copy was made.
+- **TimeAgo** stays the session 3 component: a press shows the full `DD/MM/YYYY hh:mm A`. The prompt says long-press;
+  changing it here would change every screen that uses it.
+- **The poll** is a `setTimeout` chain, not an interval: 30 s, or 60 s when NetInfo reports `cellular` and the last poll
+  found the same counts and the same newest row. It schedules only while `AppState.currentState === "active"`, stops
+  on any change away from active, and fetches at once on the change back. It lives in the tab navigator, so it runs
+  only while signed in, and stops on logout or a region switch remount.
+- **Seen**: the bell zeroes `unseen` and sends `PATCH /seen` when it has a count, then opens the inbox. The inbox sends
+  `PATCH /seen` once per mount behind `seenFiredRef`, as the web's page does. Opened from the bell, that is two calls,
+  as on the web (dropdown, then page).
+- **Mark one read** does nothing for a row already read. The web's page lowers the count even then, when a read row
+  with a url is clicked.
+- **A tap** marks the row read, then opens its lead, client or project through `resolveNotificationPath` and
+  `openRecord` (a role without that tab gets the web's 403 toast). A row with no matching url is only marked read.
+- **Row tints are opaque** (`bg-blue-50`, `bg-amber-50`) where the web uses `/60` and `/40`: behind a swiped row sits
+  the blue action, which would show through a see-through tint.
+- **Mark all read** keeps the web's toasts with the fixed id `notifications-read-all`, so a second tap replaces the
+  toast instead of stacking a new one. The 401 toast already uses its own fixed id (`auth-401`).
+- Two App tests read fetch calls by position; the bell's poll shifted them, so they now find calls by URL.
+
+### What was verified
+
+- `__tests__/notifications.test.tsx` (9 tests, the whole app): the bell shows "9+" for 12 unseen on a tab, and a tap
+  clears it, sends `PATCH /seen` and opens the inbox; the poll fires every 30 s, never while backgrounded (two minutes
+  with no request), and once at once on return; on mobile data an unchanged feed waits 60 s; the inbox loads 15 rows
+  with "New" on the fresh row, "2 unread", the 30-day line, a swipe action on the two unread rows only, and one
+  `PATCH /seen`; scrolling appends to 28 rows with no repeated id and stops at `nextCursor: null`; Unread replaces the
+  list and All brings it back; a tap marks a lead row read and opens the lead; the Check button and a swipe each mark
+  one row read with no refetch; Mark all read sends one PATCH, toasts with the fixed id, and clears the pill.
+- `npm test`: 37 suites, 356 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] The inbox loads 15 rows and appends the next 15 on scroll, stopping at the end with no repeated row.
+- [ ] Fresh rows show the blue edge and "New"; seen-but-unread rows amber; read rows plain.
+- [ ] Unread shows only unread rows; All replaces the list from the top.
+- [ ] A lead, a client and a project row each open their detail screen and turn read.
+- [ ] A swipe left reveals "Mark read" and the row turns plain (legacy `Swipeable` on RN 0.87 New Architecture).
+- [ ] Mark all read clears every bold row with one toast; two taps do not stack two toasts.
+- [ ] The bell shows the unseen count on every tab, and opening the inbox clears it.
+- [ ] Home button, then back into the app: exactly one immediate fetch, and no poll while in the background.

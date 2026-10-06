@@ -1,42 +1,29 @@
-// RN copy. The web types these ids as mongoose `Types.ObjectId`. Here they are `string`, so the file compiles
-// without mongoose. Nothing else is changed.
-
-import type { EventType } from "@/constants/eventTypes"
-import { NotificationChannel } from "@/constants/notificationChannels"
-
-export interface NotificationActor {
-    id: string
-    name?: string
-    role?: number
-}
-
-export interface RenderedMessage {
+/**
+ * The notification feed as `GET /api/notifications` returns it. App-local: the web declares the same shape inside
+ * its page and its bell, with no shared type to copy.
+ */
+export interface NotificationRow {
+    _id: string
+    type: number
     title: string
     body?: string
+    /** A web path: `/admin/operations/{leads|clients|projects}/:id`, from the web's notifications/render.ts. */
     url?: string
-    badge: string
+    /** An icon name such as "calendar-x", or a legacy emoji. */
+    badge?: string
     imageUrl?: string
+    seenAt: string | null
+    readAt: string | null
+    createdAt: string
 }
 
-export interface EmitInput {
-    type: EventType
-    entityType: number
-    entityId: string
-    actor: NotificationActor | null
-    payload: Record<string, unknown>
-    meta?: Record<string, unknown>
-    channels?: NotificationChannel[]
-    extraRecipients?: string[]
-}
-
-export interface DispatchContext {
-    type: EventType
-    entityType: number
-    entityId: string
-    actor: NotificationActor | null
-    actorOid: string | null
-    recipients: string[]
-    message: RenderedMessage
-    channels: number[]
-    meta?: Record<string, unknown>
+export interface NotificationFeed {
+    success: boolean
+    data?: NotificationRow[]
+    /** Rows never shown in the bell or the inbox. */
+    unseen?: number
+    unread?: number
+    total?: number
+    /** The `before` cursor for the next older page, or null at the end. */
+    nextCursor?: string | null
 }
