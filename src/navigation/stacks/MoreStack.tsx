@@ -9,7 +9,7 @@ import MoreScreen from "@/screens/more/MoreScreen"
 import NotificationsScreen from "@/screens/notifications/NotificationsScreen"
 import ProfileEditScreen from "@/screens/profile/ProfileEditScreen"
 import ProfileScreen from "@/screens/profile/ProfileScreen"
-import PlaceholderScreen from "@/screens/PlaceholderScreen"
+import OverallStatsScreen from "@/screens/stats/OverallStatsScreen"
 
 const Stack = createNativeStackNavigator<MoreStackParamList>()
 
@@ -19,7 +19,7 @@ export default function MoreStack() {
         <Stack.Navigator screenOptions={getStackScreenOptions} screenLayout={renderScreenLayout}>
             <Stack.Screen name="More" component={MoreScreen} />
             <Stack.Screen name="Meetings" component={MeetingsListScreen} />
-            <Stack.Screen name="OverallStats" component={PlaceholderScreen} />
+            <Stack.Screen name="OverallStats" component={OverallStatsScreen} />
             <Stack.Screen name="ActivityLogs" component={ActivityLogsScreen} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />

@@ -1565,3 +1565,92 @@ container has no Android SDK. No new package.
       "No results for …", and a failure shows the server's message.
 - [ ] A role-20 account sees Access Denied in place of the feed.
 - [ ] After a region switch, the feed, the counters, the meetings and the search use the new region.
+
+## Session 20 — overall stats and charts
+
+**Status: done, except the Android build and the device checks.** "Pipeline overview" is built with native charts
+from `react-native-gifted-charts` and tested inside the whole app against a mocked API. The cloud container has no
+Android SDK, so the native build of the two new packages is not proven yet. Real data needs the session 4 backend
+patch.
+
+### Packages
+
+| Package | Version | Note |
+|---|---|---|
+| `react-native-gifted-charts` | 1.4.81 | pulls `gifted-charts-core` 0.1.83; pure JS on `react-native-svg` |
+| `react-native-linear-gradient` | 2.8.3 | the only native code added; autolinked (`LinearGradientPackage`) |
+
+- Both are pinned exactly, like every other package. `docs/OVERVIEW.md` §4 said `^1.4` for both; it now names these
+  two versions.
+- `react-native-linear-gradient` 2.8.3 is an old-style view manager with no codegen. On the New Architecture it runs
+  through React Native's interop layer. This screen never draws it: the area fill is an SVG gradient inside
+  gifted-charts. The JS package must stay installed: gifted-charts loads it as soon as the library is imported and
+  throws if it is missing. If its native side fails to build on 0.87, turn off only its Android autolinking in
+  `react-native.config.js` (`dependencies: { "react-native-linear-gradient": { platforms: { android: null } } }`).
+  The import then still works, and this screen never renders the native view.
+- **The spike.** In place of a throwaway screen, a Jest render of a `PieChart` with `donut`, `innerRadius` and
+  `focusOnPress` proved it renders on this React and React Native. The Android production bundle builds and
+  `hermesc` compiles it with gifted-charts inside. The device build is still to do (checklist below).
+
+### What is in it
+
+- Screen: `src/screens/stats/OverallStatsScreen.tsx`, as `OverallStats` in `MoreStack`. The More row "Overall Stats"
+  already pointed there. `src/screens/PlaceholderScreen.tsx` is deleted: no screen uses it any more.
+- Components (`src/components/stats/`): `KpiRow` (+ `getConversionLabel`), `StatusPieCard`, `StatsCardHeader`,
+  `BudgetCard`, `RoleCountsCard` (+ `getRoleCountLabel`), `LeadsOverTimeCard`, `MonthTable`, `LeadsMonthlyChart`,
+  `statsTones.ts` (the web's `TONE` map and card classes).
+- `src/types/overallStats.ts` (copied; `conversionRate` is `number | null`), `src/constants/statsPalette.ts` (the
+  four palettes), `src/lib/statsChart.ts` (`toPieData`, `getPercent`, `formatInrCompact`, `fillMonths`,
+  `MONTH_NAMES`, `getConvertedLine`). `endpoints.ts` gains `OVERALL_STATS_API`.
+
+### Decisions
+
+- **Palette names.** The four palettes keep the web's names and values, but they are exported together as
+  `STATS_PALETTE.LEAD_STATUS_META` and so on. The plain names already belong to the numeric maps in
+  `src/constants`, and two different `LEAD_STATUS_META` exports would be easy to mix up.
+- **Conversion.** The rate is the API's: converted ÷ (converted + lost). `null` shows "—" in the KPI and the donut
+  centre, and the Leads card then has no accent. The Leads accent is the computed `N% converted`, not the web's
+  hard-coded "89% converted". The KPI subtitle stays the web's "`converted` of `total` leads".
+- **Pie cards.** The legend sits under the chart, so each row has the full card width at 360dp; "Maintenance" and the
+  other long labels fit. A tap lifts a slice on every card. Only the donut has a centre: the tapped slice's value
+  and "label · share", and a second tap brings back the conversion. A plain pie has no hole for a centre label, so
+  its readout is the legend.
+- **Budget and team cards** are new on the phone, as the prompt asks. The web panel has neither. The budget card's
+  line names the four running statuses the route sums.
+- **Leads over time.** The year accordion, `fillMonths` and the mobile three-column table port as they are. The month
+  chart measures its width, so the 12 points always fit. A tap shows the month, its two counts and
+  "N% converted" or "No leads"; the readout stays until the next tap. The pointer does the tap readout, so
+  `focusEnabled` is not set: the two would both answer the same touch.
+- **States.** The web returns nothing on a failure. A whole screen needs more, so a failure shows "Could not load the
+  overview" with the server's message and Try again; a reply with no data says "No stats yet".
+- **Access.** The route accepts any signed-in role, and the screen has no role gate. The More menu row keeps the
+  web's role list, as before.
+
+### What was verified
+
+- `__tests__/overallStats.test.tsx` (9 tests, the whole app, as role 60): one request; the title, the subtitle and
+  "Updated 2 minutes ago"; the KPIs "75%", "3 of 20 leads", "₹12.50 L", "4 projects running", "2 this week · 1 today"
+  and "10 total · 2 inactive"; "—" and no "NaN" for a null rate; each card's slice colours equal its legend swatches;
+  shares such as "New 40%"; a status with 0 left out; "No activity yet" for a card of zeros; a real tap on the first
+  donut slice showing "8" and "New · 40%", and a second tap restoring "75%" and "conversion"; the budget card and the
+  team card in count order with "Role 25" for an unknown code; 2026 open first with 12 rows and "—" for empty months,
+  2026 closing and 2025 opening; the chart's labels "JFMAMJJASOND" and its readout for March and for an empty
+  January; one more request on pull-to-refresh; the Clients title opening the clients list; the error state and Try
+  again.
+- `__tests__/statsChart.test.ts` (7 tests): the Cr / L / k thresholds, `toPieData`, `getPercent`, `fillMonths`,
+  `getConvertedLine`, "—" for a null rate, and the role fallback.
+- `npm test`: 45 suites, 423 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The Android production
+  bundle builds with the new classes compiled, `hermesc` compiles it, and `react-native config` lists the gradient
+  package for Android autolinking. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] `npm run android` builds and installs with gifted-charts and linear-gradient linked.
+- [ ] More → Overall Stats opens "Pipeline overview" with real data for a non-admin account.
+- [ ] The four KPIs match the web screen for the same data; a database with no converted or lost lead shows "—".
+- [ ] Each chart's slice colours match its legend; a card of zeros says "No activity yet".
+- [ ] A tap on a Leads slice names it in the centre; a second tap brings back the conversion.
+- [ ] The budget headline matches the web's Cr / L / k text.
+- [ ] Leads over time opens the latest year, toggles on tap, shows 12 rows with "—", and the chart's readout names the
+      tapped month. Scrolling the screen with a finger on the chart still scrolls.
+- [ ] Nothing scrolls sideways at 360dp, and every legend row reads well in light and dark.

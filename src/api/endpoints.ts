@@ -24,6 +24,7 @@ export const OPERATIONS_API = "/api/admin/operations"
 export const DASHBOARD_API = OPERATIONS_API
 export const STATS_API = `${OPERATIONS_API}/stats`
 export const SEARCH_API = `${OPERATIONS_API}/search`
+export const OVERALL_STATS_API = `${OPERATIONS_API}/overall-stats`
 export const MEETINGS_API = `${OPERATIONS_API}/meetings`
 export const ACTIVITY_LOGS_API = `${OPERATIONS_API}/activity-logs`
 
