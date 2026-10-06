@@ -14,11 +14,15 @@ export const AUTH_API = {
     ME: "/api/auth/me",
     LOGOUT: "/api/auth/logout",
     REGION: "/api/auth/region",
+    PROFILE: "/api/auth/profile",
+    PROFILE_AVATAR: "/api/auth/profile/avatar",
+    PROFILE_PASSWORD: "/api/auth/profile/password",
 } as const
 
 export const OPERATIONS_API = "/api/admin/operations"
 
 export const MEETINGS_API = `${OPERATIONS_API}/meetings`
+export const ACTIVITY_LOGS_API = `${OPERATIONS_API}/activity-logs`
 
 // As the web's lead-sources/api.ts has it.
 export const LEAD_SOURCES_API = "/api/admin/operations/lead-sources"

@@ -30,4 +30,5 @@ export const SCREEN_TITLES: Record<AppScreenName, string> = {
     ActivityLogs: "Activity Logs",
     Notifications: "Notifications",
     Profile: "Profile",
+    ProfileEdit: "Edit profile",
 }

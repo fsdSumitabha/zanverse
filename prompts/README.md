@@ -1371,3 +1371,66 @@ the cloud container has no Android SDK. No new package.
 - [ ] A region the edited account holds that you cannot grant is ticked, locked and not removable.
 - [ ] The image picker returns `type` and `fileSize` on Android 13+ (the photo picker); if not, the extension
       fallback covers the type.
+
+## Session 17 — profile
+
+**Status: done, except the device checks.** Profile and Edit profile are built and tested inside the whole app against
+a mocked API, with the image picker mocked. Step 1 (the curl check of the Bearer fallback on the dev API) cannot run:
+the dev API still lacks BACKEND_CHANGES rows 1–2, which these three routes depend on. No new package.
+
+### What is in it
+
+- Screens (`src/screens/profile/`): `ProfileScreen` and `ProfileEditScreen`, in `MoreStack` (`ProfileEdit` is new,
+  deep link `profile/edit`).
+- Components: `src/components/profile/` `ProfileCard` (+ `getRoleLabel`), `ProfileFacts` (+ `formatFactDate`),
+  `PasswordField`, `PhotoSourceSheet`, `HeaderAvatar`; `src/components/activityLog/` `MyActivityList` and a short
+  `ActivityLogItem` (session 18 replaces its body).
+- Types: `src/types/authProfile.ts` (copied unchanged) and `src/types/activityLog.ts` (copied from the web's
+  `activityLog/types.ts`, the only place the web keeps them).
+- `src/api/endpoints.ts`: `AUTH_API.PROFILE`, `PROFILE_AVATAR`, `PROFILE_PASSWORD`, and `ACTIVITY_LOGS_API`.
+- `src/api/client.ts`: `SendOptions.keepSessionOn401Message`. A 401 with exactly that message is an ordinary error.
+- `src/lib/pickAvatar.ts`: takes `{ source: "library" | "camera", invalidTypeMessage }`.
+- Every stack header now shows the bell and the profile photo; the photo opens the web top bar's menu (Signed in,
+  Profile, Edit profile, Logout).
+
+### Decisions
+
+- **A wrong current password keeps the session.** The password route answers "Old password is incorrect" with 401,
+  which the client's global handler would treat as an expired session. The edit screen passes
+  `keepSessionOn401Message: "Old password is incorrect"`; a 401 "Unauthorized" there still logs out as usual.
+- **Profile layout**: one FlatList of activity rows with the profile card in the list header, so the profile scrolls
+  away and pull-to-refresh reloads the profile and the first activity page together.
+- **"My activity"** uses `useListQuery` with `userId=<signed-in id>` and 15 a page, appended on scroll. No filters, as on
+  the web's profile page.
+- **Dates** use dayjs `D MMM YYYY, h:mm A`, with "—" for null, in place of the web's `toLocaleString`.
+- **The photo** comes from the camera or the gallery through a three-row sheet. JPEG and PNG up to 5 MB are checked in
+  the app with this route's words ("Invalid file type (JPEG or PNG only)", "File too large (max 5MB)"). After the
+  upload the profile reloads and `refreshUser()` updates the header photo.
+- **No CAMERA permission is declared.** react-native-image-picker opens the camera app through an intent, which needs
+  no permission; declaring CAMERA would make the intent fail until the person grants it.
+- **The avatar on the profile card** is the session 3 `Avatar` inside the web's rounded emerald square, with the
+  person icon when there is no photo.
+
+### What was verified
+
+- `__tests__/profile.test.tsx` (8 tests, the whole app): the card (name, email, "Admin", "Active"), the facts as
+  "1 Sep 2026, 3:07 PM", "—" for no login, "Created by Root Admin", and "My activity" from `?page=1&limit=15&userId=u1`
+  with "Created" and "Updated Status" rows; "Nothing yet."; the header menu opening Profile; the three password checks
+  with the web's toasts and no request; a wrong current password toasting "Old password is incorrect" with the token
+  kept and the screen still open, then a correct one sending `{ oldPassword, newPassword }`, toasting "Password updated
+  successfully" and going back; each eye toggle showing only its own field; a gallery photo posting one `avatarFile`
+  part, asking `/api/auth/me` again and toasting the server's message; a 6 MB camera photo and a GIF refused with no
+  request.
+- `npm test`: 40 suites, 382 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] With the backend patch on the dev API: `GET /api/auth/profile` with only the Bearer header returns the profile,
+      and a bad token returns 401 "Unauthorized" (step 1).
+- [ ] The header photo opens the menu, and Profile shows the real avatar, name, email, role and dates.
+- [ ] "My activity" lists 15 rows and appends on scroll; pull-to-refresh reloads the profile and the list.
+- [ ] A camera photo and a gallery JPEG both upload; the new photo shows on Profile and in the header at once.
+- [ ] The camera opens on a device where the camera permission was never granted.
+- [ ] A wrong current password does not log out; a correct one returns to Profile.
+- [ ] The keyboard never covers "Update password".

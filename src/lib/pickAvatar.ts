@@ -1,4 +1,4 @@
-import { launchImageLibrary } from "react-native-image-picker"
+import { launchCamera, launchImageLibrary } from "react-native-image-picker"
 
 import type { PickedImage } from "./userDiff"
 
@@ -14,20 +14,39 @@ export function formatSize(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-/** The server's refusal for an image it would not take, checked before any request. Null when it is fine. */
-export function getAvatarRejection(type: string, size: number): string | null {
-    if (!ACCEPTED_TYPES.includes(type)) return "Invalid file type"
+/**
+ * The server's refusal for an image it would not take, checked before any request. Null when it is fine. The users
+ * route says "Invalid file type"; the profile route says "Invalid file type (JPEG or PNG only)".
+ */
+export function getAvatarRejection(
+    type: string,
+    size: number,
+    invalidTypeMessage = "Invalid file type",
+): string | null {
+    if (!ACCEPTED_TYPES.includes(type)) return invalidTypeMessage
     if (size > MAX_BYTES) return "File too large (max 5MB)"
     return null
 }
 
+interface PickOptions {
+    /** The photo library (default) or the camera. */
+    source?: "library" | "camera"
+    invalidTypeMessage?: string
+}
+
 /**
- * Opens the photo library for one image and checks it. Resolves null when the person cancels; throws an Error with
+ * Opens the photo library, or the camera, for one image and checks it. Resolves null when the person cancels; throws an Error with
  * the server's wording for a type or size the server would refuse. The MIME type falls back to the file extension
  * when the picker gives none.
  */
-export async function pickAvatarImage(): Promise<PickedImage | null> {
-    const result = await launchImageLibrary({ mediaType: "photo", selectionLimit: 1 })
+export async function pickAvatarImage({
+    source = "library",
+    invalidTypeMessage,
+}: PickOptions = {}): Promise<PickedImage | null> {
+    const result =
+        source === "camera"
+            ? await launchCamera({ mediaType: "photo", saveToPhotos: false })
+            : await launchImageLibrary({ mediaType: "photo", selectionLimit: 1 })
     if (result.didCancel) return null
     if (result.errorCode) throw new Error(result.errorMessage || "Could not open the photos")
 
@@ -38,7 +57,7 @@ export async function pickAvatarImage(): Promise<PickedImage | null> {
     const type = asset.type || TYPE_BY_EXTENSION[extension] || ""
     const size = asset.fileSize ?? 0
 
-    const rejection = getAvatarRejection(type, size)
+    const rejection = getAvatarRejection(type, size, invalidTypeMessage)
     if (rejection) throw new Error(rejection)
     return { uri: asset.uri, name, type, size }
 }

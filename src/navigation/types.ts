@@ -55,6 +55,7 @@ export type MoreStackParamList = {
     ActivityLogs: undefined
     Notifications: undefined
     Profile: undefined
+    ProfileEdit: undefined
 }
 
 export type TabParamList = {
