@@ -1,13 +1,15 @@
 import clsx from "clsx"
 import { Check } from "lucide-react-native"
 import { useState } from "react"
-import { Pressable, ScrollView, Text, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 
 import { Button, Sheet, Textarea } from "@/components/ui"
 import { useStatus } from "@/contexts/StatusContext"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { toNativeClasses } from "@/lib/nativeClasses"
 import { notify } from "@/lib/notify"
+import { SheetScrollView } from "@/components/ui/sheetScrollables"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 interface Props<S extends number> {
     /** The entity's *_STATUS_META map: labels and pill colours. */
@@ -42,6 +44,7 @@ export default function StatusSheet<S extends number>({
     onConfirm,
     onUpdated,
 }: Props<S>) {
+    const offlineReason = useOfflineReason()
     const { nextStatus, setNextStatus, showRemarks, setShowRemarks, remarks, setRemarks, reset } = useStatus()
     const [isOpen, setIsOpen] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
@@ -105,8 +108,8 @@ export default function StatusSheet<S extends number>({
                 <Text className={trigger.text}>{isSaving ? "Updating..." : current.label}</Text>
             </Pressable>
 
-            <Sheet visible={isOpen} onClose={handleClose} accessibilityLabel="Change status" avoidKeyboard>
-                <ScrollView contentContainerClassName="gap-3 px-5 pb-4 pt-3" keyboardShouldPersistTaps="handled">
+            <Sheet visible={isOpen} onClose={handleClose} accessibilityLabel="Change status">
+                <SheetScrollView contentContainerClassName="gap-3 px-5 pb-4 pt-3" keyboardShouldPersistTaps="handled">
                     {!showRemarks ? (
                         <>
                             <Text className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
@@ -172,6 +175,7 @@ export default function StatusSheet<S extends number>({
                             <View className="flex-row justify-end gap-2">
                                 <Button label="Cancel" variant="quiet" onPress={handleClose} disabled={isSaving} />
                                 <Button
+                                    disabledReason={offlineReason}
                                     label={isSaving ? "Saving..." : "Confirm"}
                                     onPress={handleConfirm}
                                     loading={isSaving}
@@ -179,7 +183,7 @@ export default function StatusSheet<S extends number>({
                             </View>
                         </>
                     )}
-                </ScrollView>
+                </SheetScrollView>
             </Sheet>
         </>
     )

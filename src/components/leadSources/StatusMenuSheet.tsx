@@ -1,22 +1,25 @@
 import clsx from "clsx"
 import { ChevronDown } from "lucide-react-native"
 import { useEffect, useState } from "react"
-import { Pressable, ScrollView, Text, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 
 import { ApiError, send } from "@/api/client"
 import { LEAD_SOURCES_API } from "@/api/endpoints"
 import { Button, Sheet } from "@/components/ui"
+import { SheetScrollView } from "@/components/ui/sheetScrollables"
 import {
     LEAD_SOURCE_PICKABLE_STATUSES,
     LEAD_SOURCE_STATUS,
     LEAD_SOURCE_STATUS_META,
     type LeadSourceStatus,
 } from "@/constants/leadSourceStatus"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 import { callbackPayload, formatCallback } from "@/lib/callback"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { todayString } from "@/lib/leadSourceDay"
 import { toNativeClasses } from "@/lib/nativeClasses"
 import { notify } from "@/lib/notify"
+import { scheduleCallbackReminder } from "@/lib/push/reminders"
 import type { LeadSourceRow } from "@/types/leadSource"
 
 import CallbackPicker, { EMPTY_CHOICE, resolveChoice, type CallbackChoice } from "./CallbackPicker"
@@ -52,6 +55,7 @@ export function StatusBadgeButton({
             onPress={onPress}
             disabled={isLocked}
             hitSlop={8}
+            testID="statusMenuTrigger"
             accessibilityRole="button"
             accessibilityLabel={isConverted ? "Converted to a lead" : `Status: ${meta.label}. Press to change.`}
             accessibilityState={{ disabled: isLocked }}
@@ -81,6 +85,7 @@ interface Props {
  * Save sends `PATCH /:id/status` with today's local day.
  */
 export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, onConflict }: Props) {
+    const offlineReason = useOfflineReason()
     const [picked, setPicked] = useState<number>(LEAD_SOURCE_STATUS.NEW)
     const [note, setNote] = useState("")
     const [choice, setChoice] = useState<CallbackChoice>(EMPTY_CHOICE)
@@ -113,6 +118,9 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
                 today: todayString(),
                 ...(at ? callbackPayload(at) : {}),
             })
+            // Call Back sets the phone's reminder (and asks for the permission the first time); any other status
+            // clears callbackAt on the server, so the reminder goes.
+            scheduleCallbackReminder(updated, { askPermission: isCallBack })
             onUpdated(updated)
             notify.success(
                 updated.callbackAt && isCallBack
@@ -133,13 +141,8 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
     }
 
     return (
-        <Sheet
-            visible={row !== null}
-            onClose={onClose}
-            accessibilityLabel={row ? `Status of ${row.name}` : "Status"}
-            avoidKeyboard
-        >
-            <ScrollView contentContainerClassName="gap-3 px-5 pb-4 pt-3" keyboardShouldPersistTaps="handled">
+        <Sheet visible={row !== null} onClose={onClose} accessibilityLabel={row ? `Status of ${row.name}` : "Status"}>
+            <SheetScrollView contentContainerClassName="gap-3 px-5 pb-4 pt-3" keyboardShouldPersistTaps="handled">
                 <View className="flex-row items-baseline justify-between gap-2">
                     <Text className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
                         Result of the call
@@ -160,6 +163,7 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
                                 accessibilityRole="radio"
                                 accessibilityState={{ checked: isActive }}
                                 accessibilityLabel={meta.label}
+                                testID={`statusOption-${option}`}
                                 className={clsx(
                                     "min-h-[44px] w-[49%] flex-row items-center gap-2 rounded-lg border px-2.5 py-2",
                                     isActive
@@ -187,7 +191,7 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
 
                 {isCallBack && <CallbackPicker value={choice} onChange={setChoice} />}
 
-                <NoteBox value={note} onChangeText={setNote} />
+                <NoteBox value={note} onChangeText={setNote} testID="statusNote" />
 
                 {conflict && (
                     <Text accessibilityRole="alert" className="text-xs text-rose-600 dark:text-rose-400">
@@ -202,6 +206,8 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
                     <View className="flex-row gap-2">
                         <Button label="Cancel" variant="quiet" onPress={onClose} disabled={saving} />
                         <Button
+                            disabledReason={offlineReason}
+                            testID="statusSave"
                             label={saving ? "Saving..." : "Save"}
                             onPress={save}
                             disabled={!canSave}
@@ -209,7 +215,7 @@ export default function StatusMenuSheet({ row, startStatus, onClose, onUpdated, 
                         />
                     </View>
                 </View>
-            </ScrollView>
+            </SheetScrollView>
         </Sheet>
     )
 }

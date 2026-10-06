@@ -1,9 +1,10 @@
 import clsx from "clsx"
 import { Check, ChevronDown, Globe } from "lucide-react-native"
 import { useState } from "react"
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native"
+import { ActivityIndicator, Pressable, Text, View } from "react-native"
 
 import { Sheet } from "@/components/ui"
+import { SheetFlatList } from "@/components/ui/sheetScrollables"
 import { useRegionScope } from "@/contexts/RegionContext"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { toNativeClasses } from "@/lib/nativeClasses"
@@ -85,7 +86,7 @@ export default function RegionSwitcher({ className }: Props) {
                 <Text className="px-5 pb-2 pt-3 text-base font-semibold text-neutral-900 dark:text-neutral-100">
                     Region
                 </Text>
-                <FlatList
+                <SheetFlatList
                     data={options}
                     keyExtractor={(code) => code}
                     renderItem={({ item }) => {

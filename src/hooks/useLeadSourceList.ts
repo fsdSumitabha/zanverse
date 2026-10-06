@@ -2,23 +2,19 @@ import { useFocusEffect } from "@react-navigation/native"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { AppState } from "react-native"
 
-import { ApiError, sendRaw } from "@/api/client"
+import { ApiError, isNetworkError, sendRaw } from "@/api/client"
 import { LEAD_SOURCES_API } from "@/api/endpoints"
 import { todayString } from "@/lib/leadSourceDay"
 import { notify } from "@/lib/notify"
-import type { LeadSourceCounts, LeadSourceListResponse, LeadSourceRow, LeadSourceView } from "@/types/leadSource"
-
-export type LeadSourceTab = Exclude<LeadSourceView, "day">
-
-/** The list's filters, under the web's query param names. `day` set means the "day" pseudo-view. */
-export interface LeadSourceFilters {
-    view: LeadSourceTab
-    status: string
-    assignee: string
-    upload: string
-    day: string
-    search: string
-}
+import {
+    EMPTY_LEAD_SOURCE_FILTERS,
+    buildLeadSourceQuery,
+    isPlainToday,
+    type LeadSourceFilters,
+} from "@/lib/leadSourceQuery"
+import { syncCallbackReminders } from "@/lib/push/reminders"
+import { readLeadSourcesToday, writeLeadSourcesToday } from "@/store/cache"
+import type { LeadSourceCounts, LeadSourceListResponse, LeadSourceRow } from "@/types/leadSource"
 
 type FetchMode = "initial" | "refresh" | "quiet" | "append"
 
@@ -32,44 +28,26 @@ const RESORT_DELAY_MS = 900
 const SEARCH_DEBOUNCE_MS = 300
 const MIN_SEARCH_LENGTH = 2
 
-export const EMPTY_LEAD_SOURCE_FILTERS: LeadSourceFilters = {
-    view: "today",
-    status: "",
-    assignee: "",
-    upload: "",
-    day: "",
-    search: "",
-}
-
-/** The query string the web's LeadSourcesClient builds, in its order. `today` is the device's local day now. */
-export function buildLeadSourceQuery(filters: LeadSourceFilters, page: number, limit: number, today: string): string {
-    const params: [string, string][] = [
-        ["view", filters.day ? "all" : filters.view],
-        ["today", today],
-        ["page", String(page)],
-        ["limit", String(limit)],
-    ]
-    if (filters.search) params.push(["search", filters.search])
-    for (const key of ["status", "assignee", "day", "upload"] as const) {
-        if (filters[key]) params.push([key, filters[key]])
-    }
-    return params.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join("&")
-}
-
 /**
  * The lead sources list: one owner for the rows, `counts`, `progress` and paging. Ported from the web's
  * LeadSourcesClient: the request id that drops an out-of-order answer, the row swapped in place after a write and
  * re-sorted 900 ms later, and the quiet reload every minute that never runs while the person is busy.
  */
 export function useLeadSourceList({ isPaused }: { isPaused: boolean }) {
+    // The saved Today page from the last visit, shown at once while the first request runs behind it.
+    const [saved] = useState(() => readLeadSourcesToday(todayString()))
     const [filters, setFiltersState] = useState<LeadSourceFilters>(EMPTY_LEAD_SOURCE_FILTERS)
     const [searchText, setSearchText] = useState("")
-    const [rows, setRows] = useState<LeadSourceRow[]>([])
-    const [counts, setCounts] = useState<LeadSourceCounts | null>(null)
-    const [progress, setProgress] = useState<{ total: number; worked: number } | null>(null)
-    const [total, setTotal] = useState(0)
-    const [mode, setMode] = useState<FetchMode | null>("initial")
+    const [rows, setRows] = useState<LeadSourceRow[]>(saved?.data ?? [])
+    const [counts, setCounts] = useState<LeadSourceCounts | null>(saved?.counts ?? null)
+    const [progress, setProgress] = useState<{ total: number; worked: number } | null>(saved?.progress ?? null)
+    const [total, setTotal] = useState(saved?.pagination.total ?? 0)
+    const [mode, setMode] = useState<FetchMode | null>(saved ? null : "initial")
     const [accessError, setAccessError] = useState<string | null>(null)
+    /** The rows on screen are the saved page, not an answer from this visit. */
+    const [isShowingSaved, setIsShowingSaved] = useState(saved !== null)
+    /** The last load failed for want of a network. */
+    const [isOffline, setIsOffline] = useState(false)
 
     const requestId = useRef(0)
     const latest = useRef({ filters, rows, isPaused })
@@ -90,10 +68,15 @@ export function useLeadSourceList({ isPaused }: { isPaused: boolean }) {
         if (fetchMode !== "quiet") setMode(fetchMode)
 
         try {
-            const query = buildLeadSourceQuery(current.filters, page, limit, todayString())
+            const today = todayString()
+            const query = buildLeadSourceQuery(current.filters, page, limit, today)
             const json = await sendRaw<LeadSourceListResponse>(`${LEAD_SOURCES_API}?${query}`, "GET")
             if (!isMounted.current || id !== requestId.current) return
 
+            // Only the plain Today page 1 is saved, never a search, a filter or a later page.
+            if (page === 1 && isPlainToday(current.filters)) writeLeadSourcesToday(json, today)
+            setIsShowingSaved(false)
+            setIsOffline(false)
             setAccessError(null)
             setRows((list) =>
                 fetchMode === "append"
@@ -103,12 +86,28 @@ export function useLeadSourceList({ isPaused }: { isPaused: boolean }) {
             setCounts(json.counts)
             setProgress(json.progress)
             setTotal(json.pagination.total)
+            // A callback set or cleared on the web reaches this phone's reminders on the next load.
+            syncCallbackReminders(json.data)
         } catch (error) {
             if (!isMounted.current || id !== requestId.current) return
             if (error instanceof ApiError && error.status === 401) return
             if (error instanceof ApiError && error.status === 403) {
                 setAccessError(error.message)
                 setRows([])
+                return
+            }
+            // No network: the screen says so, over the saved page or in place of the list. No toast on top. A new list
+            // (another tab or filter) must not keep the old rows; the plain Today tab falls back to its saved page.
+            if (isNetworkError(error)) {
+                setIsOffline(true)
+                if (fetchMode === "initial") {
+                    const fallback = isPlainToday(current.filters) ? readLeadSourcesToday(todayString()) : null
+                    setRows(fallback?.data ?? [])
+                    setCounts(fallback?.counts ?? null)
+                    setProgress(fallback?.progress ?? null)
+                    setTotal(fallback?.pagination.total ?? 0)
+                    setIsShowingSaved(fallback !== null)
+                }
                 return
             }
             if (fetchMode !== "quiet")
@@ -119,12 +118,16 @@ export function useLeadSourceList({ isPaused }: { isPaused: boolean }) {
         }
     }, [])
 
-    // A new filter is a new list. A re-sort still waiting from the old list is not needed.
+    // A new filter is a new list. A re-sort still waiting from the old list is not needed. The very first load runs
+    // quietly when the saved page is already on screen, so it replaces the rows without a skeleton in between.
     const filtersKey = JSON.stringify(filters)
+    const isFirstLoad = useRef(true)
     useEffect(() => {
         if (resortTimer.current) clearTimeout(resortTimer.current)
-        load("initial")
-    }, [filtersKey, load])
+        const isOverSaved = isFirstLoad.current && saved !== null
+        isFirstLoad.current = false
+        load(isOverSaved ? "quiet" : "initial")
+    }, [filtersKey, load, saved])
 
     useEffect(() => {
         isMounted.current = true
@@ -220,6 +223,8 @@ export function useLeadSourceList({ isPaused }: { isPaused: boolean }) {
         progress,
         total,
         hasMore,
+        isShowingSaved,
+        isOffline,
         loading: mode === "initial",
         refreshing: mode === "refresh",
         loadingMore: mode === "append",

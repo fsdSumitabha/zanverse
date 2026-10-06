@@ -1654,3 +1654,446 @@ patch.
 - [ ] Leads over time opens the latest year, toggles on tap, shows 12 rows with "—", and the chart's readout names the
       tapped month. Scrolling the screen with a finger on the chart still scrolls.
 - [ ] Nothing scrolls sideways at 360dp, and every legend row reads well in light and dark.
+
+## Session 21 — polish: sheets, caching, offline, Sentry
+
+**Status: done, except the Android build and the device checks.** Every sheet is now a `@gorhom/bottom-sheet` sheet,
+the app opens from a cached user and a cached Today page, offline is stated on screen with write buttons disabled,
+and Sentry is wired with a scrubber. It is tested in Jest; the cloud container has no Android SDK, so drag, snap and
+the keyboard are not proven on a device. Sentry stays off until a DSN is set.
+
+### Packages
+
+| Package | Version | Note |
+|---|---|---|
+| `@gorhom/bottom-sheet` | 5.2.14 | pulls `@gorhom/portal` 1.0.14; runs on Reanimated 4.7.1 + Worklets 0.13.0 from session 1 |
+| `@sentry/react-native` | 7.13.0 | native SDK, Metro debug IDs, `sentry.gradle` |
+
+Reanimated, Worklets and NetInfo were already installed. `babel.config.js` is unchanged: the NativeWind preset already
+adds the Worklets plugin (session 1 note).
+
+### What is in it
+
+- Sheets (`src/components/ui/`):
+  - `Sheet.tsx` is a `BottomSheetModal`. Its props are the same as before, so its consumers did not change.
+  - The sheet sizes to its content up to 85% of the screen, or uses fixed `snapPoints`. A drag down, the backdrop and
+    the Android back button close it. It rises with the keyboard (`interactive` + `adjustResize`).
+  - `SheetProvider.tsx` is mounted inside the `NavigationContainer` in `RootNavigator.tsx`, not in `App.tsx`. A
+    sheet's content draws at the provider, so this keeps the navigation context available to it.
+  - `SheetTextInput.tsx` makes `Input`, `SearchField`, `PhoneField` and the activity-log search use
+    `BottomSheetTextInput` inside a sheet.
+  - `sheetScrollables.ts` provides `SheetScrollView` and `SheetFlatList`. Eight sheets moved onto them, so a drag
+    scrolls the list or moves the sheet.
+  - `Dialog` and `SelectSheet` use the sheet's own scroll views.
+- `FormSheet.tsx`: the four timeline forms are a 90% sheet. Their routes are now `transparentModal`. The route names
+  and the submit code are unchanged. Each form has its own sheet provider, so a picker opened from the form draws above
+  it. `AttendeePicker` stays a normal modal screen.
+- Caches:
+  - `src/store/cache.ts`: `readCachedMe` / `writeCachedMe`, and `readLeadSourcesToday` / `writeLeadSourcesToday`.
+    Each entry has `savedAt`. A read older than 24 hours is ignored, and a Today page for another day is ignored.
+  - `AuthContext`: with a token and a cached user, the app opens at once and asks `/api/auth/me` behind it.
+    `data: null` from that call logs out and goes to Login.
+  - `useLeadSourceList` starts from the saved page and replaces it quietly, with no skeleton in between. It saves only
+    the plain Today page 1. Its query builder moved to `src/lib/leadSourceQuery.ts`.
+- Offline:
+  - `src/hooks/useIsOnline.ts`: `useIsOnline`, `getIsOnline` (used by the client) and `useOfflineReason`.
+  - `OfflineNotice.tsx`: a line, and an empty state with Retry.
+  - `Button` gains `disabledReason`.
+  - `client.ts` words a network failure while offline as "You're offline. Connect and try again.".
+  - `useListQuery` gains `isOffline`.
+- Sentry:
+  - `src/lib/sentry.ts`: `initSentry`, `scrubEvent` / `scrubBreadcrumb`, the navigation integration, and a test-error
+    function.
+  - `index.js` calls `initSentry()` before `AppRegistry` and wraps App with `Sentry.wrap`.
+  - `metro.config.js` adds `withSentryConfig`, inside `withNativeWind`.
+  - `android/app/build.gradle` applies `sentry.gradle`.
+  - `android/sentry.properties` sets the org (still `CHANGE_ME`) and the project.
+  - The kitchen sink gets a "Send a test error" button.
+
+### Decisions
+
+- **The cached user stays a session entry, not a region entry.** It lives at `session.me` with `savedAt`.
+  - A region switch rewrites its `activeRegion` (RegionContext), as before.
+  - Logout clears it.
+  - A region-keyed copy would vanish on every switch, and a cold start with no network would then land on Login while
+    a token still exists. The Today page is region-keyed: `cache.<region>.leadSourcesToday`, cleared by
+    `clearRegionCache()` and `clearAll()`.
+  - The prompt's `${activeRegion}:${key}` is the existing `cache.<region>.<key>` scheme.
+- **Unknown network counts as online.** NetInfo's `isConnected` is `null` for a moment at launch. Counting that as
+  offline would disable every write button for that moment. So the rule is: `isConnected !== false &&
+  isInternetReachable !== false`.
+- **An offline screen keeps its Retry.** The offline state comes from the failure being a network error. It does not
+  come from the live network flag. So when the radio comes back, the Retry stays until a load works.
+- **Write buttons disabled offline.** These are disabled and read "… · Offline":
+  - the status save, the callback set and clear, the lead-source note, the four bulk confirms;
+  - convert (both the opener and Create lead), the upload;
+  - every `FormActions` save, the lead, client and user forms, the interaction editor's Save;
+  - the status sheets, the meeting reschedule and complete;
+  - the three Delete buttons, Create User;
+  - the profile photo and password.
+  - Reads and scrolling keep working.
+- **Sentry is off until `SENTRY_DSN` in `src/lib/sentry.ts` is set.** A DSN only lets a client send events, so it can
+  live in the source.
+  - The scrubber replaces `Authorization`, `token`, `accessToken`, `refreshToken`, `jwt` and `password` with
+    "[redacted]" at any depth, in the request, the extra data, the contexts and the breadcrumbs.
+  - `sentry.gradle` is applied only when `SENTRY_AUTH_TOKEN` is set. Without the token its upload would fail the
+    build, so a local build skips it.
+- **`ellipsizeMode="tail"` is not written out.** It is React Native's default once `numberOfLines` is set, and the
+  rest of the code relies on it.
+- **The sweep.** The web-only classes are gone from `Button` and `Pagination`. Both already had pressed states.
+  `grep -r "hover:\|group-hover:\|cursor-" src/` now finds only the filter list in `src/lib/nativeClasses.ts`. That
+  list strips these classes from any web string copied in later.
+  - `numberOfLines={1}` was added to names, companies, emails, sources and titles in `LeadCard`, `MeetingCard`,
+    `NotificationRow`, `EntityCard`, `ActivityLogItem` and `ClientProjectPreviewCard`.
+  - The dashboard description gets `numberOfLines={2}`.
+
+### What was verified
+
+- `__tests__/polish.test.tsx` (10 tests, the whole app):
+  - A cold start with a cached user opens the tabs before `/me` answers, and `data: null` then logs out.
+  - A cold start with no network stays in the app.
+  - The saved Today row shows before the list answers, is replaced by the answer, and is saved again.
+  - The saved page stays under "Showing saved data — you're offline".
+  - With nothing saved, "You're offline" shows with a Retry that loads.
+  - Activity Logs shows the offline state, and its Retry works after the radio returns.
+  - The status save reads "Save · Offline" and is disabled.
+  - The offline wording of a failed request is correct, and so is the online wording.
+  - Add Note shows as a sheet with "Save Note · Offline", and its close leaves the route.
+  - Logout leaves no user, page or region in MMKV.
+- `src/store/__tests__/cache.test.ts` (6) tests the 24-hour and day guards, the region keying, and the two clears.
+  `src/lib/__tests__/sentry.test.ts` (3) tests the scrubber and a DSN-less `initSentry`.
+- The sheet unit tests run on a Jest stand-in for the package (`jest/bottomSheetMock.js`). They cover present and
+  dismiss, back through `BackHandler`, the backdrop, the X, a drag-close reported once, and an owner-close reported
+  never. The old Modal-only assertions were replaced. Two existing tests now find the network listener and the Retry
+  button in a stricter way.
+- `npm test`: 48 suites, 443 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass.
+- The Android production bundle builds with a Sentry debug ID in both the bundle and its source map, and `hermesc`
+  compiles it with Reanimated, Worklets and bottom-sheet inside. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] `npm run android` builds with Reanimated 4, Worklets and bottom-sheet. If it does not, see the session prompt's
+      fallback: revert the three, restore the Modal `Sheet.tsx` from git, keep the rest.
+- [ ] The Lead Sources status sheet drags, snaps, closes on the backdrop and on Back, and saves the same payload.
+- [ ] The callback picker's six presets and the exact date/time still send `callbackAt` + `callbackDay`.
+- [ ] In Log Call, typing in the notes keeps the Save button visible with the keyboard open.
+- [ ] Kill and reopen: the name is in the header with no skeleton, and Today shows its saved page first.
+- [ ] Airplane mode: Lead Sources shows the saved page under the offline line; Activity Logs shows the offline state,
+      and its Retry works when the radio is back; the write buttons read "· Offline".
+- [ ] A region switch clears the saved page and refetches; logout leaves nothing in MMKV.
+- [ ] Set `SENTRY_DSN` and the org in `android/sentry.properties`. Then press "Send a test error" in the kitchen sink.
+      It should appear in Sentry with file and line, and with no token. Then build a release with
+      `SENTRY_AUTH_TOKEN` set and check that the mapped frames upload.
+
+## Session 22 — release
+
+**Status: the configuration is written and checked as far as this container allows. No release was built.** The
+container has no Android SDK, and Google's Maven host is blocked (`dl.google.com`, HTTP 403), so Gradle cannot load
+the Android plugin. Every step that needs a device, a keystore, the Play Console or the GitHub secrets is yours.
+**Blocker:** the production API host is not recorded anywhere (docs, web source, `.env.example`). Release builds
+point at `https://CHANGE-ME.invalid` until `PRODUCTION_API_BASE_URL` in `src/api/endpoints.ts` is set.
+
+### What is in it
+
+- `android/app/build.gradle`:
+  - `signingConfigs.release` reads `MYAPP_UPLOAD_STORE_FILE`, `MYAPP_UPLOAD_KEY_ALIAS`, `MYAPP_UPLOAD_STORE_PASSWORD`
+    and `MYAPP_UPLOAD_KEY_PASSWORD`. Each comes from a Gradle property (`~/.gradle/gradle.properties`) or, failing
+    that, the environment (CI).
+  - When any of the four is missing, release falls back to debug signing, so a fresh clone still builds. Play rejects
+    that bundle, which is the intent.
+  - `minifyEnabled true` + `shrinkResources true` with `proguard-android-optimize.txt` and `proguard-rules.pro`.
+  - `versionName` comes from `package.json` (now `0.0.1`). `versionCode` comes from `BUILD_NUMBER`, or `1` for a
+    local build.
+  - Release `ndk.abiFilters` is `arm64-v8a`, `armeabi-v7a`. Debug keeps the x86 ABIs from `gradle.properties`.
+  - New Architecture, Hermes and edge-to-edge are untouched.
+- `android/app/src/main/AndroidManifest.xml` has no cleartext setting. `android/app/src/debug/AndroidManifest.xml`
+  allows plain HTTP for debug only. `src/api/endpoints.ts` uses the dev URL when `__DEV__`, else the production one.
+  The release bundle contains only the production host; Metro strips the dev URL.
+- `android/app/proguard-rules.pro` holds the rule for adding keep rules, and no rules yet (see below).
+- `.gitignore` adds `*.jks` and `android/keystore.properties`. `*.keystore` (except `debug.keystore`) was already
+  there.
+- `.github/workflows/android-release.yml` runs on a `v*` tag, or by hand to build only. Its steps:
+  - Node 22 with the npm cache, Temurin JDK 17 and `gradle/actions/setup-gradle`.
+  - `npm ci`, lint, `tsc --noEmit`, and Jest. Jest is added to the prompt's list, because it is cheap.
+  - The keystore is decoded from its secret; the job stops if the secret is missing.
+  - `./gradlew bundleRelease` with `BUILD_NUMBER` set to the run number. The keystore is then removed.
+  - The AAB and `mapping.txt` are uploaded as an artifact.
+  - On a tag, `r0adkll/upload-google-play@v1` sends both to the `internal` track. The mapping file lets Play
+    deobfuscate crashes.
+- `.maestro/login-status-save.yaml` and `.maestro/upload-report.yaml`, with `.maestro/fixtures/lead-sources-seed.xlsx`.
+  The seed has three rows with name, company, email, phone and city, and `read-excel-file`, the web's own parser,
+  reads it correctly.
+- Test IDs: `loginEmail`, `loginPassword`, `loginSubmit`, `leadSourceRow`, `statusMenuTrigger`, `statusOption-20`,
+  `statusNote`, `statusSave`, `uploadSheetButton`, `uploadSubmit` and `reportTileImported`. One more,
+  `uploadPickFile` on the "Choose a file" button, because the upload flow taps it. `Button` and `NoteBox` gain a
+  `testID` prop.
+
+### Keystore and secrets
+
+- Generate the upload key once, outside the repo:
+  `keytool -genkeypair -v -storetype PKCS12 -keystore ~/keys/zanverse-upload.keystore -alias zanverse-upload
+  -keyalg RSA -keysize 2048 -validity 10000`.
+- Locally, put these in `~/.gradle/gradle.properties`:
+  `MYAPP_UPLOAD_STORE_FILE=/home/<you>/keys/zanverse-upload.keystore`, `MYAPP_UPLOAD_KEY_ALIAS=zanverse-upload`, and
+  the two passwords.
+- Add these GitHub secrets:
+  - `ANDROID_KEYSTORE_BASE64`: the output of `base64 -w0 zanverse-upload.keystore`.
+  - `MYAPP_UPLOAD_KEY_ALIAS`, `MYAPP_UPLOAD_STORE_PASSWORD`, `MYAPP_UPLOAD_KEY_PASSWORD`.
+  - `PLAY_SERVICE_ACCOUNT_JSON`: a service account with "Release to testing tracks".
+  - `SENTRY_AUTH_TOKEN`: optional. With it, `sentry.gradle` uploads the source maps.
+- Play track: `internal`, with Play App Signing on. Google holds the app signing key; the upload key stays with you
+  and in CI.
+
+### Keep rules
+
+None yet, on purpose. The prompt allows a rule only where the release walk proved it was needed, and that walk has not
+run. React Native, Hermes and every native library here ship consumer rules in their AARs. The file explains how to
+add a rule: one `-keep` per crash, with a comment naming the screen. Suspects if release behaves differently from
+debug: Keychain and MMKV (Nitro) first, then blob-util, then gifted-charts' gradient view.
+
+### What was verified
+
+- Both Gradle scripts compile with Gradle 9.4.1's Groovy (a syntax check; the Android plugin could not load).
+- The workflow and both Maestro flows parse as YAML. The seed sheet parses with `read-excel-file`.
+- `__tests__/release.test.tsx` (2 tests) checks that a debug build uses the dev API, and that all twelve test IDs are
+  on the screens the flows drive: Login, the list and its status sheet, the upload screen, and the report.
+- `npm test`: 49 suites, 445 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The release bundle builds
+  and `hermesc` compiles it.
+
+### Device checklist
+
+- [ ] Set `PRODUCTION_API_BASE_URL`, generate the keystore, and fill `~/.gradle/gradle.properties`.
+- [ ] `./gradlew assembleRelease` with R8 off once (set `enableProguardInReleaseBuilds = false` locally), install it,
+      and check that it is signed with the upload key. Then turn R8 back on.
+- [ ] `./gradlew bundleRelease`; `jarsigner -verify -verbose app-release.aab` names the upload key. Record the AAB
+      size.
+- [ ] Walk the minified release with `adb logcat *:E`: login, Lead Sources Today, status save, callback picker, lead
+      detail, notifications, overall-stats charts, profile avatar upload, an xlsx download. Add one keep rule per
+      crash.
+- [ ] The release build fails against `http://` and works against the production HTTPS API. `npm run android` still
+      reaches `http://10.0.2.2:3000`.
+- [ ] `adb shell dumpsys package com.zanverse | grep versionCode` shows `1` locally and the run number on a CI build.
+- [ ] Upload one AAB by hand to the internal track, accept Play App Signing, and install it from the tester link.
+- [ ] Add the secrets, push a `v0.0.1` tag, and check the run is green from lint to the Play upload.
+- [ ] `adb push .maestro/fixtures/lead-sources-seed.xlsx /sdcard/Download/`, then
+      `maestro test -e WORK_EMAIL=… -e WORK_PASSWORD=… .maestro/login-status-save.yaml` and
+      `maestro test -e MANAGE_EMAIL=… -e MANAGE_PASSWORD=… .maestro/upload-report.yaml` against the release build.
+
+## Session 23 — push notifications for due callbacks
+
+**Status: the device reminder and the push wiring are built and tested in Jest. Nothing was built or run on a phone.**
+There is no Android SDK here, no Firebase project, and no backend half yet. The device-only reminder, the part that
+cannot slip, does not need Firebase. **The server half is still open:** `docs/BACKEND_CHANGES.md` "Phase 2" is now the
+exact spec for the backend owner.
+
+### Packages
+
+| Package | Version | Note |
+|---|---|---|
+| `@notifee/react-native` | 9.1.8 | newest release (December 2024); its notes do not name RN 0.87, so its build is the first device check |
+| `@react-native-firebase/app` | 26.4.0 | September 2026 |
+| `@react-native-firebase/messaging` | 26.4.0 | September 2026 |
+
+Recorded in `docs/OVERVIEW.md` §4. Notifee adds its own Maven repo. Its manifest already declares
+`POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM` and `RECEIVE_BOOT_COMPLETED`, so the app's manifest is unchanged.
+
+### What is in it
+
+- `src/lib/push/`:
+  - `channels.ts`: the `callbacks` channel (high importance, sound, vibration) and the `crm` channel, created once.
+  - `permission.ts`: `ensureNotificationPermission`, which asks once ever. The MMKV flag is `push.permissionAsked`.
+  - `reminders.ts`: `scheduleCallbackReminder`, `cancelCallbackReminder`, `syncCallbackReminders` and
+    `cancelAllCallbackReminders`.
+  - `token.ts`: `registerDeviceToken`, `unregisterDeviceToken`, `onTokenRefresh`, `useIsPushRegistered` and
+    `isFirebaseConfigured`.
+  - `remoteMessage.ts`: shows an FCM message through Notifee on `crm`.
+  - `openPushUrl.ts`: the single route for every tap.
+  - `background.ts`: Notifee's background event and FCM's background handler, registered from `index.js`.
+- `src/contexts/PushContext.tsx` (`PushProvider`) is mounted inside `NotificationProvider`, above the tabs.
+  - It creates the channels.
+  - It shows a foreground FCM message and refreshes the bell.
+  - It routes Notifee's foreground press, FCM's opened-app message, and the notification that launched the app.
+- The reminder:
+  - Id `callback-<sourceId>`, title `Call back <name>`, body `<formatted phone> · <last note or "no notes yet">`.
+  - Channel `callbacks`, data `{ url: "/admin/operations/lead-sources/<id>", local: "1" }`.
+  - A `TimestampTrigger` at `callbackAt`.
+- Sync points:
+  - The status save. The permission is asked here on Call Back.
+  - The callback sheet set or clear. The permission is asked here on set.
+  - `runBulk` for day, status and delete.
+  - Convert on the detail screen.
+  - Every Lead Sources load.
+- `resolveNotificationPath` maps `/admin/operations/lead-sources/:id` to `LeadSourceDetail` `{ sourceId }`. The bell's
+  rows and global search gain that path too.
+- Under the callback picker: "Reminder on this phone", or "Reminder on this phone and by push" once the backend holds
+  this phone's token. If reminders are off, it says so.
+- Profile gets a "Callback reminders" switch (`push.remindersEnabled`, on by default). Off cancels every reminder. On
+  sets them again from the next list load.
+- `AuthContext` registers the token after `/api/auth/me` (so after login and on a cold start). Logout unregisters it
+  before the session is wiped.
+- Android:
+  - `android/build.gradle` adds `com.google.gms:google-services:4.4.2`.
+  - `android/app/build.gradle` applies it only when `android/app/google-services.json` exists. That file is
+    gitignored; `google-services.json.example` is committed.
+  - `proguard-rules.pro` gets the Firebase-messaging and Notifee keep rules the prompt asked for, marked as not yet
+    proven by the walk.
+
+### Decisions
+
+- **The reminder follows `callbackAt`, not the status name.** The server sets `callbackAt` to null for every status
+  but Call Back (`changeStatus` in the web's `mutations.ts`), and convert clears it too. So this is the same as
+  "schedule on Call Back, cancel on every other status". It also covers a callback set from the standalone sheet.
+- **A load reconciles only the rows it returned.** One page is not every source, so reminders for sources outside the
+  page are left alone.
+- **Exact when allowed.** The trigger uses `SET_EXACT_AND_ALLOW_WHILE_IDLE` when Android grants exact alarms. Otherwise
+  it uses `SET_AND_ALLOW_WHILE_IDLE`, which still fires in Doze but may be a few minutes late. Android 14 denies exact
+  alarms by default for new installs; Notifee's `openAlarmPermissionSettings()` opens that screen. The app does not
+  push the agent there yet.
+- **No Firebase file, no push, no error.** Without `google-services.json`:
+  - the Gradle plugin is not applied;
+  - `getApps()` is empty;
+  - the token, foreground and background FCM paths do nothing;
+  - the picker line stays "Reminder on this phone".
+  - A fresh clone and CI keep building.
+- **A tap waits for the tabs.** A tap before navigation is ready, or while on Splash or Login, is held. It opens on the
+  container's `ready` event or when the tabs mount. This covers a cold start from a locked screen. The role comes from
+  the cached user.
+- **Token calls are fire-and-forget.** A 404 while `/api/notifications/devices` does not exist is logged once and
+  changes nothing on screen. The platform sent is `Platform.OS`, so iOS will send `"ios"`.
+
+### What was verified
+
+- `src/lib/push/__tests__/reminders.test.ts` (8 tests):
+  - The reminder's id, title, body, data, channel and trigger.
+  - The fallback to the inexact idle alarm.
+  - Cancel for a cleared, past or converted callback.
+  - The permission asked exactly once.
+  - Nothing set with reminders off.
+  - A Notifee failure never reaching the save.
+  - Sync leaving out-of-page sources alone.
+  - Cancel one, and cancel all callback reminders and nothing else.
+- `__tests__/push.test.tsx` (8 tests, the whole app):
+  - A list load schedules a due row and cancels a cleared one.
+  - Not Interested cancels the reminder.
+  - The picker line reads "Reminder on this phone".
+  - A bulk day change cancels the selection's reminders.
+  - The Profile switch cancels everything and turns back on.
+  - A foreground tap opens `LeadSourceDetail`.
+  - A background tap before launch opens it once the app starts.
+  - With Firebase present: the token is POSTed after sign-in, the line reads "… and by push", a foreground push shows
+    on `crm`, and logout DELETEs the token.
+- `__tests__/leadSourceDetail.test.tsx`: the callback set schedules `callback-s1` and asks the permission once; the
+  clear cancels it; convert cancels it.
+- `__tests__/navigation/navigation.test.ts` covers the lead-source path.
+- `npm test`: 51 suites, 462 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The release bundle builds and
+  `hermesc` compiles it. Both Gradle scripts still compile with Gradle's Groovy.
+
+### Device checklist
+
+- [ ] `npm run android` builds with Notifee and both Firebase packages, first without `google-services.json`, then
+      with it. If Notifee fails on 0.87, record the Gradle error. Its trigger notifications need no Firebase.
+- [ ] Register a Firebase Android app for `com.zanverse`, put its `google-services.json` in `android/app/`, rebuild.
+- [ ] Set a callback 2 minutes ahead and close the app from recents. A high-priority "Call back <name>" with the
+      number arrives on time. On Android 14, try once with "Alarms & reminders" allowed and once without.
+- [ ] Tap it from a locked screen and from a cold start: it opens `LeadSourceDetail` for that source.
+- [ ] Clear the callback, set Not Interested, run a bulk day change, and convert: each cancels it.
+      `adb shell dumpsys alarm | grep zanverse` shows nothing left.
+- [ ] The permission dialog appears on the first callback save and never again. Declining it leaves the list, the
+      dialer and status saves working.
+- [ ] A Firebase-console test message shows in the foreground on "CRM updates", and the bell refreshes.
+- [ ] The picker line reads "Reminder on this phone" with no token, and "… and by push" once the backend route
+      exists.
+- [ ] Profile → Callback reminders off cancels the pending reminders; on reschedules from the next list load.
+- [ ] A release build from session 22 fires a reminder and opens the right screen, so the keep rules hold.
+
+## Session 24 — iOS build and the Windows decision
+
+**Status: the Windows half is done; the iOS build is not.** This container has no Mac, so no `pod install`, no Xcode
+build and no simulator. As the prompt's follow-up says, the Windows half came first: `docs/WINDOWS.md`, the
+`Platform.OS` audit, and `docs/OVERVIEW.md`. Then every iOS change that does not need a Mac. The exact Mac steps left
+are at the end of this section.
+
+### Windows
+
+- `docs/WINDOWS.md` records the decision: Windows uses the web app.
+  - Evidence (npm, 2026-10-06): `react-native-windows` latest is 0.84.0, with a peer dependency of
+    `react-native: 0.84.1`. The newest preview is 0.85.0-preview.2. There is no 0.86 or 0.87 line.
+  - It notes that a Tauri or Electron wrapper of the web app buys packaging, not features.
+  - It gives the conditions to reopen the decision.
+- `docs/OVERVIEW.md` links to it from §2 (Windows row), §9 (the session 24 row, marked done for Windows) and §10.
+- **The audit.** `grep -rn "Platform.OS" src/screens/` returns nothing. The two branches that lived in other
+  components (`CallbackPicker`, list `DateField`) now ask `hasSystemDateDialogs()` in `src/lib/pickDateTime.ts`.
+  Every `Platform.OS` left is in `src/components/ui/`, `src/lib/` or `src/api/endpoints.ts`. The list is in
+  `docs/WINDOWS.md`.
+
+### iOS changes made without a Mac
+
+- **Info.plist:**
+  - `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` (the avatar picker).
+  - `LSApplicationQueriesSchemes`: `tel`, `telprompt`, `whatsapp`, `mailto`.
+  - `UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace`, so downloads show in the Files app.
+  - The template's empty `NSLocationWhenInUseUsageDescription` is removed; the app never uses location.
+  - `NSPhotoLibraryAddUsageDescription` and `NSMicrophoneUsageDescription` are left out: nothing is saved to Photos,
+    and recordings are picked, never captured.
+  - App Transport Security: still `NSAllowsArbitraryLoads` false. The one exception, `NSAllowsLocalNetworking`, is now
+    commented as the dev API on the Mac.
+- **Bundle id:** `com.zanverse`, the same as Android. It was the template's `org.reactjs.native.example.zanverse`. The
+  Maestro flows' `appId` and Firebase now match on both platforms.
+- **Keychain:**
+  - `ios/zanverse/zanverse.entitlements` adds Keychain Sharing with one group, `$(AppIdentifierPrefix)com.zanverse`.
+    `CODE_SIGN_ENTITLEMENTS` is set in both build configurations.
+  - `src/store/keychain.ts` passes no `accessGroup`. With the entitlement, the default group is that one group, and an
+    explicit value would need the Team ID prefix, which is not known here.
+  - It keeps `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`, not the prompt's `WHEN_UNLOCKED_THIS_DEVICE_ONLY`. Both never sync
+    to iCloud. "After first unlock" also lets a background start read the token on a locked phone (session 23's
+    reminder taps and pushes), which "when unlocked" refuses.
+- **A token left by a deleted app.** iOS keeps Keychain entries after the app is deleted; MMKV goes with the app. So
+  `loadToken` now clears a token found while MMKV has no install marker (`prefs.installSeen`). `saveToken` sets the
+  marker.
+  - Android removes both on uninstall, so the rule never fires there.
+  - One side effect: an existing install that updates to this version is signed out once.
+- **Dev host:** the iOS simulator reaches the Mac at `http://localhost:3000`. The Android emulator keeps `10.0.2.2`.
+  Release builds use the production host on both.
+- **Downloads:** on iOS the `.xlsx` goes to the app's Documents folder (it was the cache) and opens in the system
+  preview, which has Share (Numbers, Excel, Files). Android is unchanged.
+- **Avatar:** the library picker asks for `assetRepresentationMode: "compatible"`. iPhones store HEIC, which the
+  server refuses; this hands over a JPEG copy. The multipart field (`avatarFile`) and the type checks are unchanged.
+- **Already fine on iOS, no change:**
+  - `src/lib/contact.ts` opens `tel:`, `https://wa.me/…` and `mailto:` directly, with a toast on failure.
+  - `src/lib/leadSourceUpload.ts` copies the picked file with `keepLocalCopy` and strips `file://`. That works for
+    both Android's `content://` and iOS's `file://`.
+
+### What was verified
+
+- `src/store/__tests__/keychain.test.ts` (1 test): a token left by an earlier install is cleared on the first boot,
+  and a token this install saved is kept.
+- `__tests__/release.test.tsx` checks the dev host per platform. Seven test files now compare request URLs against
+  `API_BASE_URL`, not the Android literal: Jest runs as iOS, so they now cover the iOS host. The report download test
+  accepts the cache or the Documents path.
+- `npm test`: 52 suites, 463 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass.
+- **Both** the Android and the iOS production bundles build, and `hermesc` compiles both. The iOS release bundle
+  contains the production host and no `localhost`.
+- `Info.plist` and the entitlements file parse as plists.
+
+### The Mac steps left (in order)
+
+1. `bundle install`, then `cd ios && bundle exec pod install`. New Architecture stays on. Fix pods one at a time,
+   starting with `react-native-svg`. Watch most closely: `react-native-gifted-charts` with
+   `react-native-linear-gradient`, `@gorhom/bottom-sheet` with Reanimated and Worklets, `@notifee/react-native`,
+   `@react-native-firebase/*` (needs `GoogleService-Info.plist` for push; the app runs without it), and Sentry.
+2. In Xcode, choose the Team on the `zanverse` target. That fills `$(AppIdentifierPrefix)` and signs the Keychain
+   Sharing entitlement. Then run `npm run ios` on a simulator, log in against the dev API on `localhost:3000`, kill the
+   app, and reopen it: the session survives. Log out: the Keychain entry is gone.
+3. Walk Lead Sources Today: Call opens the call sheet, the WhatsApp row opens WhatsApp, the email row opens Mail. With
+   an app missing, each shows its toast.
+4. Avatar from the library (PHPicker) and from the camera: the profile shows the new photo. Upload the seed
+   `.xlsx` from Files. Download the template and a report: each opens in the preview, Share works, and the file is in
+   Files → On My iPhone → zanverse.
+5. Overall stats charts and one bottom sheet (the status sheet) render. A callback reminder fires (Notifee asks for
+   permission on iOS too).
+6. Safe areas on a notched device: the tab bar, the floating buttons, the sheets and the notification inbox clear the
+   home indicator.
+7. `maestro test` both `.maestro` flows against the iOS build. Add a `testID` only where a selector does not resolve.
+   On iOS, the upload flow's file step taps the file in the Files picker.
+8. If a pod will not build on 0.87: try its latest release. If it still fails, put that feature behind a
+   `Platform.select` stub in `src/components/ui/`, so the rest runs, and record it.

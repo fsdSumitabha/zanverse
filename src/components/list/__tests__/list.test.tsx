@@ -42,6 +42,7 @@ function makeQuery(overrides: Partial<ListQueryResult<Row>> = {}): ListQueryResu
         loadingMore: false,
         accessError: null,
         error: null,
+        isOffline: false,
         refresh: jest.fn(),
         loadMore: jest.fn(),
         ...overrides,

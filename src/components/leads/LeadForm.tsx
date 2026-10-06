@@ -9,6 +9,7 @@ import WriteRegionField from "@/components/region/WriteRegionField"
 import { Button, Card, Field, Input } from "@/components/ui"
 import { useWriteRegion } from "@/hooks/useWriteRegion"
 import { notify } from "@/lib/notify"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 type LeadFormValues = {
     name: string
@@ -32,6 +33,7 @@ const LEADS_API = "/api/admin/operations/leads"
  * phone rules. A server error with `field: "phone"` shows under the phone field instead of as a toast.
  */
 export default function LeadForm({ mode = "create", leadId, initialValues, onSaved }: LeadFormProps) {
+    const offlineReason = useOfflineReason()
     const [form, setForm] = useState<Omit<LeadFormValues, "phone">>({ name: "", email: "", source: "" })
     const phone = useEditablePhone(mode === "edit" ? initialValues?.phone : "")
     // Create only. A lead's region does not change after it is saved.
@@ -131,6 +133,7 @@ export default function LeadForm({ mode = "create", leadId, initialValues, onSav
             {!isEdit && <WriteRegionField region={region} />}
 
             <Button
+                disabledReason={offlineReason}
                 label={loading ? (isEdit ? "Updating..." : "Creating...") : isEdit ? "Update Lead" : "Create Lead"}
                 onPress={handleSubmit}
                 loading={loading}

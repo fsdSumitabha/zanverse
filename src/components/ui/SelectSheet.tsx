@@ -1,7 +1,8 @@
+import { BottomSheetFlatList } from "@gorhom/bottom-sheet"
 import clsx from "clsx"
 import { Check, ChevronDown } from "lucide-react-native"
 import { useState } from "react"
-import { FlatList, Pressable, Text, View, useColorScheme } from "react-native"
+import { Pressable, StyleSheet, Text, View, useColorScheme } from "react-native"
 
 import { PALETTE } from "@/theme"
 
@@ -84,8 +85,9 @@ export default function SelectSheet<T extends string | number>({
                 <Text className="px-5 pb-2 pt-3 text-base font-semibold text-neutral-900 dark:text-neutral-100">
                     {heading}
                 </Text>
-                <FlatList
+                <BottomSheetFlatList
                     data={options}
+                    style={styles.list}
                     keyExtractor={(option) => String(option.value)}
                     renderItem={({ item }) => {
                         const isSelected = item.value === value
@@ -123,3 +125,11 @@ export default function SelectSheet<T extends string | number>({
         </Field>
     )
 }
+
+// A long option list shrinks inside the sheet's height cap and scrolls. The list is the sheet's own, which NativeWind
+// does not map className on.
+const styles = StyleSheet.create({
+    list: {
+        flexShrink: 1,
+    },
+})

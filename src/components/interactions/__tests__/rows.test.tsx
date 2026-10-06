@@ -2,6 +2,7 @@ import Clipboard from "@react-native-clipboard/clipboard"
 import { Linking, Text } from "react-native"
 import ReactTestRenderer from "react-test-renderer"
 
+import { API_BASE_URL } from "@/api/endpoints"
 import EditHistory from "@/components/interactions/EditHistory"
 import InteractionEditor from "@/components/interactions/InteractionEditor"
 import InteractionItem from "@/components/interactions/InteractionItem"
@@ -147,7 +148,7 @@ describe("timeline rows", () => {
         await ReactTestRenderer.act(async () =>
             renderer.root.findByProps({ accessibilityLabel: "Open recording" }).props.onPress(),
         )
-        expect(open).toHaveBeenCalledWith("http://10.0.2.2:3000/uploads/calls/rec.m4a")
+        expect(open).toHaveBeenCalledWith(`${API_BASE_URL}/uploads/calls/rec.m4a`)
     })
 
     it("renders a quotation with the GST-inclusive total", async () => {

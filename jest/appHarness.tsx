@@ -1,4 +1,5 @@
 // Shared by the whole-app tests: a fetch mock, a renderer for <App />, and finders for text and pressables.
+import NetInfo from "@react-native-community/netinfo"
 import { Text } from "react-native"
 import ReactTestRenderer from "react-test-renderer"
 
@@ -93,7 +94,8 @@ export interface FetchRoute {
     method?: string
     /** Matched against the path after the API base URL, query string included. */
     path: string | RegExp
-    reply: (init: RequestInit, path: string) => MockResponse
+    /** A promise holds the answer back, such as one that never settles, to see what shows before it arrives. */
+    reply: (init: RequestInit, path: string) => MockResponse | Promise<MockResponse>
 }
 
 /** Answers each request from the first matching route, and 404s anything else. Returns the calls made. */
@@ -155,4 +157,15 @@ export function installRecordingFormData(): () => void {
     return () => {
         holder.FormData = original
     }
+}
+
+/**
+ * Tells the app the network changed, through every NetInfo listener: useIsOnline's and the notification poll's.
+ * Something must be mounted that listens (any tab screen does, through the offline bar).
+ */
+export async function setNetwork(isConnected: boolean | null, isInternetReachable: boolean | null = isConnected) {
+    const listeners = (NetInfo.addEventListener as jest.Mock).mock.calls.map(([listener]) => listener)
+    if (listeners.length === 0) throw new Error("Nothing listens to NetInfo yet")
+    const state = { type: isConnected ? "wifi" : "none", isConnected, isInternetReachable, details: null }
+    await ReactTestRenderer.act(async () => listeners.forEach((listener) => listener(state)))
 }

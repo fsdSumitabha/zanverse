@@ -17,6 +17,7 @@ import { openClient } from "@/navigation/openRecord"
 import type { LeadsStackParamList } from "@/navigation/types"
 import type { Client } from "@/types/clients"
 import type { Lead } from "@/types/lead"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 type Navigation = NativeStackNavigationProp<LeadsStackParamList, "LeadDetail">
 
@@ -31,6 +32,7 @@ const ADMIN_ROLE = 10
 
 /** One lead: header card, converted client, the add buttons, the timeline and, for Admin, Delete. */
 export default function LeadDetailScreen() {
+    const offlineReason = useOfflineReason()
     const navigation = useNavigation<Navigation>()
     const { id } = useRoute<RouteProp<LeadsStackParamList, "LeadDetail">>().params
     const { role } = useAuth()
@@ -90,6 +92,7 @@ export default function LeadDetailScreen() {
             {role === ADMIN_ROLE && (
                 <View className="flex-row justify-end">
                     <Button
+                        disabledReason={offlineReason}
                         label={remove.isDeleting ? "Deleting..." : "Delete Lead"}
                         variant="danger"
                         loading={remove.isDeleting}

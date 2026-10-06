@@ -10,7 +10,7 @@ import {
     DateTimeField,
     Field,
     FilePickerField,
-    FormScrollView,
+    FormSheet,
     Input,
     SelectSheet,
     Textarea,
@@ -99,7 +99,7 @@ export default function LogCallScreen() {
     }
 
     return (
-        <FormScrollView>
+        <FormSheet title="Log Call" onClose={() => navigation.goBack()}>
             <Input
                 label="Contact Name"
                 required
@@ -157,6 +157,6 @@ export default function LogCallScreen() {
                 onSave={handleSubmit}
                 onCancel={() => navigation.goBack()}
             />
-        </FormScrollView>
+        </FormSheet>
     )
 }

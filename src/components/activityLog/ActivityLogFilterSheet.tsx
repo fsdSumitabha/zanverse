@@ -1,10 +1,12 @@
 import clsx from "clsx"
 import { ChevronDown, X } from "lucide-react-native"
 import { useState } from "react"
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 
 import DateField from "@/components/list/DateField"
 import { Button, FIELD_BOX_CLASSES, FIELD_CLASSES, Sheet } from "@/components/ui"
+import { SheetScrollView } from "@/components/ui/sheetScrollables"
+import SheetTextInput from "@/components/ui/SheetTextInput"
 import { ENTITY_TYPE_META, type EntityType } from "@/constants/entityTypes"
 import { formatLocalDate } from "@/lib/dates"
 import { enableIconClassNames } from "@/lib/iconClassName"
@@ -59,7 +61,7 @@ export default function ActivityLogFilterSheet({ visible, onClose, value, onChan
 
     return (
         <Sheet visible={visible} onClose={onClose} accessibilityLabel="Filters">
-            <ScrollView contentContainerClassName="gap-4 px-5 pb-4 pt-3" keyboardShouldPersistTaps="handled">
+            <SheetScrollView contentContainerClassName="gap-4 px-5 pb-4 pt-3" keyboardShouldPersistTaps="handled">
                 <Text className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Filters</Text>
 
                 <View className="gap-1.5">
@@ -118,7 +120,7 @@ export default function ActivityLogFilterSheet({ visible, onClose, value, onChan
                                 <ChevronDown size={16} color={PALETTE["neutral-400"]} />
                             </Pressable>
                         </View>
-                        <TextInput
+                        <SheetTextInput
                             value={value.q}
                             onChangeText={(q) => update({ q })}
                             editable={!value.userId}
@@ -149,7 +151,7 @@ export default function ActivityLogFilterSheet({ visible, onClose, value, onChan
                     )}
                     <Button label="Done" onPress={onClose} />
                 </View>
-            </ScrollView>
+            </SheetScrollView>
 
             {isAdmin && (
                 <UserPickerModal

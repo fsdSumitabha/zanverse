@@ -24,6 +24,7 @@ import { useDetailQuery } from "@/hooks/useDetailQuery"
 import { useNow } from "@/hooks/useNow"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { notify } from "@/lib/notify"
+import { cancelCallbackReminder } from "@/lib/push/reminders"
 import { openLead } from "@/navigation/openRecord"
 import type { CallsStackParamList } from "@/navigation/types"
 import { BRAND_COLOR } from "@/theme"
@@ -71,6 +72,8 @@ export default function LeadSourceDetailScreen() {
         setIsConverting(true)
         try {
             const { leadId } = await send<{ leadId: string }>(`${LEAD_SOURCES_API}/${sourceId}/convert`, "POST", {})
+            // Converted (70) is final and clears callbackAt, so no reminder is left to ring.
+            cancelCallbackReminder(sourceId)
             notify.success("Lead created")
             setPanel(null)
             setIsConverting(false)

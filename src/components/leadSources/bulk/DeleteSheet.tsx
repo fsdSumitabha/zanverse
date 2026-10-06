@@ -1,12 +1,14 @@
 import { Text } from "react-native"
 
 import { Button, Dialog } from "@/components/ui"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 import { pluralSources } from "@/lib/leadSourceBulk"
 
 import { useBulkSave, type BulkSheetProps } from "./useBulkSave"
 
 /** Deletes every selected row. Converted leads stay. Ported from the web's DeleteDialog. */
 export default function DeleteSheet(props: BulkSheetProps) {
+    const offlineReason = useOfflineReason()
     const { open, onClose, ids } = props
     const { isSaving, save } = useBulkSave(props)
 
@@ -24,6 +26,7 @@ export default function DeleteSheet(props: BulkSheetProps) {
                 <>
                     <Button label="Cancel" variant="quiet" onPress={onClose} />
                     <Button
+                        disabledReason={offlineReason}
                         label={isSaving ? "Deleting..." : "Delete"}
                         variant="danger"
                         onPress={handleDelete}

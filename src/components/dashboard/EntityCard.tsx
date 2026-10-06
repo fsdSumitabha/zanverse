@@ -39,13 +39,18 @@ function EntityCard({ item, onPress }: { item: FeedItem; onPress: () => void }) 
             </View>
             <View className="min-w-0 flex-1 gap-3">
                 <View>
-                    <Text className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                    <Text numberOfLines={1} className="text-lg font-semibold text-gray-800 dark:text-gray-200">
                         {item.name || item.title}
                     </Text>
                     {!!company && (
                         <View className="flex-row items-center gap-1">
                             <Building2 size={12} className="text-neutral-700 dark:text-neutral-300" />
-                            <Text className="text-xs text-neutral-700 dark:text-neutral-300">{company}</Text>
+                            <Text
+                                numberOfLines={1}
+                                className="flex-shrink text-xs text-neutral-700 dark:text-neutral-300"
+                            >
+                                {company}
+                            </Text>
                         </View>
                     )}
                 </View>
@@ -59,11 +64,18 @@ function EntityCard({ item, onPress }: { item: FeedItem; onPress: () => void }) 
                     {!!item.email && (
                         <View className="flex-row items-center gap-1">
                             <Mail size={12} className="text-neutral-700 dark:text-neutral-300" />
-                            <Text className="text-xs text-neutral-700 dark:text-neutral-300">{item.email}</Text>
+                            <Text
+                                numberOfLines={1}
+                                className="flex-shrink text-xs text-neutral-700 dark:text-neutral-300"
+                            >
+                                {item.email}
+                            </Text>
                         </View>
                     )}
                     {!!item.source && (
-                        <Text className="text-xs text-neutral-700 dark:text-neutral-300">{item.source}</Text>
+                        <Text numberOfLines={1} className="text-xs text-neutral-700 dark:text-neutral-300">
+                            {item.source}
+                        </Text>
                     )}
                     {!!item.lastInteractionAt && (
                         <View className="flex-row items-center gap-1">
@@ -73,7 +85,9 @@ function EntityCard({ item, onPress }: { item: FeedItem; onPress: () => void }) 
                     )}
                 </View>
                 {!!item.description && (
-                    <Text className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">{item.description}</Text>
+                    <Text numberOfLines={2} className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+                        {item.description}
+                    </Text>
                 )}
                 {item.lastInteraction && <LastInteraction entityType={item.entityType} item={item.lastInteraction} />}
             </View>

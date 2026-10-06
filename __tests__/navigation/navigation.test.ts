@@ -78,6 +78,15 @@ describe("resolveNotificationPath", () => {
         )
     })
 
+    it("maps a callback reminder's lead-source path to LeadSourceDetail", () => {
+        expect(resolveNotificationPath(`/admin/operations/lead-sources/${ID}`)).toEqual({
+            tab: "CallsTab",
+            screen: "LeadSourceDetail",
+            params: { sourceId: ID },
+        })
+        expect(resolveNotificationPath("/admin/operations/lead-sources/uploads")).toBeNull()
+    })
+
     it("gives null for anything else", () => {
         expect(resolveNotificationPath(undefined)).toBeNull()
         expect(resolveNotificationPath("/admin/operations/leads/")).toBeNull()

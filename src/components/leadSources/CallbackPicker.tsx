@@ -2,12 +2,14 @@ import DateTimePicker from "@react-native-community/datetimepicker"
 import clsx from "clsx"
 import { AlarmClock, CalendarClock } from "lucide-react-native"
 import { useState } from "react"
-import { Platform, Pressable, Text, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 
 import { useNow } from "@/hooks/useNow"
 import { CALLBACK_PRESETS, formatCallback, relativeCallback, toDateTimeLocal } from "@/lib/callback"
 import { enableIconClassNames } from "@/lib/iconClassName"
-import { pickDateTimeAndroid } from "@/lib/pickDateTime"
+import { hasSystemDateDialogs, pickDateTimeAndroid } from "@/lib/pickDateTime"
+import { useIsPushRegistered } from "@/lib/push/token"
+import { getRemindersEnabled } from "@/store/mmkv"
 
 export interface CallbackChoice {
     /** Index into CALLBACK_PRESETS, or null. */
@@ -41,7 +43,17 @@ enableIconClassNames(AlarmClock, CalendarClock)
  * Quick callback times, plus an exact time. Ported from the web's CallbackPicker.tsx: "call me after 2 hours" is one
  * tap, "call me at 12" is the date and time dialogs.
  */
+/**
+ * Says where the reminder will ring. A reminder on this phone does not follow the agent to another phone, so the
+ * line only adds "by push" once the backend holds this phone's token.
+ */
+function getReminderLine(isPushRegistered: boolean): string {
+    if (!getRemindersEnabled()) return "Callback reminders are off on this phone (Profile)"
+    return isPushRegistered ? "Reminder on this phone and by push" : "Reminder on this phone"
+}
+
 export default function CallbackPicker({ value, onChange }: Props) {
+    const isPushRegistered = useIsPushRegistered()
     // Its own clock, so "in 25 min" stays true while the sheet is open.
     const now = useNow(15_000)
     const at = resolveChoice(value)
@@ -52,7 +64,7 @@ export default function CallbackPicker({ value, onChange }: Props) {
     }
 
     function openExact() {
-        if (Platform.OS === "android") {
+        if (hasSystemDateDialogs()) {
             pickDateTimeAndroid({ value: at ?? new Date(now), minimumDate: new Date(now), onPicked: setExact })
             return
         }
@@ -111,7 +123,7 @@ export default function CallbackPicker({ value, onChange }: Props) {
                 </Pressable>
             </View>
 
-            {Platform.OS === "ios" && isIosPickerOpen && (
+            {!hasSystemDateDialogs() && isIosPickerOpen && (
                 <DateTimePicker
                     mode="datetime"
                     display="inline"
@@ -132,6 +144,10 @@ export default function CallbackPicker({ value, onChange }: Props) {
                     </Text>
                 </View>
             )}
+
+            <Text className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                {getReminderLine(isPushRegistered)}
+            </Text>
         </View>
     )
 }

@@ -1,13 +1,14 @@
-import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from "@react-native-community/datetimepicker"
+import DateTimePicker from "@react-native-community/datetimepicker"
 import clsx from "clsx"
 import { Calendar } from "lucide-react-native"
 import { useState } from "react"
-import { Platform, Pressable, Text, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 
 import { Button, FIELD_BOX_CLASSES, Sheet } from "@/components/ui"
 import { formatLocalDate, parseLocalDate } from "@/lib/dates"
 import { formatShortDate } from "@/lib/format"
 import { enableIconClassNames } from "@/lib/iconClassName"
+import { hasSystemDateDialogs, pickDateAndroid } from "@/lib/pickDateTime"
 
 interface Props {
     label: string
@@ -38,18 +39,13 @@ export default function DateField({ label, value, min, max, active, onChange }: 
     const minimumDate = min ? parseLocalDate(min) : undefined
     const maximumDate = max ? parseLocalDate(max) : undefined
 
-    function handleAndroidChange(event: DateTimePickerEvent, date?: Date) {
-        if (event.type === "set" && date) onChange(formatLocalDate(date))
-    }
-
     function openPicker() {
-        if (Platform.OS === "android") {
-            DateTimePickerAndroid.open({
+        if (hasSystemDateDialogs()) {
+            pickDateAndroid({
                 value: parseLocalDate(value),
-                mode: "date",
                 minimumDate,
                 maximumDate,
-                onChange: handleAndroidChange,
+                onPicked: (date) => onChange(formatLocalDate(date)),
             })
             return
         }
@@ -79,7 +75,7 @@ export default function DateField({ label, value, min, max, active, onChange }: 
                 </Text>
             </Pressable>
 
-            {Platform.OS === "ios" && (
+            {!hasSystemDateDialogs() && (
                 <Sheet visible={isIosSheetOpen} onClose={() => setIsIosSheetOpen(false)} accessibilityLabel={label}>
                     <View className="gap-3 px-5 pb-4 pt-3">
                         <Text className="text-base font-semibold text-neutral-900 dark:text-neutral-100">{label}</Text>

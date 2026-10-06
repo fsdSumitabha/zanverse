@@ -3,7 +3,7 @@ import { useState } from "react"
 
 import { send } from "@/api/client"
 import FormActions from "@/components/interactions/FormActions"
-import { FilePickerField, FormScrollView, Input, Textarea, type PickedFile } from "@/components/ui"
+import { FilePickerField, FormSheet, Input, Textarea, type PickedFile } from "@/components/ui"
 import { INTERACTION_TYPE } from "@/constants/interactionTypes"
 import { notify } from "@/lib/notify"
 import { toastPromise } from "@/lib/toastPromise"
@@ -73,7 +73,7 @@ export default function SendQuotationScreen() {
     }
 
     return (
-        <FormScrollView>
+        <FormSheet title="Send Quotation" onClose={() => navigation.goBack()}>
             <Input label="Title" required value={title} onChangeText={setTitle} placeholder="Quotation title" />
             <Textarea
                 label="Description"
@@ -111,6 +111,6 @@ export default function SendQuotationScreen() {
                 onSave={handleSubmit}
                 onCancel={() => navigation.goBack()}
             />
-        </FormScrollView>
+        </FormSheet>
     )
 }

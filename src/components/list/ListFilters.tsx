@@ -1,9 +1,10 @@
 import clsx from "clsx"
 import { X } from "lucide-react-native"
 import { useEffect, useState } from "react"
-import { Pressable, ScrollView, Text, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 
 import { Button, Sheet } from "@/components/ui"
+import { SheetScrollView } from "@/components/ui/sheetScrollables"
 import { clampDate, MIN_DATE, todayLocal } from "@/lib/dates"
 import { enableIconClassNames } from "@/lib/iconClassName"
 
@@ -94,7 +95,7 @@ export default function ListFilters({ visible, statusMeta, value, onApply, onClo
 
     return (
         <Sheet visible={visible} onClose={handleClose} accessibilityLabel="Filters">
-            <ScrollView contentContainerClassName="gap-5 px-5 pb-4 pt-3">
+            <SheetScrollView contentContainerClassName="gap-5 px-5 pb-4 pt-3">
                 <Text className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Filters</Text>
 
                 <View className="gap-2">
@@ -148,7 +149,7 @@ export default function ListFilters({ visible, statusMeta, value, onApply, onClo
                     )}
                     <Button label="Done" onPress={handleClose} />
                 </View>
-            </ScrollView>
+            </SheetScrollView>
         </Sheet>
     )
 }

@@ -5,6 +5,7 @@ import { View } from "react-native"
 import { send } from "@/api/client"
 import { Button, Input, Textarea } from "@/components/ui"
 import { notify } from "@/lib/notify"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 interface Props {
     interactionId: string
@@ -27,6 +28,7 @@ export default function InteractionEditor({
     onCancel,
     onSaved,
 }: Props) {
+    const offlineReason = useOfflineReason()
     const [title, setTitle] = useState(initialTitle)
     const [description, setDescription] = useState(initialDescription)
     const [saving, setSaving] = useState(false)
@@ -72,7 +74,14 @@ export default function InteractionEditor({
             />
             <View className="flex-row items-center justify-end gap-2">
                 <Button label="Cancel" variant="quiet" icon={X} onPress={onCancel} disabled={saving} />
-                <Button label="Save" icon={Check} onPress={save} disabled={!dirty || saving} loading={saving} />
+                <Button
+                    disabledReason={offlineReason}
+                    label="Save"
+                    icon={Check}
+                    onPress={save}
+                    disabled={!dirty || saving}
+                    loading={saving}
+                />
             </View>
         </View>
     )

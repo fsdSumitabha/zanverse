@@ -103,6 +103,7 @@ function LeadSourceRow({
             onLongPress={() => onToggle(row._id)}
             accessibilityRole="button"
             accessibilityLabel={row.name}
+            testID="leadSourceRow"
             accessibilityState={{ selected: isSelected }}
             className={clsx(
                 "flex-row items-center gap-2.5 border-b border-l-4 border-b-slate-100 py-2 pl-2 pr-2.5 dark:border-b-neutral-800",

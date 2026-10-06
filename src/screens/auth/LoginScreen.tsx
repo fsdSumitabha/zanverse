@@ -126,6 +126,7 @@ export default function LoginScreen() {
                                     submitBehavior="submit"
                                     onSubmitEditing={() => passwordRef.current?.focus()}
                                     accessibilityLabel="Email"
+                                    testID="loginEmail"
                                     className={`mt-1 ${INPUT_CLASSES}`}
                                 />
                             </View>
@@ -147,6 +148,7 @@ export default function LoginScreen() {
                                         returnKeyType="go"
                                         onSubmitEditing={handleLogin}
                                         accessibilityLabel="Password"
+                                        testID="loginPassword"
                                         className={`pr-12 ${INPUT_CLASSES}`}
                                     />
                                     <Pressable
@@ -168,6 +170,7 @@ export default function LoginScreen() {
                             <Pressable
                                 onPress={handleLogin}
                                 disabled={loading}
+                                testID="loginSubmit"
                                 accessibilityRole="button"
                                 accessibilityState={{ disabled: loading, busy: loading }}
                                 className="min-h-[44px] w-full flex-row items-center justify-center gap-2 rounded-md bg-neutral-800 py-2 active:opacity-80 disabled:opacity-60"

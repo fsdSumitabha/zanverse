@@ -104,7 +104,9 @@ function MeetingCard({ meeting, onChanged }: { meeting: MeetingListItem; onChang
             <View className="min-w-0 flex-1 gap-2">
                 <View className="flex-row items-start justify-between gap-2">
                     <View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-2">
-                        <Text className="font-bold text-neutral-800 dark:text-neutral-200">{meeting.title}</Text>
+                        <Text numberOfLines={1} className="font-bold text-neutral-800 dark:text-neutral-200">
+                            {meeting.title}
+                        </Text>
                         <Badge meta={MEETING_STATUS_META} status={meeting.status} />
                         {isScheduled && <TemporalBadge status={temporal} />}
                     </View>
@@ -121,7 +123,10 @@ function MeetingCard({ meeting, onChanged }: { meeting: MeetingListItem; onChang
                         className="min-h-[32px] justify-center self-start"
                         hitSlop={6}
                     >
-                        <Text className="text-sm font-medium text-neutral-600 underline dark:text-neutral-300">
+                        <Text
+                            numberOfLines={1}
+                            className="text-sm font-medium text-neutral-600 underline dark:text-neutral-300"
+                        >
                             {meeting.entity.title}
                         </Text>
                     </Pressable>
@@ -132,6 +137,7 @@ function MeetingCard({ meeting, onChanged }: { meeting: MeetingListItem; onChang
                         <Users size={12} className="text-neutral-400" />
                         {attendees.map((attendee) => (
                             <Text
+                                numberOfLines={1}
                                 key={attendee._id}
                                 className="rounded-md bg-neutral-100 px-1.5 py-0.5 text-[11px] text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
                             >

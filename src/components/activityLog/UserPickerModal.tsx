@@ -1,12 +1,13 @@
 import clsx from "clsx"
 import { Check } from "lucide-react-native"
 import { useEffect, useMemo, useState } from "react"
-import { FlatList, Pressable, Text, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 
 import { send } from "@/api/client"
 import SearchField from "@/components/list/SearchField"
 import { Sheet } from "@/components/ui"
 import { enableIconClassNames } from "@/lib/iconClassName"
+import { SheetFlatList } from "@/components/ui/sheetScrollables"
 
 interface UserOption {
     _id: string
@@ -64,7 +65,7 @@ export default function UserPickerModal({ visible, value, onClose, onChange }: P
                 <Text className="text-base font-semibold text-neutral-900 dark:text-neutral-100">User</Text>
                 <SearchField value={term} onChangeText={setTerm} placeholder="Search users" />
             </View>
-            <FlatList
+            <SheetFlatList
                 data={options}
                 keyExtractor={(user) => user._id || "all"}
                 keyboardShouldPersistTaps="handled"

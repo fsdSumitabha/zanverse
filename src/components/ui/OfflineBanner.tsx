@@ -1,7 +1,7 @@
-import { useNetInfo } from "@react-native-community/netinfo"
 import { WifiOff } from "lucide-react-native"
 import { Text, View } from "react-native"
 
+import { useIsOnline } from "@/hooks/useIsOnline"
 import { enableIconClassNames } from "@/lib/iconClassName"
 
 enableIconClassNames(WifiOff)
@@ -11,8 +11,8 @@ enableIconClassNames(WifiOff)
  * flashes at launch.
  */
 export default function OfflineBanner() {
-    const { isConnected } = useNetInfo()
-    if (isConnected !== false) return null
+    const isOnline = useIsOnline()
+    if (isOnline) return null
 
     return (
         <View

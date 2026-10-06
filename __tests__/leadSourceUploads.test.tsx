@@ -3,6 +3,7 @@ import { FlatList } from "react-native"
 import ReactNativeBlobUtil from "react-native-blob-util"
 import ReactTestRenderer from "react-test-renderer"
 
+import { API_BASE_URL } from "@/api/endpoints"
 import { navigationRef } from "@/api/navigationRef"
 import { notify } from "@/lib/notify"
 import LeadSourceReportScreen from "@/screens/leadSources/LeadSourceReportScreen"
@@ -289,11 +290,12 @@ describe("uploads and reports", () => {
             ]),
         )
         await press(findPressableByText(renderer, "Skipped rows only"))
+        // The cache on Android, Documents on iOS (Jest runs as iOS).
         expect(blob.config).toHaveBeenCalledWith({
             fileCache: true,
-            path: "/data/user/0/com.zanverse/cache/october-report-skipped.xlsx",
+            path: expect.stringMatching(/^\/(data|var)\/.+\/october-report-skipped\.xlsx$/),
         })
-        expect(fetchFile.mock.calls[0][1]).toBe(`http://10.0.2.2:3000${UPLOADS}/up1/download?only=skipped`)
+        expect(fetchFile.mock.calls[0][1]).toBe(`${API_BASE_URL}${UPLOADS}/up1/download?only=skipped`)
         await unmountApp(renderer)
     })
 

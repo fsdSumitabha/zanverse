@@ -5,6 +5,7 @@ import { MEETINGS_API } from "@/api/endpoints"
 import { Button, Dialog, Textarea } from "@/components/ui"
 import { MEETING_STATUS } from "@/constants/meetingStatus"
 import { notify } from "@/lib/notify"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 const HTTP_CONFLICT = 409
 
@@ -19,6 +20,7 @@ interface Props {
  * web's MeetingCard.
  */
 export default function CompleteSheet({ meetingId, onClose, onChanged }: Props) {
+    const offlineReason = useOfflineReason()
     const [outcome, setOutcome] = useState("")
     const [isSaving, setIsSaving] = useState(false)
 
@@ -56,7 +58,12 @@ export default function CompleteSheet({ meetingId, onClose, onChanged }: Props) 
             footer={
                 <>
                     <Button label="Cancel" variant="quiet" onPress={onClose} disabled={isSaving} />
-                    <Button label={isSaving ? "Saving…" : "Confirm completed"} onPress={submit} disabled={isSaving} />
+                    <Button
+                        disabledReason={offlineReason}
+                        label={isSaving ? "Saving…" : "Confirm completed"}
+                        onPress={submit}
+                        disabled={isSaving}
+                    />
                 </>
             }
         >

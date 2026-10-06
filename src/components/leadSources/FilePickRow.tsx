@@ -24,7 +24,13 @@ export default function FilePickRow({ file, maxFileMb, maxRows, disabled, onPick
     if (!file) {
         return (
             <View className="items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 p-5 dark:border-neutral-700">
-                <Button label="Choose a file" variant="quiet" onPress={onPick} disabled={disabled} />
+                <Button
+                    label="Choose a file"
+                    variant="quiet"
+                    onPress={onPick}
+                    disabled={disabled}
+                    testID="uploadPickFile"
+                />
                 <Text className="text-center text-sm text-neutral-700 dark:text-neutral-300">
                     An .xlsx or .csv file.
                 </Text>

@@ -153,6 +153,12 @@ beforeEach(async () => {
     Object.defineProperty(AppState, "currentState", { value: "active", configurable: true })
 })
 
+/** Sends a network state to every NetInfo listener: the bell's back-off and the app's online state both listen. */
+async function sendNetwork(state: { type: string }) {
+    const listeners = (NetInfo.addEventListener as jest.Mock).mock.calls.map(([listener]) => listener)
+    await ReactTestRenderer.act(async () => listeners.forEach((listener) => listener(state)))
+}
+
 describe("header bell", () => {
     it("shows the unseen count on a tab, and a tap marks it seen and opens the inbox", async () => {
         const renderer = await signIn()
@@ -170,8 +176,7 @@ describe("header bell", () => {
     it("polls every 30 s in front, never in the background, and once at once on return", async () => {
         const renderer = await signIn()
         // Wi-Fi, so no cellular back-off.
-        const onNet = (NetInfo.addEventListener as jest.Mock).mock.calls[0][0]
-        await ReactTestRenderer.act(async () => onNet({ type: "wifi" }))
+        await sendNetwork({ type: "wifi" })
 
         await advance(30_000)
         expect(countCalls(`GET ${FEED}?limit=4`)).toBe(2)
@@ -193,8 +198,7 @@ describe("header bell", () => {
 
     it("backs off to 60 s on mobile data while nothing changes", async () => {
         const renderer = await signIn()
-        const onNet = (NetInfo.addEventListener as jest.Mock).mock.calls[0][0]
-        await ReactTestRenderer.act(async () => onNet({ type: "cellular" }))
+        await sendNetwork({ type: "cellular" })
 
         // The first 30 s poll finds the same feed, so the next one waits 60 s.
         await advance(30_000)

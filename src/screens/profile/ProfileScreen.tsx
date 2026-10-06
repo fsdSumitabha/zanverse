@@ -10,6 +10,7 @@ import ActivityLogList from "@/components/activityLog/ActivityLogList"
 import FilterButton from "@/components/activityLog/FilterButton"
 import ProfileCard from "@/components/profile/ProfileCard"
 import ProfileFacts from "@/components/profile/ProfileFacts"
+import ReminderSwitch from "@/components/profile/ReminderSwitch"
 import { Card, SkeletonBlock } from "@/components/ui"
 import { useAuth } from "@/contexts/AuthContext"
 import { useDetailQuery } from "@/hooks/useDetailQuery"
@@ -75,6 +76,7 @@ export default function ProfileScreen() {
                 </View>
                 <ProfileFacts profile={profile} />
             </Card>
+            <ReminderSwitch />
             <View className="flex-row items-start gap-3 pt-2">
                 <View className="flex-1">
                     <View className="flex-row items-center gap-2">

@@ -22,6 +22,7 @@ import type { Client } from "@/types/clients"
 import type { Lead } from "@/types/lead"
 import type { Project } from "@/types/projects"
 import { BRAND_COLOR } from "@/theme"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 type Navigation = NativeStackNavigationProp<ClientsStackParamList, "ClientDetail">
 type Section = "overview" | "timeline" | "projects"
@@ -46,6 +47,7 @@ const SECTIONS: Segment<Section>[] = [
 
 /** One client: Overview (header, source lead, Delete), Timeline (entityType 1) and Projects, plus Create New Project. */
 export default function ClientDetailScreen() {
+    const offlineReason = useOfflineReason()
     const navigation = useNavigation<Navigation>()
     const { id } = useRoute<RouteProp<ClientsStackParamList, "ClientDetail">>().params
     const { role } = useAuth()
@@ -123,6 +125,7 @@ export default function ClientDetailScreen() {
                     {role !== null && CLIENT_DELETE_ROLES.includes(role) && (
                         <View className="flex-row justify-end">
                             <Button
+                                disabledReason={offlineReason}
                                 label={remove.isDeleting ? "Deleting..." : "Delete Client"}
                                 variant="danger"
                                 loading={remove.isDeleting}

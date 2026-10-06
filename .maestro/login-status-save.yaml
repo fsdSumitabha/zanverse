@@ -1,0 +1,48 @@
+# Login → Lead Sources Today → a status save, the journey an agent repeats all day.
+#
+# Run against a release build on a device or emulator:
+#   maestro test -e WORK_EMAIL=agent@example.com -e WORK_PASSWORD=secret .maestro/login-status-save.yaml
+# The account is a WORK role (one that may open Lead Sources but not manage them, such as 60) with at least one New
+# source on Today. The flow uses the deep link to reach the list, so it needs no tab label.
+appId: com.zanverse
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: loginEmail
+- inputText: ${WORK_EMAIL}
+- tapOn:
+    id: loginPassword
+- inputText: ${WORK_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: loginSubmit
+- extendedWaitUntil:
+    notVisible:
+      id: loginSubmit
+    timeout: 20000
+- openLink: zanverse://lead-sources
+- extendedWaitUntil:
+    visible:
+      id: leadSourceRow
+    timeout: 20000
+# The first row's status badge opens the status sheet.
+- tapOn:
+    id: statusMenuTrigger
+    index: 0
+- tapOn:
+    id: statusOption-20
+- tapOn:
+    id: statusNote
+- inputText: "Maestro: no answer"
+- hideKeyboard
+- tapOn:
+    id: statusSave
+- extendedWaitUntil:
+    notVisible:
+      id: statusSave
+    timeout: 15000
+# The saved row's badge now reads Not Reached (code 20).
+- assertVisible:
+    id: statusMenuTrigger
+    text: ".*Not Reached.*"

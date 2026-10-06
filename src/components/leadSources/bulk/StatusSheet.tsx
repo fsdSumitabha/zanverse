@@ -9,6 +9,7 @@ import {
     LEAD_SOURCE_STATUS_META,
     type LeadSourceStatus,
 } from "@/constants/leadSourceStatus"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 import { pluralSources } from "@/lib/leadSourceBulk"
 
 import { useBulkSave, type BulkSheetProps } from "./useBulkSave"
@@ -19,6 +20,7 @@ const CHOICES = LEAD_SOURCE_PICKABLE_STATUSES.filter((status) => status !== LEAD
 
 /** One status and an optional note for every selected row. Ported from the web's StatusDialog. */
 export default function StatusSheet(props: BulkSheetProps) {
+    const offlineReason = useOfflineReason()
     const { open, onClose, ids } = props
     const [status, setStatus] = useState<LeadSourceStatus>(LEAD_SOURCE_STATUS.NOT_REACHED)
     const [note, setNote] = useState("")
@@ -42,7 +44,12 @@ export default function StatusSheet(props: BulkSheetProps) {
             footer={
                 <>
                     <Button label="Cancel" variant="quiet" onPress={onClose} />
-                    <Button label={isSaving ? "Saving..." : "Save"} onPress={handleSave} disabled={isSaving} />
+                    <Button
+                        disabledReason={offlineReason}
+                        label={isSaving ? "Saving..." : "Save"}
+                        onPress={handleSave}
+                        disabled={isSaving}
+                    />
                 </>
             }
         >

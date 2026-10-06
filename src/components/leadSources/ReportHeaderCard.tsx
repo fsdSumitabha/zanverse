@@ -37,7 +37,12 @@ export default function ReportHeaderCard({ report, onOpenImported }: Props) {
     const download = `${LEAD_SOURCE_UPLOADS_API}/${report._id}/download`
     const tiles = [
         { label: "Rows read", value: report.counts.read, tone: "text-neutral-900 dark:text-neutral-100" },
-        { label: "Imported", value: report.counts.imported, tone: "text-emerald-700 dark:text-emerald-400" },
+        {
+            label: "Imported",
+            value: report.counts.imported,
+            tone: "text-emerald-700 dark:text-emerald-400",
+            testID: "reportTileImported",
+        },
         { label: "With warnings", value: report.counts.warned, tone: "text-amber-700 dark:text-amber-400" },
         { label: "Skipped", value: report.counts.skipped, tone: "text-rose-700 dark:text-rose-400" },
     ]
@@ -92,6 +97,7 @@ export default function ReportHeaderCard({ report, onOpenImported }: Props) {
                 {tiles.map((tile) => (
                     <View
                         key={tile.label}
+                        testID={tile.testID}
                         className="w-[49%] rounded-lg border border-slate-200 px-3 py-2 dark:border-neutral-800"
                     >
                         <Text className="text-[11px] uppercase tracking-wide text-neutral-500">{tile.label}</Text>

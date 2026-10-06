@@ -1,6 +1,7 @@
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { X } from "lucide-react-native"
 import type { ReactNode } from "react"
-import { Pressable, ScrollView, Text, View } from "react-native"
+import { Pressable, StyleSheet, Text, View } from "react-native"
 
 import { PALETTE } from "@/theme"
 
@@ -18,11 +19,11 @@ interface Props {
 
 /**
  * The web's lead-sources Dialog as a bottom sheet: title, description, close button, a scrolling body and a footer
- * row. It lifts above the keyboard, so a field in the body stays visible while typing.
+ * row. The sheet rises with the keyboard, so a field in the body stays visible while typing.
  */
 export default function Dialog({ open, onClose, title, description, children, footer }: Props) {
     return (
-        <Sheet visible={open} onClose={onClose} accessibilityLabel={title} avoidKeyboard>
+        <Sheet visible={open} onClose={onClose} accessibilityLabel={title}>
             <View className="flex-row items-start justify-between gap-3 px-5 pt-3">
                 <View className="min-w-0 flex-1">
                     <Text className="text-base font-semibold text-neutral-900 dark:text-neutral-100">{title}</Text>
@@ -43,9 +44,13 @@ export default function Dialog({ open, onClose, title, description, children, fo
                 </Pressable>
             </View>
 
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerClassName="gap-4 px-5 py-4">
+            <BottomSheetScrollView
+                keyboardShouldPersistTaps="handled"
+                style={styles.body}
+                contentContainerStyle={styles.bodyContent}
+            >
                 {children}
-            </ScrollView>
+            </BottomSheetScrollView>
 
             {footer && (
                 <View className="flex-row justify-end gap-2 border-t border-neutral-100 px-5 py-3 dark:border-neutral-800">
@@ -55,3 +60,16 @@ export default function Dialog({ open, onClose, title, description, children, fo
         </Sheet>
     )
 }
+
+// The sheet's own scroll view is not a core component, so NativeWind does not map className on it.
+// The body shrinks inside a tall sheet and scrolls; the padding and gap are the old "gap-4 px-5 py-4".
+const styles = StyleSheet.create({
+    body: {
+        flexShrink: 1,
+    },
+    bodyContent: {
+        gap: 16,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+    },
+})

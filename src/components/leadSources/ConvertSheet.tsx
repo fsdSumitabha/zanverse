@@ -1,6 +1,7 @@
 import { Text, View } from "react-native"
 
 import { Button, Dialog } from "@/components/ui"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 
 interface Props {
     name: string
@@ -12,6 +13,7 @@ interface Props {
 
 /** The confirm step before a source becomes a lead. The web's convert Dialog, word for word. */
 export default function ConvertSheet({ name, assigneeName, isConverting, onClose, onConfirm }: Props) {
+    const offlineReason = useOfflineReason()
     const bullets = [
         "The lead gets the name, phone, email and region.",
         `It is assigned to ${assigneeName || "you"}.`,
@@ -29,6 +31,7 @@ export default function ConvertSheet({ name, assigneeName, isConverting, onClose
                 <>
                     <Button label="Cancel" variant="quiet" onPress={onClose} disabled={isConverting} />
                     <Button
+                        disabledReason={offlineReason}
                         label={isConverting ? "Creating..." : "Create lead"}
                         onPress={onConfirm}
                         disabled={isConverting}

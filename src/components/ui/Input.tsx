@@ -10,6 +10,7 @@ import {
 import { PALETTE } from "@/theme"
 
 import Field, { FIELD_CLASSES } from "./Field"
+import SheetTextInput from "./SheetTextInput"
 
 export interface InputProps extends Omit<TextInputProps, "style" | "className"> {
     label?: string
@@ -67,7 +68,7 @@ export default function Input({
 
     return (
         <Field label={label} required={required} error={error} className={className}>
-            <TextInput
+            <SheetTextInput
                 ref={ref}
                 placeholderTextColor={PALETTE["neutral-400"]}
                 accessibilityLabel={accessibilityLabel ?? label}

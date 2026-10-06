@@ -3,7 +3,7 @@ import { useState } from "react"
 
 import { send } from "@/api/client"
 import FormActions from "@/components/interactions/FormActions"
-import { FormScrollView, Input, Textarea } from "@/components/ui"
+import { FormSheet, Input, Textarea } from "@/components/ui"
 import { INTERACTION_TYPE } from "@/constants/interactionTypes"
 import { notify } from "@/lib/notify"
 import { toastPromise } from "@/lib/toastPromise"
@@ -49,7 +49,7 @@ export default function AddNoteScreen() {
     }
 
     return (
-        <FormScrollView>
+        <FormSheet title="Add Note" onClose={() => navigation.goBack()}>
             <Input label="Title" value={title} onChangeText={setTitle} placeholder="write a proper title" />
             <Textarea
                 label="Note"
@@ -65,6 +65,6 @@ export default function AddNoteScreen() {
                 onSave={handleSubmit}
                 onCancel={() => navigation.goBack()}
             />
-        </FormScrollView>
+        </FormSheet>
     )
 }

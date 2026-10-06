@@ -1,5 +1,6 @@
+import { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useState } from "react"
-import { Image, Modal, StyleSheet, Text, TextInput, type ViewStyle } from "react-native"
+import { BackHandler, Image, StyleSheet, Text, TextInput, type ViewStyle } from "react-native"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import ReactTestRenderer from "react-test-renderer"
 
@@ -44,9 +45,34 @@ function getCloseButtons(renderer: Renderer): Node[] {
     )
 }
 
+/** An open sheet's content carries accessibilityViewIsModal. A closed sheet renders nothing. */
 function isSheetOpen(renderer: Renderer): boolean {
-    return renderer.root.findAllByType(Modal).some((node) => node.props.visible)
+    return renderer.root.findAll((node) => node.props.accessibilityViewIsModal === true).length > 0
 }
+
+type BackListener = Parameters<typeof BackHandler.addEventListener>[1]
+
+// The event a back press passes. The sheets do not read it.
+const BACK_EVENT = {} as Parameters<BackListener>[0]
+
+/** Presses the Android back button: the newest listener is asked first, as BackHandler does. */
+async function pressBack(listeners: BackListener[]) {
+    await ReactTestRenderer.act(async () => {
+        for (const listener of [...listeners].reverse()) if (listener(BACK_EVENT)) break
+    })
+}
+
+let backListeners: BackListener[] = []
+
+beforeEach(() => {
+    backListeners = []
+    jest.spyOn(BackHandler, "addEventListener").mockImplementation((_event, listener) => {
+        backListeners.push(listener)
+        return { remove: () => (backListeners = backListeners.filter((item) => item !== listener)) }
+    })
+})
+
+afterEach(() => jest.restoreAllMocks())
 
 function StatefulSelect({ onChange }: { onChange: (value: number) => void }) {
     const [value, setValue] = useState<number | null>(10)
@@ -87,10 +113,9 @@ describe("SelectSheet", () => {
         const trigger = renderer.root.find((node) => node.props.accessibilityLabel === "Status: New")
 
         await press(trigger)
-        await ReactTestRenderer.act(async () => {
-            renderer.root.findByType(Modal).props.onRequestClose()
-        })
+        await pressBack(backListeners)
         expect(isSheetOpen(renderer)).toBe(false)
+        expect(backListeners).toHaveLength(0)
 
         await press(trigger)
         await press(getCloseButtons(renderer)[0])
@@ -99,7 +124,7 @@ describe("SelectSheet", () => {
 })
 
 describe("Dialog", () => {
-    test("shows its title, body and footer, and lifts above the keyboard", async () => {
+    test("shows its title, body and footer, and rises with the keyboard", async () => {
         const renderer = await renderTree(
             <Dialog
                 open
@@ -113,8 +138,9 @@ describe("Dialog", () => {
         )
         expect(getTexts(renderer)).toEqual(expect.arrayContaining(["Add a note", "Shows on the timeline.", "Footer"]))
         expect(renderer.root.findByProps({ accessibilityLabel: "Note" })).toBeTruthy()
-        const keyboardAvoiding = renderer.root.find((node) => node.props.behavior === "padding")
-        expect(keyboardAvoiding.props.enabled).toBe(true)
+        const sheet = renderer.root.findByType(BottomSheetModal)
+        expect(sheet.props.keyboardBehavior).toBe("interactive")
+        expect(sheet.props.android_keyboardInputMode).toBe("adjustResize")
     })
 
     test("back, the backdrop and the X button each call onClose", async () => {
@@ -124,11 +150,30 @@ describe("Dialog", () => {
                 <Text>Body</Text>
             </Dialog>,
         )
-        await ReactTestRenderer.act(async () => {
-            renderer.root.findByType(Modal).props.onRequestClose()
-        })
-        for (const button of getCloseButtons(renderer)) await press(button)
+        await pressBack(backListeners)
+        // The owner keeps it open here, so each press reaches onClose. The backdrop also dismisses the sheet itself,
+        // and that dismissal is reported once, not twice.
+        const [backdrop, xButton] = getCloseButtons(renderer)
+        await press(xButton)
+        await press(backdrop)
         expect(onClose).toHaveBeenCalledTimes(3)
+    })
+
+    test("a sheet closed by its owner does not report a close of its own", async () => {
+        const onClose = jest.fn()
+        function Owner({ isOpen }: { isOpen: boolean }) {
+            return (
+                <Dialog open={isOpen} onClose={onClose} title="Add a note">
+                    <Text>Body</Text>
+                </Dialog>
+            )
+        }
+        const renderer = await renderTree(<Owner isOpen />)
+        expect(isSheetOpen(renderer)).toBe(true)
+        await ReactTestRenderer.act(async () => renderer.update(<Owner isOpen={false} />))
+        expect(isSheetOpen(renderer)).toBe(false)
+        expect(onClose).not.toHaveBeenCalled()
+        expect(backListeners).toHaveLength(0)
     })
 
     test("renders nothing while closed", async () => {

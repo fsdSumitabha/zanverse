@@ -1,3 +1,5 @@
+import { Platform } from "react-native"
+
 /**
  * Where the API lives, and the paths the app calls.
  *
@@ -5,9 +7,17 @@
  * API_BASE_URL by `src/api/client.ts`. No env loader is installed, so the value lives here. `.env.example` records it.
  */
 
-// The Android emulator reaches the dev machine's localhost at 10.0.2.2. A physical device needs the machine's LAN
-// address instead. Session 22 points release builds at the production HTTPS host.
-export const API_BASE_URL = "http://10.0.2.2:3000"
+// The dev machine, seen from a simulator: the Android emulator reaches its localhost at 10.0.2.2, the iOS simulator
+// at localhost itself. A physical phone needs the machine's LAN address instead. Debug builds allow this plain HTTP
+// (android/app/src/debug/AndroidManifest.xml; NSAllowsLocalNetworking in ios/zanverse/Info.plist).
+const DEV_API_BASE_URL = Platform.OS === "ios" ? "http://localhost:3000" : "http://10.0.2.2:3000"
+
+// The deployed web app, over HTTPS. Release builds can reach nothing else. Not recorded anywhere yet: set the real
+// host here before the first release build. The placeholder fails every request, so a wrong build cannot go quiet.
+const PRODUCTION_API_BASE_URL = "https://CHANGE-ME.invalid"
+
+/** Debug builds talk to the dev machine; release builds to the production host. */
+export const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PRODUCTION_API_BASE_URL
 
 export const AUTH_API = {
     LOGIN: "/api/auth/login",

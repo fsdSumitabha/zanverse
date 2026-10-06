@@ -59,6 +59,7 @@ function NotificationRow({ row, onOpen, onMarkRead }: Props) {
             <View className="min-w-0 flex-1">
                 <View className="flex-row flex-wrap items-center gap-2">
                     <Text
+                        numberOfLines={1}
                         className={clsx(
                             "flex-shrink text-sm",
                             isUnread

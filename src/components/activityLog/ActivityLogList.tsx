@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, type ReactElement } from "react"
 import { ActivityIndicator, FlatList, RefreshControl, Text, View, useColorScheme } from "react-native"
 
 import { ACTIVITY_LOGS_API } from "@/api/endpoints"
-import { EmptyState, SkeletonBlock } from "@/components/ui"
+import { EmptyState, OfflineNotice, SkeletonBlock } from "@/components/ui"
 import { useListQuery } from "@/hooks/useListQuery"
 import { buildActivityParams } from "@/lib/activityLog/buildActivityParams"
 import { BRAND_COLOR, PALETTE } from "@/theme"
@@ -86,6 +86,8 @@ export default function ActivityLogList({
                             <SkeletonBlock key={key} width="100%" height={64} rounded="lg" />
                         ))}
                     </View>
+                ) : query.isOffline ? (
+                    <OfflineNotice variant="empty" onRetry={query.refresh} />
                 ) : query.error ? (
                     <View className="mx-4 rounded-lg border border-red-300 bg-red-50 p-4 dark:border-red-500/40 dark:bg-red-500/10">
                         <Text className="text-sm text-red-700 dark:text-red-300">{query.error}</Text>

@@ -7,8 +7,9 @@ import FeedbackSections from "@/components/dev/FeedbackSections"
 import FormSections from "@/components/dev/FormSections"
 import KitchenSection from "@/components/dev/KitchenSection"
 import MediaSections from "@/components/dev/MediaSections"
-import { Fab } from "@/components/ui"
+import { Button, Fab } from "@/components/ui"
 import { notify } from "@/lib/notify"
+import { SENTRY_DSN, sendSentryTestError } from "@/lib/sentry"
 import NativeModuleChecks from "@/screens/spike/NativeModuleChecks"
 
 const TOP_GAP = 16
@@ -49,6 +50,26 @@ export default function KitchenSinkScreen() {
                     <Text className="text-sm text-neutral-700 dark:text-neutral-200">
                         Bottom offset: insets.bottom ({Math.round(insets.bottom)}) + 16.
                     </Text>
+                </KitchenSection>
+
+                <KitchenSection
+                    title="Sentry"
+                    note="Sends one test error. It should appear in Sentry with this file and line, and no token."
+                >
+                    <Button
+                        label="Send a test error"
+                        variant="quiet"
+                        disabled={!SENTRY_DSN}
+                        onPress={() => {
+                            sendSentryTestError()
+                            notify.info("Test error sent to Sentry")
+                        }}
+                    />
+                    {!SENTRY_DSN && (
+                        <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                            SENTRY_DSN in src/lib/sentry.ts is empty, so Sentry is off.
+                        </Text>
+                    )}
                 </KitchenSection>
 
                 {/* Kept reachable for the session 1 device checklist, now that the spike tabs are not mounted. */}

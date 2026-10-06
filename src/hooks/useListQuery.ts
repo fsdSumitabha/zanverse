@@ -1,7 +1,7 @@
 import { useFocusEffect } from "@react-navigation/native"
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { ApiError, isAbortError, sendRaw } from "@/api/client"
+import { ApiError, isAbortError, isNetworkError, sendRaw } from "@/api/client"
 import { notify } from "@/lib/notify"
 
 /** The list state, under the web's own query param names. */
@@ -112,6 +112,8 @@ export function useListQuery<T extends { _id: string }>(options: Options<T>) {
     const [activeMode, setActiveMode] = useState<FetchMode | null>("initial")
     const [accessError, setAccessError] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
+    /** The last load failed for want of a network. The screen says so, with a Retry, until a load works. */
+    const [isOffline, setIsOffline] = useState(false)
 
     // Read inside the fetch without making it re-run.
     const latest = useRef({ extraParams, selectItems, items })
@@ -145,6 +147,7 @@ export function useListQuery<T extends { _id: string }>(options: Options<T>) {
                 setPages(json.pagination?.totalPages ?? json.pagination?.pages ?? 1)
                 setAccessError(null)
                 setError(null)
+                setIsOffline(false)
             } catch (err) {
                 if (isAbortError(err) || controller.signal.aborted) return
                 if (err instanceof ApiError && err.status === 401) return
@@ -156,6 +159,7 @@ export function useListQuery<T extends { _id: string }>(options: Options<T>) {
                 }
                 const message = err instanceof Error ? err.message : "Something went wrong. Try again."
                 setError(message)
+                setIsOffline(isNetworkError(err))
                 // With rows on screen, the list stays and the failure is a toast.
                 if (latest.current.items.length > 0) notify.error(message)
             } finally {
@@ -238,6 +242,7 @@ export function useListQuery<T extends { _id: string }>(options: Options<T>) {
         loadingMore: activeMode === "append",
         accessError,
         error,
+        isOffline,
         refresh,
         loadMore,
     }

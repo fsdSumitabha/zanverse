@@ -4,6 +4,7 @@ import { Switch, Text, View } from "react-native"
 import { Button, Card, Input, SelectSheet, type SelectOption } from "@/components/ui"
 import { USER_ROLE_META, type UserRole } from "@/constants/userRoles"
 import { useAuth } from "@/contexts/AuthContext"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 import type { LoadedUser, UserFormValues } from "@/lib/userDiff"
 
 import AvatarField from "./AvatarField"
@@ -32,6 +33,7 @@ const PASSWORD_MESSAGE = "Password must be at least 6 characters"
  * "Pick at least one region" as the only guard the form itself adds.
  */
 export default function UserForm({ mode, loaded, onSubmit, loading = false, regionsLockedReason, errors = {} }: Props) {
+    const offlineReason = useOfflineReason()
     const { regions: myRegions } = useAuth()
     const isEdit = mode === "edit"
 
@@ -162,6 +164,7 @@ export default function UserForm({ mode, loaded, onSubmit, loading = false, regi
 
             <View className="border-t border-gray-200 pt-4 dark:border-neutral-700">
                 <Button
+                    disabledReason={offlineReason}
                     label={isEdit ? (loading ? "Saving..." : "Save changes") : loading ? "Creating..." : "Create User"}
                     onPress={submit}
                     disabled={loading}

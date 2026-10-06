@@ -8,13 +8,20 @@ import { notify } from "./notify"
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
+// Android hands the file to a spreadsheet app from the cache. iOS has no Downloads folder: the app's Documents folder
+// is where a file stays, and it shows in the Files app (UIFileSharingEnabled in ios/zanverse/Info.plist).
+function getDownloadDir(): string {
+    return Platform.OS === "ios" ? ReactNativeBlobUtil.fs.dirs.DocumentDir : ReactNativeBlobUtil.fs.dirs.CacheDir
+}
+
 /**
- * Downloads an .xlsx from an authenticated route into the cache directory and opens it in the phone's spreadsheet
- * app. A plain link cannot do this: it sends no Authorization header. A refusal toasts the server's message.
+ * Downloads an .xlsx from an authenticated route and opens it: in the phone's spreadsheet app on Android, in the iOS
+ * preview with its share button on iOS. A plain link cannot do this: it sends no Authorization header. A refusal
+ * toasts the server's message.
  */
 export async function downloadXlsx(path: string, fileName: string): Promise<void> {
     const { token, headers } = getApiHeaders()
-    const target = `${ReactNativeBlobUtil.fs.dirs.CacheDir}/${fileName}`
+    const target = `${getDownloadDir()}/${fileName}`
     try {
         const res = await ReactNativeBlobUtil.config({ fileCache: true, path: target }).fetch(
             "GET",
@@ -53,5 +60,6 @@ async function openSaved(savedPath: string, fileName: string) {
         }
         return
     }
+    // The preview has the share button: Numbers, Excel, Files, mail.
     await ReactNativeBlobUtil.ios.openDocument(savedPath)
 }

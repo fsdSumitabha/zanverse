@@ -1,5 +1,6 @@
 import ReactTestRenderer from "react-test-renderer"
 
+import { API_BASE_URL } from "@/api/endpoints"
 import { useListQuery, type ListQueryResult } from "@/hooks/useListQuery"
 import { saveToken } from "@/store/keychain"
 
@@ -114,7 +115,7 @@ describe("useListQuery", () => {
 
         expect(result.loading).toBe(true)
         expect(pending).toHaveLength(1)
-        expect(pending[0].url.startsWith("http://10.0.2.2:3000/api/admin/operations/leads?")).toBe(true)
+        expect(pending[0].url.startsWith(`${API_BASE_URL}/api/admin/operations/leads?`)).toBe(true)
         expect(getParams(0)).toEqual({ page: "1", limit: "10" })
 
         await answer(0, envelope(1, 3, 25))

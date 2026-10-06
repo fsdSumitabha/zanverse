@@ -5,6 +5,7 @@ import { useState, type ComponentRef, type RefObject } from "react"
 import { Pressable, Text, TextInput, View } from "react-native"
 
 import { FIELD_CLASSES } from "@/components/ui"
+import SheetTextInput from "@/components/ui/SheetTextInput"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { PHONE_MESSAGES, checkPastedPhone, getPhonePlaceholder } from "@/lib/phone"
 import { PALETTE } from "@/theme"
@@ -116,7 +117,7 @@ export default function PhoneField({
                 <ChevronDown size={14} className="text-neutral-400" />
             </Pressable>
             <View className="flex-1">
-                <TextInput
+                <SheetTextInput
                     ref={inputRef}
                     value={value}
                     onChangeText={handleChangeText}

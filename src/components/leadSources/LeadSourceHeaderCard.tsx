@@ -7,6 +7,7 @@ import { Button, Card, ContactRow } from "@/components/ui"
 import { canConvertLeadSources, canManageLeadSources } from "@/constants/leadSourceRoles"
 import { LEAD_SOURCE_STATUS } from "@/constants/leadSourceStatus"
 import { useAuth } from "@/contexts/AuthContext"
+import { useOfflineReason } from "@/hooks/useIsOnline"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { formatDay, todayString } from "@/lib/leadSourceDay"
 import type { LeadSourceDetail } from "@/types/leadSource"
@@ -67,6 +68,7 @@ function QuietButton({
  * manager and convert actions. Ported from the header card of the web's [sourceId]/page.tsx.
  */
 export default function LeadSourceHeaderCard({ source, now, onOpen, onOpenUpload }: Props) {
+    const offlineReason = useOfflineReason()
     const { role } = useAuth()
     const isManager = canManageLeadSources(role)
     const canConvert = canConvertLeadSources(role)
@@ -169,6 +171,7 @@ export default function LeadSourceHeaderCard({ source, now, onOpen, onOpenUpload
                     )}
                     {canConvert && !isConverted && (
                         <Button
+                            disabledReason={offlineReason}
                             label="Convert to lead"
                             icon={ArrowRight}
                             onPress={() => onOpen("convert")}

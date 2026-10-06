@@ -5,9 +5,11 @@ import { AUTH_API } from "@/api/endpoints"
 import { resetToLogin } from "@/api/navigationRef"
 import type { UserRole } from "@/constants/userRoles"
 import { notify } from "@/lib/notify"
+import { registerDeviceToken, unregisterDeviceToken } from "@/lib/push/token"
 import type { ActiveRegion, RegionCode } from "@/lib/region"
+import { readCachedMe, writeCachedMe } from "@/store/cache"
 import { clearToken, getToken, loadToken } from "@/store/keychain"
-import { clearAll, getCachedMe, saveActiveRegion, saveCachedMe } from "@/store/mmkv"
+import { clearAll, saveActiveRegion } from "@/store/mmkv"
 
 /** The signed-in person, as `/api/auth/me` returns them. Same fields as the web's AuthUser. */
 export interface AuthUser {
@@ -64,13 +66,14 @@ export function waitForAuthBoot(): Promise<boolean> {
  * The session. Ported from the web's AuthContext.
  *
  * Differences a phone needs: the JWT is read from Keychain at boot, `/api/auth/me` is skipped when there is no token,
- * a start with no network falls back to the last cached user, and logout navigates at once instead of after 500 ms.
+ * a start with a cached user opens the app at once and checks `/api/auth/me` behind it, a start with no network keeps
+ * the last cached user, and logout navigates at once instead of after 500 ms.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null)
     const [loading, setLoading] = useState(true)
 
-    async function fetchUser(): Promise<AuthUser | null> {
+    async function fetchUser({ isBehindCache = false } = {}): Promise<AuthUser | null> {
         try {
             // No token means signed out. The server would answer `data: null`, so the round trip is skipped.
             if (!getToken()) {
@@ -86,19 +89,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 await clearToken()
                 clearAll()
                 setUser(null)
+                // The app already opened from the cache, so Splash is gone and cannot route to Login.
+                if (isBehindCache) resetToLogin()
                 return null
             }
 
             // Seed the region from the server, so the device never disagrees with what the APIs will do.
             saveActiveRegion(data.activeRegion)
-            saveCachedMe(data)
+            writeCachedMe(data)
             setUser(data)
+            // After login and on every start: the backend gets this phone's push token. Fire-and-forget.
+            registerDeviceToken()
             return data
         } catch (error) {
-            // Started with no network: keep working from the last known user. Writes fail on their own.
-            const cached = isNetworkError(error) && getToken() ? getCachedMe() : null
-            setUser(cached)
-            return cached
+            // Opened from the cache: keep that user through any failure. Only `data: null` or a 401 ends the session.
+            const cached = getToken() ? readCachedMe() : null
+            if (isBehindCache) return cached
+            // Started with no network: keep working from the last known user. Writes are disabled while offline.
+            const fallback = isNetworkError(error) ? cached : null
+            setUser(fallback)
+            return fallback
         } finally {
             setLoading(false)
         }
@@ -107,6 +117,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         async function bootstrap() {
             await loadToken()
+
+            // 1. A token and a fresh cached user: open the app now, with the name in the header and no wait.
+            const cached = getToken() ? readCachedMe() : null
+            if (cached) {
+                setUser(cached)
+                setLoading(false)
+                resolveAuthBoot(true)
+                // 2. Still ask the server, behind the app. `data: null` logs out from there.
+                fetchUser({ isBehindCache: true })
+                return
+            }
+
+            // No cache: wait for the server, as before.
             const bootUser = await fetchUser()
             resolveAuthBoot(bootUser !== null)
         }
@@ -125,6 +148,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function logout(): Promise<void> {
         // 1. Tell the server without waiting. It clears a cookie the app never had, so the result does not matter.
         send(AUTH_API.LOGOUT, "POST").catch(() => undefined)
+        // The push token goes too, while the request can still carry the session's JWT.
+        unregisterDeviceToken()
 
         // 2. Forget the session on the device: the token, the cached user, the region pin and every cached list.
         await clearToken()
