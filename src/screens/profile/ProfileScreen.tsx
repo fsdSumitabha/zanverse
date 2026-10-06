@@ -1,10 +1,13 @@
 import { useNavigation } from "@react-navigation/native"
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { Pencil } from "lucide-react-native"
+import { Activity, Pencil } from "lucide-react-native"
+import { useState } from "react"
 import { Pressable, Text, View } from "react-native"
 
 import { AUTH_API } from "@/api/endpoints"
-import MyActivityList from "@/components/activityLog/MyActivityList"
+import ActivityLogFilterSheet, { hasActiveFilters } from "@/components/activityLog/ActivityLogFilterSheet"
+import ActivityLogList from "@/components/activityLog/ActivityLogList"
+import FilterButton from "@/components/activityLog/FilterButton"
 import ProfileCard from "@/components/profile/ProfileCard"
 import ProfileFacts from "@/components/profile/ProfileFacts"
 import { Card, SkeletonBlock } from "@/components/ui"
@@ -12,11 +15,12 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useDetailQuery } from "@/hooks/useDetailQuery"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import type { MoreStackParamList } from "@/navigation/types"
+import { EMPTY_FILTERS, type ActivityLogFilterState } from "@/types/activityLog"
 import type { AuthProfileUser } from "@/types/authProfile"
 
 type Navigation = NativeStackNavigationProp<MoreStackParamList, "Profile">
 
-enableIconClassNames(Pencil)
+enableIconClassNames(Activity, Pencil)
 
 /**
  * The signed-in person's account: the profile card and facts, then "My activity". Ported from the web's profile page.
@@ -26,6 +30,8 @@ export default function ProfileScreen() {
     const navigation = useNavigation<Navigation>()
     const { user } = useAuth()
     const detail = useDetailQuery<AuthProfileUser>(AUTH_API.PROFILE)
+    const [filters, setFilters] = useState<ActivityLogFilterState>({ ...EMPTY_FILTERS })
+    const [isSheetOpen, setIsSheetOpen] = useState(false)
     const profile = detail.data
 
     if (detail.loading) {
@@ -69,10 +75,39 @@ export default function ProfileScreen() {
                 </View>
                 <ProfileFacts profile={profile} />
             </Card>
+            <View className="flex-row items-start gap-3 pt-2">
+                <View className="flex-1">
+                    <View className="flex-row items-center gap-2">
+                        <Activity size={20} className="text-emerald-500" />
+                        <Text className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                            My activity
+                        </Text>
+                    </View>
+                    <Text className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
+                        Everything you’ve done across the system.
+                    </Text>
+                </View>
+                <FilterButton isActive={hasActiveFilters(filters)} onPress={() => setIsSheetOpen(true)} />
+            </View>
         </View>
     )
 
     return (
-        <MyActivityList userId={user.id} header={header} onRefresh={detail.refresh} isRefreshing={detail.refreshing} />
+        <>
+            <ActivityLogList
+                filters={filters}
+                forceUserId={user.id}
+                ListHeaderComponent={header}
+                onRefresh={detail.refresh}
+                isRefreshing={detail.refreshing}
+            />
+            <ActivityLogFilterSheet
+                visible={isSheetOpen}
+                onClose={() => setIsSheetOpen(false)}
+                value={filters}
+                onChange={setFilters}
+                isAdmin={false}
+            />
+        </>
     )
 }

@@ -1434,3 +1434,61 @@ the dev API still lacks BACKEND_CHANGES rows 1–2, which these three routes dep
 - [ ] The camera opens on a device where the camera permission was never granted.
 - [ ] A wrong current password does not log out; a correct one returns to Profile.
 - [ ] The keyboard never covers "Update password".
+
+## Session 18 — activity logs
+
+**Status: done, except the device checks.** Activity Logs is built and tested inside the whole app against a mocked
+API, and the Profile screen's "My activity" now uses the same list. Real data needs the session 4 backend patch; the
+cloud container has no Android SDK. No new package.
+
+### What is in it
+
+- Screen: `src/screens/activityLogs/ActivityLogsScreen.tsx`, as `ActivityLogs` in `MoreStack`.
+- Components (`src/components/activityLog/`): `ActivityLogList`, `ActivityLogItem` (the row shell, replacing session
+  17's short one), `ActivityDiff`, `InteractionLine` (+ `InteractionDetailBlock`), `entityTarget.ts` (`ENTITY_BADGE`,
+  `getEntityTarget`, `getInteractionParentTarget`, `openActivityTarget`), `ActivityLogFilterSheet`
+  (+ `hasActiveFilters`), `UserPickerModal`, `FilterButton`, `RestrictedArea`. Session 17's `MyActivityList` is gone.
+- Libs (`src/lib/activityLog/`): `formatActivityValue.ts` (copied, dates through dayjs `DD MMM YYYY, hh:mm A`) and
+  `buildActivityParams.ts` (the web `buildQuery` rules).
+- `useListQuery` takes `params`: sent after everything else in their own order, and a change goes back to page 1.
+
+### Decisions
+
+- **A status change shows the status's own colour** from `STATUS_META_BY_ENTITY` (the comment in that constants file
+  says the activity log uses it this way). The web's diff pills are red and green with the label; every other field
+  change keeps those red and green tones.
+- **The filter sheet** applies each change at once, as the web's filters do. The entity picker is a wrap of chips
+  ("All entities" first) rather than a second sheet, so only the user picker opens on top of the sheet. The name search
+  is debounced 300 ms; the other filters fire at once. The search box is disabled while a user is chosen.
+- **The profile list** has a filter button too, with entity and dates only, as the web passes `isAdmin={false}` there.
+  Its empty text is now the web list's "No activity matches the current filters." (session 17 said "Nothing yet.").
+- **Badges navigate** through `openActivityTarget`: Lead, Client, Project, User (to UserEdit), Lead Source and Lead
+  Source Upload (to the report) open in their tab; a role without that tab or screen gets the web's 403 toast.
+  Interaction, Meeting and the rest stay plain pills.
+- **The admin gate** is `[10, 20]` from the auth context. Everyone else sees the Restricted-area card with an "Open my
+  profile" button; no request is sent. More shows the row only to its own role list, as before.
+- `ActivityHeatmap.tsx` is not ported, as the prompt says.
+
+### What was verified
+
+- `__tests__/activityLogs.test.tsx` (5 tests, the whole app): the first request `?page=1&limit=15`; "8 entries"; a
+  status change as "New Lead" → "Contacted" with the Contacted pill in LEAD_STATUS_META's colour; a role change as
+  labels; an ObjectId shortened; Created and Deleted chips; an interaction row with "Status Changed", "on", "Lead —
+  Acme", the status pills and "Remarks: "; page 2 appended with the repeated row dropped; a Lead badge opening the lead
+  and a Meeting badge disabled; entity Lead sending `entityType=0`, a To date sent as that day's 23:59:59.999 in ISO,
+  and the user picker sending `userId` while the name search is disabled, then cleared; role 60 seeing the Restricted
+  area with no request, and its button opening Profile with `userId=u2` and no user picker.
+- `src/lib/activityLog/__tests__/activityLog.test.ts` (6 tests): the formatter cases from the prompt and the param
+  rules. The profile test now expects the shared list.
+- `npm test`: 42 suites, 393 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] More → Activity Logs shows 15 rows newest first and appends the next 15, with no repeated row.
+- [ ] Status rows show coloured pills; role, ObjectId and date values read as the web shows them.
+- [ ] An interaction row shows its type chip, "on Lead — <name>", and for a 2510 row the pills and the remarks.
+- [ ] Lead, Client, Project and Lead Source badges open their screens; Interaction and Meeting badges do nothing.
+- [ ] Entity "Lead" filters; a To date includes that day; a user disables the name search.
+- [ ] A role-60 account sees the Restricted-area card, and its button opens Profile.
+- [ ] Profile's "My activity" shows only that user's rows, with no user picker.

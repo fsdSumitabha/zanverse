@@ -144,16 +144,17 @@ describe("profile", () => {
             "Created",
             "Lead",
             "— Acme",
-            "Updated Status",
+            "Status",
+            "2 entries",
         ]
         expect(expected.filter((text) => !texts.includes(text))).toEqual([])
         await unmountApp(renderer)
     })
 
-    it("says Nothing yet. with no activity", async () => {
+    it("says no activity matches with no rows, as the web's list does", async () => {
         rows = []
         const renderer = await openProfile()
-        expect(getTexts(renderer)).toContain("Nothing yet.")
+        expect(getTexts(renderer)).toContain("No activity matches the current filters.")
         await unmountApp(renderer)
     })
 
