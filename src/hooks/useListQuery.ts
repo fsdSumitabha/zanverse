@@ -13,9 +13,15 @@ export interface ListQuery {
     to: string
     view: string
     sort: string
+    /** Meetings only: the quick range on `scheduledAt` (today, last7, upcoming). */
+    range: string
+    /** Meetings only: 0 lead, 1 client, 2 project. */
+    entityType: string
 }
 
-export type ListFilterPatch = Partial<Pick<ListQuery, "status" | "from" | "to" | "view" | "sort">>
+export type ListFilterPatch = Partial<
+    Pick<ListQuery, "status" | "from" | "to" | "view" | "sort" | "range" | "entityType">
+>
 
 /** The list envelope. Meetings report `totalPages`; every other route reports `pages`. */
 export interface ListEnvelope<T> {
@@ -43,14 +49,22 @@ const DEFAULT_PAGE_SIZE = 10
 const SEARCH_DEBOUNCE_MS = 300
 const MIN_SEARCH_LENGTH = 2
 
-const EMPTY_FILTERS: Omit<ListQuery, "page" | "search"> = { status: "", from: "", to: "", view: "", sort: "" }
+const EMPTY_FILTERS: Omit<ListQuery, "page" | "search"> = {
+    status: "",
+    from: "",
+    to: "",
+    view: "",
+    sort: "",
+    range: "",
+    entityType: "",
+}
 
 function buildQuery(query: ListQuery, pageSize: number, extraParams: Record<string, string> = {}): string {
     const params: [string, string][] = [
         ["page", String(query.page)],
         ["limit", String(pageSize)],
     ]
-    for (const key of ["search", "status", "from", "to", "view", "sort"] as const) {
+    for (const key of ["search", "status", "from", "to", "view", "sort", "range", "entityType"] as const) {
         if (query[key]) params.push([key, query[key]])
     }
     for (const [key, value] of Object.entries(extraParams)) params.push([key, value])
@@ -110,7 +124,7 @@ export function useListQuery<T extends { _id: string }>(options: Options<T>) {
                 setItems((current) => (mode === "append" ? mergeById(current, rows) : rows))
                 setEnvelope(json)
                 setTotal(json.pagination?.total ?? rows.length)
-                setPages(json.pagination?.pages ?? json.pagination?.totalPages ?? 1)
+                setPages(json.pagination?.totalPages ?? json.pagination?.pages ?? 1)
                 setAccessError(null)
                 setError(null)
             } catch (err) {

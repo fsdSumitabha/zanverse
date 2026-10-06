@@ -1,4 +1,4 @@
-import { Alert } from "react-native"
+import { Alert, Linking } from "react-native"
 
 import { notify } from "@/lib/notify"
 import { clearToken, saveToken } from "@/store/keychain"
@@ -144,6 +144,9 @@ describe("lead detail", () => {
         for (const label of ["+ Call Made", "+ Meeting Scheduled", "+ Note Added", "+ Quotation Sent"]) {
             expect(texts).toContain(label)
         }
+        const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined)
+        await press(findPressable(renderer, "Email acme@example.com"))
+        expect(open).toHaveBeenCalledWith("mailto:acme@example.com")
         await unmountApp(renderer)
     })
 

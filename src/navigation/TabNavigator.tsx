@@ -3,6 +3,7 @@ import { Ellipsis, type LucideIcon } from "lucide-react-native"
 import type { ComponentType, ReactNode } from "react"
 
 import { useAuth } from "@/contexts/AuthContext"
+import { NotificationProvider } from "@/contexts/NotificationContext"
 
 import { getNavItemsForRole, type NavItem } from "./navItems"
 import CallsStack from "./stacks/CallsStack"
@@ -51,20 +52,22 @@ export default function TabNavigator() {
     const items = getNavItemsForRole(role)
 
     return (
-        <Tab.Navigator screenOptions={{ headerShown: false, tabBarLabelStyle: TAB_LABEL_STYLE }}>
-            {items.map((item) => (
+        <NotificationProvider>
+            <Tab.Navigator screenOptions={{ headerShown: false, tabBarLabelStyle: TAB_LABEL_STYLE }}>
+                {items.map((item) => (
+                    <Tab.Screen
+                        key={item.tab}
+                        name={item.tab}
+                        component={TAB_STACKS[item.tab]}
+                        options={{ title: item.name, tabBarIcon: getTabIcon(item.icon) }}
+                    />
+                ))}
                 <Tab.Screen
-                    key={item.tab}
-                    name={item.tab}
-                    component={TAB_STACKS[item.tab]}
-                    options={{ title: item.name, tabBarIcon: getTabIcon(item.icon) }}
+                    name="MoreTab"
+                    component={MoreStack}
+                    options={{ title: "More", tabBarIcon: getTabIcon(Ellipsis) }}
                 />
-            ))}
-            <Tab.Screen
-                name="MoreTab"
-                component={MoreStack}
-                options={{ title: "More", tabBarIcon: getTabIcon(Ellipsis) }}
-            />
-        </Tab.Navigator>
+            </Tab.Navigator>
+        </NotificationProvider>
     )
 }

@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from "react-native"
 
 import WhatsAppLink from "@/components/phone/WhatsAppLink"
-import { Card } from "@/components/ui"
+import { Card, ContactRow } from "@/components/ui"
 import { LEAD_STATUS } from "@/constants/leadStatus"
 import { useAuth } from "@/contexts/AuthContext"
 import { formatDateTime } from "@/lib/format"
@@ -64,9 +64,7 @@ export default function LeadDetailsCard({ lead, onEdit, onConvert, onStatusUpdat
                 {!!lead.email && (
                     <View>
                         <Text className="text-sm text-gray-500">Email</Text>
-                        <Text selectable className="text-sm text-neutral-800 dark:text-neutral-200">
-                            {lead.email}
-                        </Text>
+                        <ContactRow kind="email" value={lead.email} />
                     </View>
                 )}
             </View>

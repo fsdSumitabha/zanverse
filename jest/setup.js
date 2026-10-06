@@ -20,21 +20,32 @@ jest.mock("react-native-keychain", () => {
             entries.set(service, { username, password, service, storage: "KC" })
             return Promise.resolve({ service, storage: "KC" })
         }),
-        getGenericPassword: jest.fn((options = {}) => Promise.resolve(entries.get(options.service ?? "default") ?? false)),
+        getGenericPassword: jest.fn((options = {}) =>
+            Promise.resolve(entries.get(options.service ?? "default") ?? false),
+        ),
         resetGenericPassword: jest.fn((options = {}) => Promise.resolve(entries.delete(options.service ?? "default"))),
     }
 })
 
+// Tests that upload or download give `fetch` and `config` their own implementations.
 jest.mock("react-native-blob-util", () => ({
     fs: {
         dirs: { CacheDir: "/data/user/0/com.zanverse/cache" },
         exists: jest.fn(() => Promise.resolve(true)),
+        readFile: jest.fn(() => Promise.resolve("")),
+        unlink: jest.fn(() => Promise.resolve()),
     },
+    wrap: jest.fn((path) => `RNFetchBlob-file://${path}`),
+    fetch: jest.fn(),
+    config: jest.fn(),
+    android: { actionViewIntent: jest.fn(() => Promise.resolve(true)) },
+    ios: { openDocument: jest.fn(() => Promise.resolve()) },
 }))
 
 // The real module calls TurboModuleRegistry.getEnforcing at import time.
 jest.mock("@react-native-documents/picker", () => ({
     pick: jest.fn(),
+    keepLocalCopy: jest.fn(),
     errorCodes: { OPERATION_CANCELED: "OPERATION_CANCELED" },
     isErrorWithCode: jest.fn(() => false),
 }))
@@ -44,4 +55,6 @@ jest.mock("react-native-nitro-modules", () => ({
     NitroModules: { createHybridObject: jest.fn() },
 }))
 
-jest.mock("@react-native-clipboard/clipboard", () => require("@react-native-clipboard/clipboard/jest/clipboard-mock.js"))
+jest.mock("@react-native-clipboard/clipboard", () =>
+    require("@react-native-clipboard/clipboard/jest/clipboard-mock.js"),
+)

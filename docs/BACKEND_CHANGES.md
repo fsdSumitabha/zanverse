@@ -21,8 +21,12 @@ the jar is cleared. The app therefore sends the JWT as a header, which the API d
 | 4 | Accept the active region as `X-Active-Region` when the `active_region` cookie is absent | wherever `narrowToActiveRegion(...)` reads the cookie. Safe by construction: the value can only narrow to regions the user already holds, and unknown values are ignored |
 | 5 | Confirm the two `.xlsx` routes authenticate through the helper, so they inherit the Bearer fallback | `GET /api/admin/operations/lead-sources/template` and `GET /api/admin/operations/lead-sources/uploads/:id/download` |
 
+| 6 | Add `GET /api/admin/operations/lead-sources/columns`, returning `{ success: true, data: { columns: [{ key, label, headers, required }], rules: { maxFileMb, maxRows } } }` read from `LEAD_SOURCE_COLUMNS` and `LEAD_SOURCE_SHEET_RULES` in `src/config/leadSourceSheet.ts`, behind `requireRole(req, LEAD_SOURCE_MANAGE_ROLES)` | a new `src/app/api/admin/operations/lead-sources/columns/route.ts` |
+
 Without 1–3 the app cannot log in at all. Without 4 every list silently shows the wrong region's data. Without 5 the app
-can upload a sheet but never download the report it produced.
+can upload a sheet but never download the report it produced. Without 6 the upload screen cannot show the expected
+header row (the web reads it from its own config file, which the phone cannot import); it shows "Download the template
+to see the expected header row." instead, and checks the file size against a local copy of the 5 MB limit.
 
 **Not needed:** CORS (native `fetch` is not bound by the browser's same-origin policy) and any change to
 `POST /api/auth/logout` (it clears a cookie the app never had; the app calls it anyway and then clears its own storage).

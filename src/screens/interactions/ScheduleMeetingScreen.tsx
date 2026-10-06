@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { Pressable, Text, View } from "react-native"
 
 import { send } from "@/api/client"
+import { MEETINGS_API } from "@/api/endpoints"
 import FormActions from "@/components/interactions/FormActions"
 import {
     DateTimeField,
@@ -57,7 +58,7 @@ export default function ScheduleMeetingScreen() {
 
     async function handleSubmit() {
         setLoading(true)
-        const promise = send("/api/admin/operations/meetings", "POST", {
+        const promise = send(MEETINGS_API, "POST", {
             entityType,
             entityId,
             title,

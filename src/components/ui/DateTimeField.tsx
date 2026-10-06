@@ -1,4 +1,4 @@
-import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from "@react-native-community/datetimepicker"
+import DateTimePicker from "@react-native-community/datetimepicker"
 import clsx from "clsx"
 import { CalendarClock } from "lucide-react-native"
 import { useState } from "react"
@@ -6,6 +6,7 @@ import { Platform, Pressable, Text, View } from "react-native"
 
 import { formatDateTime } from "@/lib/format"
 import { enableIconClassNames } from "@/lib/iconClassName"
+import { pickDateTimeAndroid } from "@/lib/pickDateTime"
 import { PALETTE } from "@/theme"
 
 import Button from "./Button"
@@ -24,13 +25,6 @@ interface Props {
 
 enableIconClassNames(CalendarClock)
 
-/** The day from `day` with the hour and minute from `time`. */
-function combine(day: Date, time: Date): Date {
-    const result = new Date(day)
-    result.setHours(time.getHours(), time.getMinutes(), 0, 0)
-    return result
-}
-
 /**
  * A date and time, replacing the web's `datetime-local` input. Android asks for the day, then the time, in its two
  * system dialogs; iOS shows the inline calendar with the time in a sheet. The value is a Date; forms send it as ISO.
@@ -48,22 +42,7 @@ export default function DateTimeField({
     const [iosDraft, setIosDraft] = useState<Date>(value ?? new Date())
 
     function openAndroid() {
-        const start = value ?? new Date()
-        DateTimePickerAndroid.open({
-            value: start,
-            mode: "date",
-            minimumDate,
-            onChange: (event: DateTimePickerEvent, day?: Date) => {
-                if (event.type !== "set" || !day) return
-                DateTimePickerAndroid.open({
-                    value: start,
-                    mode: "time",
-                    onChange: (timeEvent: DateTimePickerEvent, time?: Date) => {
-                        if (timeEvent.type === "set" && time) onChange(combine(day, time))
-                    },
-                })
-            },
-        })
+        pickDateTimeAndroid({ value: value ?? new Date(), minimumDate, onPicked: onChange })
     }
 
     function open() {

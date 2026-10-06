@@ -18,9 +18,12 @@ export type LeadsStackParamList = {
 }
 
 export type CallsStackParamList = {
-    LeadSources: undefined
-    LeadSourceDetail: IdParams
+    /** A report's "Open the N imported sources" opens the list on one upload, in the All tab. */
+    LeadSources: { view?: "today" | "upcoming" | "unscheduled" | "closed" | "all"; upload?: string } | undefined
+    LeadSourceDetail: { sourceId: string }
     LeadSourceUploads: undefined
+    LeadSourceUpload: undefined
+    LeadSourceReport: { uploadId: string }
 }
 
 export type ClientsStackParamList = {

@@ -11,6 +11,8 @@ export const SCREEN_TITLES: Record<AppScreenName, string> = {
     LeadSources: "Calls",
     LeadSourceDetail: "Lead Source",
     LeadSourceUploads: "Uploads",
+    LeadSourceUpload: "Upload sheet",
+    LeadSourceReport: "Upload report",
     ClientsList: "Clients",
     ClientDetail: "Client",
     ClientEdit: "Edit Client",

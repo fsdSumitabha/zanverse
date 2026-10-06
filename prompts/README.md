@@ -937,3 +937,364 @@ package.
 - [ ] The client row opens the client.
 - [ ] Edit shows the client read-only and saves a new title and budget; the list and the workspace show them.
 - [ ] Amounts show Indian grouping (`₹2,50,000`) under Hermes, not plain digits.
+
+## Session 11 — lead sources list and Today
+
+**Status: done, except the device checks.** The Calls tab now opens the lead sources list. It is built and tested
+inside the whole app against a mocked API. Real data needs the session 4 backend patch; the cloud container has no
+Android SDK. No new package.
+
+### What is in it
+
+- Screen: `src/screens/leadSources/LeadSourcesScreen.tsx`, registered as `LeadSources` in `CallsStack`. The detail
+  and uploads screens stay placeholders until sessions 12 and 13.
+- Hooks: `useLeadSourceList` (filters, rows, counts, progress, paging, the request id, the quiet reloads, the 900 ms
+  re-sort) and `useAssignees` (+ `roleLabel`).
+- Components (`src/components/leadSources/`): `LeadSourcesHeader`, `ViewTabs`, `LeadSourceFilters`, `AssigneeSelect`,
+  `LeadSourceRow` (+ skeleton), `StatusMenuSheet` (+ `StatusBadgeButton`), `CallbackPicker`, `NoteBox`, `CallButton`,
+  `BulkBar`, `DayChoice`, `LeadSourcesEmpty`, `rowLayout.ts`, `listItems.ts`, and `bulk/` with the Status, Assign,
+  Day and Delete sheets on one `useBulkSave`.
+- Libs: `src/lib/dialer.ts` (`startCall`, a toast with a Copy action for now), `src/lib/leadSourceBulk.ts` (`runBulk`,
+  `reportBulkResult`, `BULK_MAX`), `src/lib/pickDateTime.ts` (the Android date-then-time dialogs, shared with
+  `DateTimeField`).
+
+### Decisions
+
+- **Sections without a SectionList.** On Today the rows are flattened into section and row items, exactly where the
+  web draws a header. `stickyHeaderIndices` gets each header's data index + 1, because the list header is item 0.
+  `getItemLayout` adds the measured list-header height to each item's offset.
+- **Two row heights, not one.** A row is 64 dp, or 88 dp when it has a callback chip or a day chip. Both come from the
+  data, so `getItemLayout` still needs no measuring. One fixed height could not hold the chips on a phone.
+- **Infinite scroll instead of pages.** Scrolling appends page n + 1. A quiet reload re-reads page 1 with
+  `limit = rows on screen` (50 to 100, the route's cap), so the rows already scrolled to stay.
+- **The quiet reload** runs every 60 s while `AppState.currentState === "active"`, at once on background → active,
+  and on a later focus of the tab. It skips while a sheet is open, rows are selected or `menusOpen > 0`. The 900 ms
+  re-sort after a write runs even then, as on the web. `today` is worked out at each request.
+- **One status sheet for the screen**, not one per row. A row calls `onOpenStatus(row, status)`; the callback chip
+  opens it on Call Back. A 409 keeps the sheet open with the note, shows the server's message and reloads the list.
+- **The bulk bar** sits 16 dp above the tab bar. The prompt's `useBottomTabBarHeight() + insets.bottom` would count
+  the gesture inset twice (session 1 finding). As on the web at phone width, its buttons show icons only, each with
+  its label for screen readers.
+- **"Show them"** shows when the view is not Today. With infinite scroll there is no page 2 to jump back from, so it
+  also scrolls to the top.
+- **The "Upload sheet" button** waits for session 13, which adds the `LeadSourceUpload` route. The "Uploads" row in
+  the manager filters opens the `LeadSourceUploads` placeholder now.
+- **The one-day filter and "Other day"** use the session 6 `DateField`. With no day chosen it shows today muted.
+- **Callback preset pills** are 36 dp tall with a 4 dp `hitSlop`, so the touch target is 44 dp.
+
+### What was verified
+
+- `__tests__/leadSources.test.tsx` (11 tests, the whole app): the first request is
+  `view=today&today=2026-10-06&page=1&limit=50`; the three section titles, the sticky indices `[1, 3, 6]`, the tab
+  counts, "3 of 10 for today called", "1 callback is due." and "Unknown" for code 60; no filters, no assignee chips
+  and no Assign / Day / Delete for role 60; the filters, people from `/assignees`, `assignee=none` and all four bulk
+  buttons for role 10; a status save sending `{ status, note, today }`, the badge changing at once, the toast, and one
+  reload 900 ms later; Call Back keeping Save disabled with "Pick when to call back." until "2 hours" is picked, then
+  `callbackAt` two hours ahead and a `callbackDay` that matches it; a 409 keeping the sheet and the note, with the
+  message and a reload; the 60 s poll firing once, not while a sheet is open or rows are selected, and once on
+  background → active; a bulk Status on three rows sending the web's body and toasting
+  "1 lead source marked Not Reached. 1 already set. 1 skipped."; a new tab going back to page 1 and clearing the
+  selection; "Show them"; the Today and filtered empty states; AccessDenied with the server's message on a 403.
+- `src/components/leadSources/__tests__/leadSourceList.test.ts` (10 tests): the query string and its order, the
+  one-day view, the bulk report text, the 200-id limit, the day chip rules, the row heights, the section flattening
+  and offsets, and `resolveChoice`.
+- `npm test`: 29 suites, 301 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] The Calls tab opens the list on the dev API; Today shows up to 50 rows and appends the next page on scroll.
+- [ ] The section headers stick while scrolling, and rows do not jump (check `getItemLayout` against real heights).
+- [ ] The tab counts match `counts`; a tab or status change goes back to the top of page 1.
+- [ ] A status save changes the badge at once; about a second later the row moves and the counts change.
+- [ ] Call Back with "2 hours" shows a violet chip; it turns amber inside 15 minutes, then rose with a rose left edge.
+- [ ] "or at" opens the date dialog, then the time dialog, on RN 0.87.
+- [ ] Backgrounding for two minutes and returning refetches once; no poll fires while a sheet is open or rows are
+      selected (Metro network log).
+- [ ] Long-press selects, a tap toggles, the X clears; the bulk bar clears the tab bar and the gesture bar.
+- [ ] A role-60 account sees no filters, avatars or Assign / Day / Delete; a role-10 account sees them all.
+
+## Session 12 — lead sources dialing, detail, convert
+
+**Status: done, except the device checks.** The call button now opens the phone's dialer, and the lead source detail
+screen works end to end in the whole-app tests against a mocked API. Real data needs the session 4 backend patch; the
+cloud container has no Android SDK. No new package.
+
+### What is in it
+
+- `src/lib/contact.ts`: `startCall` (`tel:` through `Linking.openURL`, and the web's toast with "Copy number" only
+  when no dialer opens), `openWhatsApp` (`https://wa.me/<digits>?text=`, nothing for an invalid number) and
+  `openEmail` (`mailto:`). `src/lib/dialer.ts` re-exports `startCall`, so session 11's imports are unchanged.
+- `AndroidManifest.xml`: a `<queries>` block inside `<manifest>` for DIAL + `tel`, VIEW + `https`, SENDTO + `mailto`,
+  `com.whatsapp` and `com.whatsapp.w4b`. The `mailto` intent is one more than the prompt lists; without it Android 11+
+  may not see the mail app.
+- `src/components/ui/ContactRow.tsx`: the tappable phone (WhatsApp green, grey for an invalid number) or email (blue,
+  Mail icon) line. `WhatsAppLink` now renders it. The email lines on the lead detail card and both client cards use it.
+- Screen: `src/screens/leadSources/LeadSourceDetailScreen.tsx` (route param `sourceId`), on `useDetailQuery`.
+- Components (`src/components/leadSources/`): `LeadSourceHeaderCard`, `CallbackButton`, `CallbackSheet`
+  (`PATCH /:id/callback` set / change / clear), `AddNote`, `ImportNotes`, `SheetData`, `ActivityTimeline`,
+  `ConvertSheet`. `StatusBadgeButton` and `CallButton` take `size="md"`.
+- `src/constants/leadSourceColumns.ts`: key, label and kind from the web's `src/config/leadSourceSheet.ts`.
+- Navigation: `LeadSourceDetail` takes `{ sourceId }` (deep link `lead-sources/:sourceId`). `LeadSourceUpload` and
+  `LeadSourceReport { uploadId }` are registered as placeholders, with MANAGE roles, so the detail screen's file line
+  can link to the report now. Session 13 builds them.
+
+### Decisions
+
+- **The row's clock chip** now opens `CallbackSheet`, as the web's chip opens its CallbackMenu. Session 11 opened the
+  status sheet on Call Back as a stand-in. The sheet also pauses the list's quiet reload.
+- **NoteBox stays the plain box** (session 11's status sheet uses it). `AddNote` wraps it with the web NoteBox's
+  `POST /:id/notes`, the "What did you learn on the call?" placeholder and the "Add note" button.
+- **Convert** lands on the lead through `openLead(leadId, role)`, in the Leads tab. The source reloads behind it, so
+  going back to the Calls tab shows it converted. A failure toasts the server's message and closes the sheet.
+- **Delete** goes back with `popTo("LeadSources")`; the list reloads on focus. Assign and Set day reload the source.
+- **The activity sentences** are the web's words. A status change is a wrapping row of words and pills, because a
+  pill cannot sit inside a `<Text>` on Android. `TimeAgo` follows the sentence.
+- **The source file line** links to the report only for managers, as on the web.
+
+### What was verified
+
+- `__tests__/leadSourceDetail.test.tsx` (10 tests, the whole app): every card's content (header, list info, status,
+  phone, email, assignee, "Sun 4 Oct" with "left over", "leads.xlsx, row 7", upload warnings, sheet values with a date
+  as "3 Apr 2021" and an "(extra column)", the activity); call → `tel:+919876543210`, WhatsApp →
+  `https://wa.me/919876543210?text=`, email → `mailto:`; a note posting `{ text }` trimmed, clearing the box, "Note
+  added" and a reload; a callback set from "1 hour" with today's `callbackDay`, then cleared with `{ callbackAt: null }`
+  and "Callback cleared"; Assign / Set day / Delete for a manager, and Delete posting `{ action, ids: ["s1"], today }`
+  and returning to the list; no manager row for role 60 and no Convert for role 65; convert posting to `/convert`,
+  "Lead created" and the lead screen; a 409 toasting the server's message and closing the sheet; the converted banner,
+  the locked "Converted to a lead" badge and no call, callback or note; the not-found card on a 404.
+- `src/lib/__tests__/contact.test.ts` (4) and `src/components/leadSources/__tests__/SheetData.test.tsx` (2). The
+  list test opens the callback sheet from a row's chip; the lead and client tests tap the email line.
+- `npm test`: 32 suites, 319 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, and
+  `hermesc` compiles it. Every source file is under 250 lines.
+
+### Open question: do-not-call
+
+One-tap dialing now exists. The status list still has no distinct "Do not call": it is folded into Not Interested.
+Under TCPA-style rules a number that asked not to be called must never be dialed again. Whether to add a DNC status
+(and block the call button for it) is a backend decision. Nothing on the phone changes until the web adds it.
+
+### Device checklist
+
+- [ ] The call button on a list row and on the detail screen opens the dialer with the number filled in.
+- [ ] The WhatsApp line opens a chat when WhatsApp is installed, and the browser when it is not.
+- [ ] The email line on the lead source, lead and client screens opens the mail app.
+- [ ] A source with sheet data and several activity entries shows all seven cards, with no clipped text at 360 dp.
+- [ ] A note saves, clears, toasts "Note added" and appears in the activity.
+- [ ] Set callback, Change time and Clear callback all work from the header button and from a row's chip.
+- [ ] A manager can Assign, Set day and Delete; Delete returns to the list and the row is gone.
+- [ ] Convert creates the lead and opens it; the source then shows the blue banner with the controls hidden.
+- [ ] Converting an already converted source toasts the server's 409 message.
+- [ ] A source assigned to someone else shows "Lead source not found".
+
+## Session 13 — lead sources uploads and reports
+
+**Status: done, except the device checks.** The three upload screens are built and tested inside the whole app against
+a mocked API, with the document picker and react-native-blob-util mocked. Real data needs the session 4 backend patch;
+the cloud container has no Android SDK. No new package.
+
+### What is in it
+
+- Screens (`src/screens/leadSources/`): `LeadSourceUploadScreen`, `LeadSourceUploadsScreen`, `LeadSourceReportScreen`,
+  registered in `CallsStack` (the session 12 placeholders are gone).
+- Components (`src/components/leadSources/`): `FilePickRow`, `SheetHeaderChips`, `UploadProblem`, `UploadSummaryRow`
+  (+ skeleton), `ReportHeaderCard`, `ReportRows` (the FlatList with the chips and search), `ReportRowCard`,
+  `ListSectionHeader` (moved out of the list screen to keep it under 250 lines).
+- Libs: `src/lib/leadSourceUpload.ts` (`sizeText`, `getSheetRejection`, `pickSheetFile`, `uploadSheet`) and
+  `src/lib/downloadFile.ts` (`downloadXlsx`).
+- `src/hooks/useSheetColumns.ts` and `src/constants/leadSourceSheet.ts` (the 5 MB / 5,000-row fallback).
+- `src/api/client.ts` exports `readApiResult` (the 401 and ApiError rules) and `getApiHeaders`, so the blob-util
+  upload and downloads behave like every other request. `request()` now uses `readApiResult` itself.
+- `src/api/endpoints.ts`: `LEAD_SOURCE_UPLOADS_API`, `LEAD_SOURCE_TEMPLATE_API`, `LEAD_SOURCE_COLUMNS_API`.
+- `ListScreen` takes `isSearchable={false}` for a route with no search (the uploads list).
+- The list screen: an "Upload sheet" button for managers, and `LeadSources` route params `{ view, upload }`.
+- `docs/BACKEND_CHANGES.md` item 6: `GET /lead-sources/columns`.
+
+### Decisions
+
+- **The picked file is copied first.** `keepLocalCopy({ destination: "cachesDirectory" })` turns the `content://` uri
+  into a plain cache path before the upload, so the grant cannot expire mid-upload. Nothing is parsed on the phone.
+- **The local checks** use the server's words: an `.xls` (or any other type) → "Choose an .xlsx or a .csv file. For an
+  old .xls file, save it as .xlsx first."; 0 bytes → "The file is empty."; over the limit → "The file is larger than
+  5 MB. Split it into smaller files." No request is sent.
+- **The upload sends `Content-Type: multipart/form-data`.** The prompt says no Content-Type, which is right for
+  `fetch`. blob-util is different: it builds a multipart body only when this header says so, and writes the boundary
+  into it itself (its README requires the header).
+- **The back block** uses a ref inside one `beforeRemove` listener, not the state. With the state, the replace to the
+  report straight after the upload would be blocked by the listener from the render before.
+- **The header chips** come from `GET /lead-sources/columns`. The dev API has no such route, so the screen shows
+  "Download the template to see the expected header row." until item 6 ships.
+- **Downloads** save into the cache directory under the web's file names (`lead-source-template.xlsx`,
+  `<file>-report.xlsx`, `<file>-report-skipped.xlsx`) and open with `actionViewIntent`. A refusal reads the JSON the
+  server wrote into the file, deletes it, and toasts the message. With no app for .xlsx, a toast gives the saved path.
+- **Report rows** are cards in one FlatList with the header card on top: 50 at a time on scroll, the four chips, and a
+  search over the row number, the cells and the messages. A tap expands a card to every non-empty cell. A card with a
+  `sourceId` has an "Open this lead source" link, because the tap is taken by the expansion.
+- **"Open the N imported sources"** goes back to the list with `popTo("LeadSources", { view: "all", upload })`. The
+  list replaces its filters and search with those, as the web's link does, then clears the params, so the same link
+  works again later.
+
+### What was verified
+
+- `__tests__/leadSourceUploads.test.tsx` (9 tests, the whole app): the upload from the list's "Upload sheet" button
+  (the template fallback line, the picked file's name and "3 KB", "Checking and importing...", "50%", the stay line,
+  back blocked mid-upload, "3 imported." and the report screen); an `.xls` refused with no request; a 400 showing the
+  message, "name, mobile no" and the "Nothing was saved" line with the file still picked; the uploads list with the
+  counters and a Failed chip; the report tiles, file notes, missing-columns line and the skipped-rows download path and
+  URL; no "Skipped rows only" at 0 skipped; 50 row cards, then 60 on scroll, the Skipped / With warnings / All chips, a
+  search for "pune", and a card opening its source; "Open the 57 imported sources" asking for `view=all&…&upload=up1`
+  and showing "Showing one upload only."; no entry points and AccessDenied for role 60.
+- `src/lib/__tests__/leadSourceUpload.test.ts` (8 tests): sizes, the refusals, the cache copy and its path, the
+  multipart parts and headers with progress, the ApiError with `details`, the download path and headers with the
+  Android viewer, and a refused download toasting the server's message.
+- `npm test`: 34 suites, 336 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] The Uploads screen lists real uploads with region badges, counters and TimeAgo.
+- [ ] "Download template" saves `lead-source-template.xlsx` and opens it as a real workbook (not a JSON body).
+- [ ] Choosing a file shows its real name and size; the X clears it; an `.xls` or an over-5 MB file is refused.
+- [ ] A 3-row sheet uploads with a bar that reaches 100%, toasts "3 imported." and lands on the report.
+- [ ] The back button does nothing during the upload and works again after it.
+- [ ] A sheet missing a required column shows the rose card with the headers found; the file stays picked.
+- [ ] The report's four tiles match the web for the same upload, with the file notes and the missing-columns line.
+- [ ] The row cards page past 50; the chips and search narrow them; "Open this lead source" opens it.
+- [ ] "Skipped rows only" appears only when rows were skipped and opens a workbook with just those rows.
+- [ ] "Open the N imported sources" shows the list filtered by that upload, and the count matches.
+- [ ] A role-60 account sees no "Upload sheet" or "Uploads", and AccessDenied on the three screens.
+
+## Session 14 — meetings module
+
+**Status: done, except the device checks.** More → Meetings opens the meetings list, built and tested inside the
+whole app against a mocked API. Real data needs the session 4 backend patch; the cloud container has no Android SDK.
+No new package.
+
+### What is in it
+
+- Screen: `src/screens/meetings/MeetingsListScreen.tsx` on `useListQuery` + `ListScreen` (10 a page), registered as
+  `Meetings` in `MoreStack`. The `moreItems.ts` role list is unchanged.
+- Components (`src/components/meetings/`): `MeetingCard` (+ the `MeetingListItem` type with the route's `entity`),
+  `MeetingCardSkeleton`, `MeetingFilters`, `MeetingActions`, `RescheduleSheet`, `CompleteSheet`, `RescheduleHistory`,
+  `MeetingOutcome`, `PulseDot`, `meetingIcons.ts` (`getMeetingIcon`).
+- `src/lib/meetingTemporal.ts`: `getMeetingTemporalStatus`, ported from the web's utils.
+- `useListQuery` carries `range` and `entityType` as filters (sent after `status`, in the web's order), and reads
+  `totalPages ?? pages`. `MEETINGS_API` moved into `src/api/endpoints.ts`; the schedule-meeting form uses it too.
+
+### Decisions
+
+- **Filters sit in the list header**, not in the session 6 filter sheet: status and entity are `SelectSheet`s, the four
+  ranges a chip row, and "Clear filters" shows when any is set. Every change goes back to page 1. The entity select
+  lists every `ENTITY_TYPE_META` entry, as the web does, although only Lead, Client and Project ever hold a meeting.
+- **Icons** come from an explicit map of the `icon` names in `MEETING_STATUS_META` (Calendar fallback), in place of the
+  web's dynamic lookup.
+- **The entity row** opens the lead, client or project in its own tab through `openLead` / `openClient` /
+  `openProject`. The web's `entityHref` builds `/admin//operations/...` with a double slash.
+- **Cancel asks first** with an `Alert` ("Cancel this meeting?"). The web cancels on one click.
+- **Writes refetch, never flip state locally.** Reschedule and Completed close their sheet and refresh after a save.
+  A 409 ("Meeting is already closed", "Cannot reschedule a closed meeting") toasts the server's message, closes the
+  sheet and refreshes; other refusals keep the sheet open with the typed text. Cancel refreshes after any answer.
+- **The pulsing dot** is an `Animated` loop (scale 1→2, opacity 0.75→0, one second), the web's `animate-ping`.
+- **Join and Copy** reuse the session 8 `MeetingLinkButton`, shown for an online meeting still 2010 / 2020.
+
+### Backend notes (not changed)
+
+- `GET /api/admin/operations/meetings` checks only `requireAuth`, not a role list. The phone gates the screen with
+  the More item's roles, as the web's menu does; any signed-in user could still call the route.
+- The reschedule route accepts any future time, with no upper bound.
+
+### What was verified
+
+- `__tests__/meetings.test.tsx` (8 tests, the whole app): the first request `?page=1&limit=10`; the badges ("Meeting
+  Rescheduled" + "Today", "Meeting Scheduled" + "Past", "Meeting Completed"), the entity title, attendee chips, agenda,
+  the history block with "(1)", the old date struck through and the reason, the outcome block, and the orange dot;
+  status, range and entity filters each sending page 1 in the web's order, and Clear filters; reschedule refusing an
+  empty reason and a past time with no request, then sending `{ scheduledAt, reason }`, toasting "Meeting
+  rescheduled" and reloading; Completed offered only on the past meeting, refusing an empty outcome, then sending
+  `{ status: 2050, outcome }`; Cancel asking first, sending `{ status: 2030 }`, and a 409 toast with a reload; Join
+  opening the Meet link, scrolling to page 2, and the entity row opening the lead; no actions for role 50; AccessDenied
+  on a 403.
+- `src/lib/__tests__/meetingTemporal.test.ts` (4 tests): TODAY / UPCOMING / PAST at the day edges and the icon map.
+- `npm test`: 36 suites, 347 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] More → Meetings opens the list; 10 cards newest first; scrolling appends page 2.
+- [ ] 5 skeleton cards on first load; pull-to-refresh reloads page 1.
+- [ ] A meeting today shows the green "Today" badge and a pulsing dot; a rescheduled one the orange dot and history.
+- [ ] Status "Meeting Completed" shows only 2050 rows; range "Upcoming" only future ones; the count matches.
+- [ ] Clear filters restores the first page.
+- [ ] Reschedule with a future time and a reason updates the card (new time, 2020 badge, new history row).
+- [ ] An empty reason and a past time are refused with the web's messages.
+- [ ] Completed on a past meeting shows the green border and the Outcome block; it is not offered on a future one.
+- [ ] Cancel asks first, then shows the red border.
+- [ ] A second attempt on a closed meeting toasts the 409 message and refreshes.
+- [ ] Join opens the Meet link; Copy puts it on the clipboard.
+- [ ] The entity row opens that lead, client or project.
+- [ ] A role outside `[10, 15, 60, 65, 69, 45, 70]` sees no Reschedule, Cancel or Completed.
+
+## Session 15 — notifications
+
+**Status: done, except the device checks.** The header bell and the inbox are built and tested inside the whole app
+against a mocked API. Real data needs the session 4 backend patch; the cloud container has no Android SDK. No new
+package.
+
+### What is in it
+
+- `src/types/notification.ts`: `NotificationRow` and `NotificationFeed` (app-local; the web has no shared type).
+- `src/api/endpoints.ts`: `NOTIFICATIONS_API` (`FEED`, `READ_ALL`, `SEEN`, `read(id)`).
+- `src/hooks/useNotificationFeed.ts`: cursor pages of 15 (`limit=15`, `before=<cursor>`, `unread=true`), append on
+  scroll, replace on a new filter or pull-to-refresh, `markOneRead`, `markAllRead`.
+- `src/screens/notifications/NotificationsScreen.tsx`, registered as `Notifications` in `MoreStack`.
+- `src/components/notifications/NotificationRow.tsx` (three states, `Swipeable` right action, Check button) and
+  `HeaderBell.tsx`.
+- `src/contexts/NotificationContext.tsx`: `NotificationProvider` around the tab navigator, and `useNotifications`
+  (`unseen`, `unread`, the 4 newest `rows`, `refreshBadge`, `markSeen`).
+- `src/navigation/stackOptions.ts`: every tab stack's header shows the bell on the right.
+
+### Decisions
+
+- **The badge icon** is the session 3 `src/components/ui/NotificationBadge.tsx`, already a verbatim port of the web's
+  `BADGE_MAP` and `EMOJI_TO_NAME` with the same sizes. No second copy was made.
+- **TimeAgo** stays the session 3 component: a press shows the full `DD/MM/YYYY hh:mm A`. The prompt says long-press;
+  changing it here would change every screen that uses it.
+- **The poll** is a `setTimeout` chain, not an interval: 30 s, or 60 s when NetInfo reports `cellular` and the last poll
+  found the same counts and the same newest row. It schedules only while `AppState.currentState === "active"`, stops
+  on any change away from active, and fetches at once on the change back. It lives in the tab navigator, so it runs
+  only while signed in, and stops on logout or a region switch remount.
+- **Seen**: the bell zeroes `unseen` and sends `PATCH /seen` when it has a count, then opens the inbox. The inbox sends
+  `PATCH /seen` once per mount behind `seenFiredRef`, as the web's page does. Opened from the bell, that is two calls,
+  as on the web (dropdown, then page).
+- **Mark one read** does nothing for a row already read. The web's page lowers the count even then, when a read row
+  with a url is clicked.
+- **A tap** marks the row read, then opens its lead, client or project through `resolveNotificationPath` and
+  `openRecord` (a role without that tab gets the web's 403 toast). A row with no matching url is only marked read.
+- **Row tints are opaque** (`bg-blue-50`, `bg-amber-50`) where the web uses `/60` and `/40`: behind a swiped row sits
+  the blue action, which would show through a see-through tint.
+- **Mark all read** keeps the web's toasts with the fixed id `notifications-read-all`, so a second tap replaces the
+  toast instead of stacking a new one. The 401 toast already uses its own fixed id (`auth-401`).
+- Two App tests read fetch calls by position; the bell's poll shifted them, so they now find calls by URL.
+
+### What was verified
+
+- `__tests__/notifications.test.tsx` (9 tests, the whole app): the bell shows "9+" for 12 unseen on a tab, and a tap
+  clears it, sends `PATCH /seen` and opens the inbox; the poll fires every 30 s, never while backgrounded (two minutes
+  with no request), and once at once on return; on mobile data an unchanged feed waits 60 s; the inbox loads 15 rows
+  with "New" on the fresh row, "2 unread", the 30-day line, a swipe action on the two unread rows only, and one
+  `PATCH /seen`; scrolling appends to 28 rows with no repeated id and stops at `nextCursor: null`; Unread replaces the
+  list and All brings it back; a tap marks a lead row read and opens the lead; the Check button and a swipe each mark
+  one row read with no refetch; Mark all read sends one PATCH, toasts with the fixed id, and clears the pill.
+- `npm test`: 37 suites, 356 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] The inbox loads 15 rows and appends the next 15 on scroll, stopping at the end with no repeated row.
+- [ ] Fresh rows show the blue edge and "New"; seen-but-unread rows amber; read rows plain.
+- [ ] Unread shows only unread rows; All replaces the list from the top.
+- [ ] A lead, a client and a project row each open their detail screen and turn read.
+- [ ] A swipe left reveals "Mark read" and the row turns plain (legacy `Swipeable` on RN 0.87 New Architecture).
+- [ ] Mark all read clears every bold row with one toast; two taps do not stack two toasts.
+- [ ] The bell shows the unseen count on every tab, and opening the inbox clears it.
+- [ ] Home button, then back into the app: exactly one immediate fetch, and no poll while in the background.

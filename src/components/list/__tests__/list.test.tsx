@@ -26,7 +26,7 @@ type Renderer = ReactTestRenderer.ReactTestRenderer
 
 function makeQuery(overrides: Partial<ListQueryResult<Row>> = {}): ListQueryResult<Row> {
     return {
-        query: { page: 1, search: "", status: "", from: "", to: "", view: "", sort: "" },
+        query: { page: 1, search: "", status: "", from: "", to: "", view: "", sort: "", range: "", entityType: "" },
         searchText: "",
         setSearch: jest.fn(),
         setPage: jest.fn(),

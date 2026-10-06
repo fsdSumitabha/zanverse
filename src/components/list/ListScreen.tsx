@@ -19,6 +19,8 @@ interface Props<T extends { _id: string }> {
     /** The count line, such as "12 leads found". Defaults to "12 found". */
     getCountLabel?: (total: number) => string
     searchPlaceholder?: string
+    /** False hides the search box, for a route that has no search. */
+    isSearchable?: boolean
     /** Shows the filter button and sheet, with the statuses from this META map. */
     statusMeta?: Record<string | number, { label: string }>
     /** Leaves the date range out of the filter sheet. */
@@ -55,6 +57,7 @@ export default function ListScreen<T extends { _id: string }>({
     emptyText,
     getCountLabel = (total) => `${total} found`,
     searchPlaceholder,
+    isSearchable = true,
     statusMeta,
     hideDateFilters = false,
     headerRight,
@@ -78,11 +81,13 @@ export default function ListScreen<T extends { _id: string }>({
         <View className="gap-3 pb-1">
             <View className="flex-row items-center gap-2">
                 <View className="flex-1">
-                    <SearchField
-                        value={query.searchText}
-                        onChangeText={query.setSearch}
-                        placeholder={searchPlaceholder}
-                    />
+                    {isSearchable && (
+                        <SearchField
+                            value={query.searchText}
+                            onChangeText={query.setSearch}
+                            placeholder={searchPlaceholder}
+                        />
+                    )}
                 </View>
                 {statusMeta && (
                     <Pressable

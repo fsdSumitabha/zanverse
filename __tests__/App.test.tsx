@@ -123,7 +123,8 @@ describe("More", () => {
         fetchMock.mockResolvedValueOnce(respond(200, { success: true, data: { active: "US", regions: ["IN", "US"] } }))
         await press(findPressableByText(renderer, "United States"))
 
-        const [url, init] = fetchMock.mock.calls[1]
+        // The notification bell polls too, so calls are found by URL, not by position.
+        const [url, init] = fetchMock.mock.calls.filter(([callUrl]) => !callUrl.includes("/api/notifications"))[1]
         expect(url).toBe("http://10.0.2.2:3000/api/auth/region")
         expect(init.method).toBe("POST")
         expect(init.body).toBe(JSON.stringify({ region: "US" }))
@@ -135,7 +136,8 @@ describe("More", () => {
         // 3. The next request carries the new region.
         fetchMock.mockResolvedValueOnce(respond(200, { success: true, data: [] }))
         await press(findPressableByText(renderer, "Send a test request"))
-        expect((fetchMock.mock.calls[2][1].headers as Record<string, string>)["X-Active-Region"]).toBe("US")
+        const lastCall = fetchMock.mock.calls.filter(([callUrl]) => !callUrl.includes("/api/notifications")).at(-1)
+        expect((lastCall?.[1].headers as Record<string, string>)["X-Active-Region"]).toBe("US")
         await unmountApp(renderer)
     })
 
@@ -155,7 +157,8 @@ describe("More", () => {
         fetchMock.mockResolvedValueOnce(respond(200, { success: true, message: "Logged out successfully" }))
         await press(findPressable(renderer, "Logout"))
 
-        expect(fetchMock.mock.calls[1][0]).toBe("http://10.0.2.2:3000/api/auth/logout")
+        const calls = fetchMock.mock.calls.filter(([callUrl]) => !callUrl.includes("/api/notifications"))
+        expect(calls[1][0]).toBe("http://10.0.2.2:3000/api/auth/logout")
         expect(getToken()).toBeNull()
         expect(getActiveRegion()).toBeNull()
         expect(getTexts(renderer)).toContain("Admin Login")
@@ -186,14 +189,14 @@ describe("screen guard", () => {
 
         await ReactTestRenderer.act(async () => {
             navigationRef.navigate("App", {
-                screen: "CallsTab",
-                params: { screen: "LeadSourceDetail", params: { id: "64b7f0c2a1b2c3d4e5f60718" } },
+                screen: "UsersTab",
+                params: { screen: "UserEdit", params: { id: "64b7f0c2a1b2c3d4e5f60718" } },
             })
         })
         await flush()
 
         const texts = getTexts(renderer)
-        expect(texts).toContain("LeadSourceDetail")
+        expect(texts).toContain("UserEdit")
         expect(texts.some((text) => text.includes("64b7f0c2a1b2c3d4e5f60718"))).toBe(true)
         await unmountApp(renderer)
     })
