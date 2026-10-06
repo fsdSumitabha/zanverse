@@ -1,0 +1,31 @@
+import type { AppScreenName } from "./types"
+
+/** The header title of every screen inside a tab. */
+export const SCREEN_TITLES: Record<AppScreenName, string> = {
+    Dashboard: "Dashboard",
+    LeadsList: "Leads",
+    LeadDetail: "Lead",
+    LeadCreate: "Create Lead",
+    LeadEdit: "Edit Lead",
+    LeadConvert: "Convert Lead",
+    LeadSources: "Calls",
+    LeadSourceDetail: "Lead Source",
+    LeadSourceUploads: "Uploads",
+    ClientsList: "Clients",
+    ClientDetail: "Client",
+    ClientEdit: "Edit Client",
+    ClientProjects: "Client Projects",
+    ProjectCreate: "Create Project",
+    ProjectsList: "Projects",
+    ProjectDetail: "Project",
+    ProjectEdit: "Edit Project",
+    UsersList: "Users",
+    UserCreate: "Create User",
+    UserEdit: "Edit User",
+    More: "More",
+    Meetings: "Meetings",
+    OverallStats: "Overall Stats",
+    ActivityLogs: "Activity Logs",
+    Notifications: "Notifications",
+    Profile: "Profile",
+}

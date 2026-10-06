@@ -14,6 +14,11 @@ interface Props {
      * the tab bar, so passing the tab bar height may lift the button too far. Check it on a device.
      */
     extraBottom?: number
+    /**
+     * True on a tab screen. The screen already ends at the tab bar's top edge, and the tab bar already covers the
+     * gesture bar, so the bottom inset is not added (the session 1 finding).
+     */
+    isAboveTabBar?: boolean
 }
 
 const FAB_SIZE = 56
@@ -32,7 +37,13 @@ const FAB_SHADOW = {
  * The bottom-right floating button. Edge-to-edge is on, so it adds the bottom inset to clear the gesture bar.
  * Its parent must fill the screen (or the area it floats over), because it is positioned absolutely.
  */
-export default function Fab({ onPress, accessibilityLabel, icon: Icon = Plus, extraBottom }: Props) {
+export default function Fab({
+    onPress,
+    accessibilityLabel,
+    icon: Icon = Plus,
+    extraBottom,
+    isAboveTabBar = false,
+}: Props) {
     const insets = useSafeAreaInsets()
 
     return (
@@ -48,7 +59,7 @@ export default function Fab({ onPress, accessibilityLabel, icon: Icon = Plus, ex
                     width: FAB_SIZE,
                     height: FAB_SIZE,
                     right: insets.right + EDGE_GAP,
-                    bottom: insets.bottom + (extraBottom ?? 0) + EDGE_GAP,
+                    bottom: (isAboveTabBar ? 0 : insets.bottom) + (extraBottom ?? 0) + EDGE_GAP,
                 },
             ]}
         >

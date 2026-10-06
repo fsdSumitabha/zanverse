@@ -1,0 +1,28 @@
+/**
+ * Where the API lives, and the paths the app calls.
+ *
+ * The web app calls same-origin paths like "/api/auth/me". A phone has no origin, so every path is joined to
+ * API_BASE_URL by `src/api/client.ts`. No env loader is installed, so the value lives here. `.env.example` records it.
+ */
+
+// The Android emulator reaches the dev machine's localhost at 10.0.2.2. A physical device needs the machine's LAN
+// address instead. Session 22 points release builds at the production HTTPS host.
+export const API_BASE_URL = "http://10.0.2.2:3000"
+
+export const AUTH_API = {
+    LOGIN: "/api/auth/login",
+    ME: "/api/auth/me",
+    LOGOUT: "/api/auth/logout",
+    REGION: "/api/auth/region",
+} as const
+
+export const OPERATIONS_API = "/api/admin/operations"
+
+// As the web's lead-sources/api.ts has it.
+export const LEAD_SOURCES_API = "/api/admin/operations/lead-sources"
+
+/** Joins a path to the API base URL. An absolute URL is returned as it is. */
+export function resolveApiUrl(path: string): string {
+    if (/^https?:\/\//i.test(path)) return path
+    return `${API_BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`
+}

@@ -9,9 +9,21 @@ jest.mock("react-native-safe-area-context", () => require("react-native-safe-are
 
 jest.mock("@react-native-community/netinfo", () => require("@react-native-community/netinfo/jest/netinfo-mock.js"))
 
-jest.mock("react-native-keychain", () => ({
-    getSupportedBiometryType: jest.fn(() => Promise.resolve(null)),
-}))
+// An in-memory keystore with the calls src/store/keychain.ts makes, keyed by service as the real module is.
+jest.mock("react-native-keychain", () => {
+    const entries = new Map()
+    return {
+        ACCESSIBLE: { AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: "AccessibleAfterFirstUnlockThisDeviceOnly" },
+        getSupportedBiometryType: jest.fn(() => Promise.resolve(null)),
+        setGenericPassword: jest.fn((username, password, options = {}) => {
+            const service = options.service ?? "default"
+            entries.set(service, { username, password, service, storage: "KC" })
+            return Promise.resolve({ service, storage: "KC" })
+        }),
+        getGenericPassword: jest.fn((options = {}) => Promise.resolve(entries.get(options.service ?? "default") ?? false)),
+        resetGenericPassword: jest.fn((options = {}) => Promise.resolve(entries.delete(options.service ?? "default"))),
+    }
+})
 
 jest.mock("react-native-blob-util", () => ({
     fs: {
@@ -31,3 +43,5 @@ jest.mock("@react-native-documents/picker", () => ({
 jest.mock("react-native-nitro-modules", () => ({
     NitroModules: { createHybridObject: jest.fn() },
 }))
+
+jest.mock("@react-native-clipboard/clipboard", () => require("@react-native-clipboard/clipboard/jest/clipboard-mock.js"))

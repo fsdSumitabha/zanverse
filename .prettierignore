@@ -7,3 +7,4 @@ src/lib/region.ts
 src/lib/leadSourceDay.ts
 src/lib/callback.ts
 src/hooks/useNow.ts
+src/contexts/StatusContext.tsx
