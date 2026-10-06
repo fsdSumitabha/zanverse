@@ -182,6 +182,12 @@ export function useLeadSourceList({ isPaused }: { isPaused: boolean }) {
         setFiltersState((current) => ({ ...current, ...patch }))
     }, [])
 
+    /** Replaces every filter and clears the search, as opening a link with its own query does on the web. */
+    const resetFilters = useCallback((next: Partial<LeadSourceFilters>) => {
+        setSearchText("")
+        setFiltersState({ ...EMPTY_LEAD_SOURCE_FILTERS, ...next })
+    }, [])
+
     /** Swaps a changed row in at once, keeping its section, then reloads quietly so it moves to where it belongs. */
     const onUpdated = useCallback(
         (row: LeadSourceRow) => {
@@ -206,6 +212,7 @@ export function useLeadSourceList({ isPaused }: { isPaused: boolean }) {
     return {
         filters,
         setFilters,
+        resetFilters,
         searchText,
         setSearch: setSearchText,
         rows,

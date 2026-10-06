@@ -1086,3 +1086,80 @@ Under TCPA-style rules a number that asked not to be called must never be dialed
 - [ ] Convert creates the lead and opens it; the source then shows the blue banner with the controls hidden.
 - [ ] Converting an already converted source toasts the server's 409 message.
 - [ ] A source assigned to someone else shows "Lead source not found".
+
+## Session 13 — lead sources uploads and reports
+
+**Status: done, except the device checks.** The three upload screens are built and tested inside the whole app against
+a mocked API, with the document picker and react-native-blob-util mocked. Real data needs the session 4 backend patch;
+the cloud container has no Android SDK. No new package.
+
+### What is in it
+
+- Screens (`src/screens/leadSources/`): `LeadSourceUploadScreen`, `LeadSourceUploadsScreen`, `LeadSourceReportScreen`,
+  registered in `CallsStack` (the session 12 placeholders are gone).
+- Components (`src/components/leadSources/`): `FilePickRow`, `SheetHeaderChips`, `UploadProblem`, `UploadSummaryRow`
+  (+ skeleton), `ReportHeaderCard`, `ReportRows` (the FlatList with the chips and search), `ReportRowCard`,
+  `ListSectionHeader` (moved out of the list screen to keep it under 250 lines).
+- Libs: `src/lib/leadSourceUpload.ts` (`sizeText`, `getSheetRejection`, `pickSheetFile`, `uploadSheet`) and
+  `src/lib/downloadFile.ts` (`downloadXlsx`).
+- `src/hooks/useSheetColumns.ts` and `src/constants/leadSourceSheet.ts` (the 5 MB / 5,000-row fallback).
+- `src/api/client.ts` exports `readApiResult` (the 401 and ApiError rules) and `getApiHeaders`, so the blob-util
+  upload and downloads behave like every other request. `request()` now uses `readApiResult` itself.
+- `src/api/endpoints.ts`: `LEAD_SOURCE_UPLOADS_API`, `LEAD_SOURCE_TEMPLATE_API`, `LEAD_SOURCE_COLUMNS_API`.
+- `ListScreen` takes `isSearchable={false}` for a route with no search (the uploads list).
+- The list screen: an "Upload sheet" button for managers, and `LeadSources` route params `{ view, upload }`.
+- `docs/BACKEND_CHANGES.md` item 6: `GET /lead-sources/columns`.
+
+### Decisions
+
+- **The picked file is copied first.** `keepLocalCopy({ destination: "cachesDirectory" })` turns the `content://` uri
+  into a plain cache path before the upload, so the grant cannot expire mid-upload. Nothing is parsed on the phone.
+- **The local checks** use the server's words: an `.xls` (or any other type) → "Choose an .xlsx or a .csv file. For an
+  old .xls file, save it as .xlsx first."; 0 bytes → "The file is empty."; over the limit → "The file is larger than
+  5 MB. Split it into smaller files." No request is sent.
+- **The upload sends `Content-Type: multipart/form-data`.** The prompt says no Content-Type, which is right for
+  `fetch`. blob-util is different: it builds a multipart body only when this header says so, and writes the boundary
+  into it itself (its README requires the header).
+- **The back block** uses a ref inside one `beforeRemove` listener, not the state. With the state, the replace to the
+  report straight after the upload would be blocked by the listener from the render before.
+- **The header chips** come from `GET /lead-sources/columns`. The dev API has no such route, so the screen shows
+  "Download the template to see the expected header row." until item 6 ships.
+- **Downloads** save into the cache directory under the web's file names (`lead-source-template.xlsx`,
+  `<file>-report.xlsx`, `<file>-report-skipped.xlsx`) and open with `actionViewIntent`. A refusal reads the JSON the
+  server wrote into the file, deletes it, and toasts the message. With no app for .xlsx, a toast gives the saved path.
+- **Report rows** are cards in one FlatList with the header card on top: 50 at a time on scroll, the four chips, and a
+  search over the row number, the cells and the messages. A tap expands a card to every non-empty cell. A card with a
+  `sourceId` has an "Open this lead source" link, because the tap is taken by the expansion.
+- **"Open the N imported sources"** goes back to the list with `popTo("LeadSources", { view: "all", upload })`. The
+  list replaces its filters and search with those, as the web's link does, then clears the params, so the same link
+  works again later.
+
+### What was verified
+
+- `__tests__/leadSourceUploads.test.tsx` (9 tests, the whole app): the upload from the list's "Upload sheet" button
+  (the template fallback line, the picked file's name and "3 KB", "Checking and importing...", "50%", the stay line,
+  back blocked mid-upload, "3 imported." and the report screen); an `.xls` refused with no request; a 400 showing the
+  message, "name, mobile no" and the "Nothing was saved" line with the file still picked; the uploads list with the
+  counters and a Failed chip; the report tiles, file notes, missing-columns line and the skipped-rows download path and
+  URL; no "Skipped rows only" at 0 skipped; 50 row cards, then 60 on scroll, the Skipped / With warnings / All chips, a
+  search for "pune", and a card opening its source; "Open the 57 imported sources" asking for `view=all&…&upload=up1`
+  and showing "Showing one upload only."; no entry points and AccessDenied for role 60.
+- `src/lib/__tests__/leadSourceUpload.test.ts` (8 tests): sizes, the refusals, the cache copy and its path, the
+  multipart parts and headers with progress, the ApiError with `details`, the download path and headers with the
+  Android viewer, and a refused download toasting the server's message.
+- `npm test`: 34 suites, 336 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] The Uploads screen lists real uploads with region badges, counters and TimeAgo.
+- [ ] "Download template" saves `lead-source-template.xlsx` and opens it as a real workbook (not a JSON body).
+- [ ] Choosing a file shows its real name and size; the X clears it; an `.xls` or an over-5 MB file is refused.
+- [ ] A 3-row sheet uploads with a bar that reaches 100%, toasts "3 imported." and lands on the report.
+- [ ] The back button does nothing during the upload and works again after it.
+- [ ] A sheet missing a required column shows the rose card with the headers found; the file stays picked.
+- [ ] The report's four tiles match the web for the same upload, with the file notes and the missing-columns line.
+- [ ] The row cards page past 50; the chips and search narrow them; "Open this lead source" opens it.
+- [ ] "Skipped rows only" appears only when rows were skipped and opens a workbook with just those rows.
+- [ ] "Open the N imported sources" shows the list filtered by that upload, and the count matches.
+- [ ] A role-60 account sees no "Upload sheet" or "Uploads", and AccessDenied on the three screens.

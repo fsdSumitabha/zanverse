@@ -133,23 +133,42 @@ async function request<T>(path: string, method: HttpMethod, body: unknown, optio
     }
 
     const json = (await res.json().catch(() => null)) as (ErrorBody & T) | null
+    return readApiResult<T>(res.status, json, token)
+}
+
+/**
+ * The response rules every request follows: a 401 for the current token ends the session, and anything but success
+ * throws ApiError with the server's message. Exported for the react-native-blob-util upload, which cannot use fetch
+ * because it needs upload progress.
+ */
+export async function readApiResult<T>(status: number, json: unknown, token: string | null): Promise<T> {
+    const body = json as (ErrorBody & T) | null
 
     // Only a request that carried the current token can end the session. A login attempt has no token, so its
     // 401 "Invalid credentials" is just an error. A late 401 for a token already replaced is ignored.
-    if (res.status === HTTP_UNAUTHORIZED && token !== null && getToken() === token) {
-        await handleUnauthorized(json?.message)
+    if (status === HTTP_UNAUTHORIZED && token !== null && getToken() === token) {
+        await handleUnauthorized(body?.message)
     }
 
-    if (!res.ok || !json?.success) {
+    const isOk = status >= 200 && status < 300
+    if (!isOk || !body?.success) {
         throw new ApiError(
-            json?.message || json?.error || getFallbackMessage(res.status),
-            res.status,
-            json?.field,
-            json?.details,
+            body?.message || body?.error || getFallbackMessage(status),
+            status,
+            body?.field,
+            body?.details,
         )
     }
 
-    return json
+    return body
+}
+
+/** The token and region headers, for requests that do not go through fetch (uploads and file downloads). */
+export function getApiHeaders(): { token: string | null; headers: Record<string, string> } {
+    const token = getToken()
+    const headers = buildHeaders(token, false)
+    delete headers.Accept
+    return { token, headers }
 }
 
 /**

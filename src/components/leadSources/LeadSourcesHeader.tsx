@@ -1,7 +1,8 @@
-import { AlarmClock, PhoneCall } from "lucide-react-native"
+import { AlarmClock, FileUp, PhoneCall } from "lucide-react-native"
 import { Pressable, Text, View } from "react-native"
 
 import SearchField from "@/components/list/SearchField"
+import { Button } from "@/components/ui"
 import type { LeadSourceList } from "@/hooks/useLeadSourceList"
 import { enableIconClassNames } from "@/lib/iconClassName"
 
@@ -13,6 +14,7 @@ interface Props {
     isManager: boolean
     onShowDue: () => void
     onOpenUploads: () => void
+    onUploadSheet: () => void
 }
 
 enableIconClassNames(AlarmClock, PhoneCall)
@@ -25,7 +27,7 @@ function getProgressStyle(share: number) {
  * Everything above the rows: the title, the callbacks-due banner, the view tabs and status filter, the manager
  * filters, the search box and Today's progress bar. Ported from the top of the web's LeadSourcesClient.tsx.
  */
-export default function LeadSourcesHeader({ list, isManager, onShowDue, onOpenUploads }: Props) {
+export default function LeadSourcesHeader({ list, isManager, onShowDue, onOpenUploads, onUploadSheet }: Props) {
     const { filters, counts, progress } = list
     const view = filters.day ? "day" : filters.view
     const dueCount = counts?.callbacksDue ?? 0
@@ -49,6 +51,8 @@ export default function LeadSourcesHeader({ list, isManager, onShowDue, onOpenUp
                     </Text>
                 </View>
             </View>
+
+            {isManager && <Button label="Upload sheet" icon={FileUp} onPress={onUploadSheet} />}
 
             {dueCount > 0 && (
                 <View className="flex-row items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 dark:border-rose-500/30 dark:bg-rose-500/10">

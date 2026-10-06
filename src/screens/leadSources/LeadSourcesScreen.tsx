@@ -1,7 +1,7 @@
-import { useNavigation } from "@react-navigation/native"
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native"
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { FlatList, RefreshControl, Text, View, useColorScheme, type LayoutChangeEvent } from "react-native"
+import { FlatList, RefreshControl, View, useColorScheme, type LayoutChangeEvent } from "react-native"
 
 import BulkBar, { type BulkDialog } from "@/components/leadSources/BulkBar"
 import CallbackSheet from "@/components/leadSources/CallbackSheet"
@@ -12,8 +12,8 @@ import StatusSheet from "@/components/leadSources/bulk/StatusSheet"
 import LeadSourceRow, { LeadSourceRowSkeleton } from "@/components/leadSources/LeadSourceRow"
 import LeadSourcesEmpty from "@/components/leadSources/LeadSourcesEmpty"
 import LeadSourcesHeader from "@/components/leadSources/LeadSourcesHeader"
-import { buildListLayout, SECTION_TITLE, type ListItem } from "@/components/leadSources/listItems"
-import { SECTION_HEIGHT } from "@/components/leadSources/rowLayout"
+import { buildListLayout, type ListItem } from "@/components/leadSources/listItems"
+import ListSectionHeader from "@/components/leadSources/ListSectionHeader"
 import StatusMenuSheet from "@/components/leadSources/StatusMenuSheet"
 import { AccessDenied } from "@/components/ui"
 import { canManageLeadSources } from "@/constants/leadSourceRoles"
@@ -34,7 +34,6 @@ const NOW_TICK_MS = 15_000
 const CONTENT_WITH_BAR = { paddingBottom: 96 }
 const CONTENT_PLAIN = { paddingBottom: 16 }
 
-const SECTION_STYLE = { height: SECTION_HEIGHT }
 const SKELETON_KEYS = Array.from({ length: SKELETON_ROWS }, (_, i) => i)
 
 function SkeletonRows() {
@@ -54,6 +53,7 @@ function SkeletonRows() {
  */
 export default function LeadSourcesScreen() {
     const navigation = useNavigation<Navigation>()
+    const params = useRoute<RouteProp<CallsStackParamList, "LeadSources">>().params
     const { role } = useAuth()
     const isManager = canManageLeadSources(role)
     const isDarkMode = useColorScheme() === "dark"
@@ -71,6 +71,15 @@ export default function LeadSourcesScreen() {
     const list = useLeadSourceList({ isPaused: isBusy })
     const view = list.filters.day ? "day" : list.filters.view
     const layout = useMemo(() => buildListLayout(list.rows, view, today), [list.rows, view, today])
+
+    // A report's "Open the N imported sources" arrives with its own view and upload, and replaces the filters. The
+    // params are then cleared, so the same link opened again later applies again.
+    const { resetFilters } = list
+    useEffect(() => {
+        if (!params?.upload && !params?.view) return
+        resetFilters({ view: params.view ?? "today", upload: params.upload ?? "" })
+        navigation.setParams({ view: undefined, upload: undefined })
+    }, [params?.view, params?.upload, resetFilters, navigation])
 
     // A new view or filter is a new list. A selection from the old one would point at rows no longer on screen.
     const filtersKey = JSON.stringify(list.filters)
@@ -124,19 +133,7 @@ export default function LeadSourcesScreen() {
     )
 
     function renderItem({ item }: { item: ListItem }) {
-        if (item.kind === "section") {
-            const title = SECTION_TITLE[item.section]
-            return (
-                <View
-                    className="justify-center border-b border-slate-100 bg-slate-50 px-3 dark:border-neutral-800 dark:bg-neutral-800"
-                    style={SECTION_STYLE}
-                >
-                    <Text className={`text-[11px] font-semibold uppercase tracking-wide ${title.tone}`}>
-                        {title.text}
-                    </Text>
-                </View>
-            )
-        }
+        if (item.kind === "section") return <ListSectionHeader section={item.section} />
         return (
             <LeadSourceRow
                 row={item.row}
@@ -177,6 +174,7 @@ export default function LeadSourcesScreen() {
                             isManager={isManager}
                             onShowDue={showDue}
                             onOpenUploads={() => navigation.navigate("LeadSourceUploads")}
+                            onUploadSheet={() => navigation.navigate("LeadSourceUpload")}
                         />
                     </View>
                 }

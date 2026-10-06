@@ -20,6 +20,10 @@ export const OPERATIONS_API = "/api/admin/operations"
 
 // As the web's lead-sources/api.ts has it.
 export const LEAD_SOURCES_API = "/api/admin/operations/lead-sources"
+export const LEAD_SOURCE_UPLOADS_API = `${LEAD_SOURCES_API}/uploads`
+export const LEAD_SOURCE_TEMPLATE_API = `${LEAD_SOURCES_API}/template`
+/** Not on the dev API yet: BACKEND_CHANGES.md item 6. The upload screen falls back on a 404. */
+export const LEAD_SOURCE_COLUMNS_API = `${LEAD_SOURCES_API}/columns`
 
 /** Joins a path to the API base URL. An absolute URL is returned as it is. */
 export function resolveApiUrl(path: string): string {
