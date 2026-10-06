@@ -1163,3 +1163,73 @@ the cloud container has no Android SDK. No new package.
 - [ ] "Skipped rows only" appears only when rows were skipped and opens a workbook with just those rows.
 - [ ] "Open the N imported sources" shows the list filtered by that upload, and the count matches.
 - [ ] A role-60 account sees no "Upload sheet" or "Uploads", and AccessDenied on the three screens.
+
+## Session 14 — meetings module
+
+**Status: done, except the device checks.** More → Meetings opens the meetings list, built and tested inside the
+whole app against a mocked API. Real data needs the session 4 backend patch; the cloud container has no Android SDK.
+No new package.
+
+### What is in it
+
+- Screen: `src/screens/meetings/MeetingsListScreen.tsx` on `useListQuery` + `ListScreen` (10 a page), registered as
+  `Meetings` in `MoreStack`. The `moreItems.ts` role list is unchanged.
+- Components (`src/components/meetings/`): `MeetingCard` (+ the `MeetingListItem` type with the route's `entity`),
+  `MeetingCardSkeleton`, `MeetingFilters`, `MeetingActions`, `RescheduleSheet`, `CompleteSheet`, `RescheduleHistory`,
+  `MeetingOutcome`, `PulseDot`, `meetingIcons.ts` (`getMeetingIcon`).
+- `src/lib/meetingTemporal.ts`: `getMeetingTemporalStatus`, ported from the web's utils.
+- `useListQuery` carries `range` and `entityType` as filters (sent after `status`, in the web's order), and reads
+  `totalPages ?? pages`. `MEETINGS_API` moved into `src/api/endpoints.ts`; the schedule-meeting form uses it too.
+
+### Decisions
+
+- **Filters sit in the list header**, not in the session 6 filter sheet: status and entity are `SelectSheet`s, the four
+  ranges a chip row, and "Clear filters" shows when any is set. Every change goes back to page 1. The entity select
+  lists every `ENTITY_TYPE_META` entry, as the web does, although only Lead, Client and Project ever hold a meeting.
+- **Icons** come from an explicit map of the `icon` names in `MEETING_STATUS_META` (Calendar fallback), in place of the
+  web's dynamic lookup.
+- **The entity row** opens the lead, client or project in its own tab through `openLead` / `openClient` /
+  `openProject`. The web's `entityHref` builds `/admin//operations/...` with a double slash.
+- **Cancel asks first** with an `Alert` ("Cancel this meeting?"). The web cancels on one click.
+- **Writes refetch, never flip state locally.** Reschedule and Completed close their sheet and refresh after a save.
+  A 409 ("Meeting is already closed", "Cannot reschedule a closed meeting") toasts the server's message, closes the
+  sheet and refreshes; other refusals keep the sheet open with the typed text. Cancel refreshes after any answer.
+- **The pulsing dot** is an `Animated` loop (scale 1→2, opacity 0.75→0, one second), the web's `animate-ping`.
+- **Join and Copy** reuse the session 8 `MeetingLinkButton`, shown for an online meeting still 2010 / 2020.
+
+### Backend notes (not changed)
+
+- `GET /api/admin/operations/meetings` checks only `requireAuth`, not a role list. The phone gates the screen with
+  the More item's roles, as the web's menu does; any signed-in user could still call the route.
+- The reschedule route accepts any future time, with no upper bound.
+
+### What was verified
+
+- `__tests__/meetings.test.tsx` (8 tests, the whole app): the first request `?page=1&limit=10`; the badges ("Meeting
+  Rescheduled" + "Today", "Meeting Scheduled" + "Past", "Meeting Completed"), the entity title, attendee chips, agenda,
+  the history block with "(1)", the old date struck through and the reason, the outcome block, and the orange dot;
+  status, range and entity filters each sending page 1 in the web's order, and Clear filters; reschedule refusing an
+  empty reason and a past time with no request, then sending `{ scheduledAt, reason }`, toasting "Meeting
+  rescheduled" and reloading; Completed offered only on the past meeting, refusing an empty outcome, then sending
+  `{ status: 2050, outcome }`; Cancel asking first, sending `{ status: 2030 }`, and a 409 toast with a reload; Join
+  opening the Meet link, scrolling to page 2, and the entity row opening the lead; no actions for role 50; AccessDenied
+  on a 403.
+- `src/lib/__tests__/meetingTemporal.test.ts` (4 tests): TODAY / UPCOMING / PAST at the day edges and the icon map.
+- `npm test`: 36 suites, 347 tests. `npx tsc --noEmit`, `npm run lint` and Prettier pass. The bundle builds, the new
+  classes are compiled, and `hermesc` compiles it. Every source file is under 250 lines.
+
+### Device checklist
+
+- [ ] More → Meetings opens the list; 10 cards newest first; scrolling appends page 2.
+- [ ] 5 skeleton cards on first load; pull-to-refresh reloads page 1.
+- [ ] A meeting today shows the green "Today" badge and a pulsing dot; a rescheduled one the orange dot and history.
+- [ ] Status "Meeting Completed" shows only 2050 rows; range "Upcoming" only future ones; the count matches.
+- [ ] Clear filters restores the first page.
+- [ ] Reschedule with a future time and a reason updates the card (new time, 2020 badge, new history row).
+- [ ] An empty reason and a past time are refused with the web's messages.
+- [ ] Completed on a past meeting shows the green border and the Outcome block; it is not offered on a future one.
+- [ ] Cancel asks first, then shows the red border.
+- [ ] A second attempt on a closed meeting toasts the 409 message and refreshes.
+- [ ] Join opens the Meet link; Copy puts it on the clipboard.
+- [ ] The entity row opens that lead, client or project.
+- [ ] A role outside `[10, 15, 60, 65, 69, 45, 70]` sees no Reschedule, Cancel or Completed.

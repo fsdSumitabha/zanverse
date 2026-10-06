@@ -18,6 +18,8 @@ export const AUTH_API = {
 
 export const OPERATIONS_API = "/api/admin/operations"
 
+export const MEETINGS_API = `${OPERATIONS_API}/meetings`
+
 // As the web's lead-sources/api.ts has it.
 export const LEAD_SOURCES_API = "/api/admin/operations/lead-sources"
 export const LEAD_SOURCE_UPLOADS_API = `${LEAD_SOURCES_API}/uploads`
