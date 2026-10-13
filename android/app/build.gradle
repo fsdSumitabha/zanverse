@@ -70,8 +70,10 @@ react {
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  * On since session 22: R8 shrinks the release. A missing keep rule shows as a crash in the release walk only, never in
  * debug; android/app/proguard-rules.pro lists each rule with the screen that needed it.
+ * Off for the first release build, as the session 22 device checklist asks: a crash then cannot come from R8. Turn it
+ * back on once that build runs on a phone, and walk the release again before the Play Store.
  */
-def enableProguardInReleaseBuilds = true
+def enableProguardInReleaseBuilds = false
 
 // versionName follows package.json. versionCode is the CI build number (BUILD_NUMBER), or 1 for a local build.
 def packageJson = new groovy.json.JsonSlurper().parse(file("../../package.json"))

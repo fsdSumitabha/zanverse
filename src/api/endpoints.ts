@@ -12,9 +12,9 @@ import { Platform } from "react-native"
 // (android/app/src/debug/AndroidManifest.xml; NSAllowsLocalNetworking in ios/zanverse/Info.plist).
 const DEV_API_BASE_URL = Platform.OS === "ios" ? "http://localhost:3000" : "http://10.0.2.2:3000"
 
-// The deployed web app, over HTTPS. Release builds can reach nothing else. Not recorded anywhere yet: set the real
-// host here before the first release build. The placeholder fails every request, so a wrong build cannot go quiet.
-const PRODUCTION_API_BASE_URL = "https://CHANGE-ME.invalid"
+// The deployed web app, over HTTPS. Release builds can reach nothing else. The host only, with no "/api": every path
+// below already starts with it. The value is built into the APK, so a new host needs a new build.
+const PRODUCTION_API_BASE_URL = "https://zan-workspace-ntjc.vercel.app"
 
 /** Debug builds talk to the dev machine; release builds to the production host. */
 export const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PRODUCTION_API_BASE_URL
