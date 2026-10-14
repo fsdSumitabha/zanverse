@@ -1,0 +1,8 @@
+<resources>
+    <!-- Launcher icon background (mipmap-anydpi-v26/ic_launcher.xml): Material 3 tone 96 of the brand navy. -->
+    <color name="ic_launcher_background">#F1F3FF</color>
+    <!-- Behind SplashView, and behind every screen before React draws: neutral-50 (values-night: neutral-950). -->
+    <color name="splash_background">#FAFAFA</color>
+    <!-- Accent of the pushes Firebase shows itself. The app's own notifications use the same navy (src/lib/push/channels.ts). -->
+    <color name="notification_accent">#183668</color>
+</resources>

@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -47,5 +48,16 @@
             <data android:scheme="zanverse" />
         </intent-filter>
       </activity>
+
+      <!-- Pushes that Firebase shows itself, while the app is closed: the white ZAN mark on the brand navy, as the
+           app's own notifications (src/lib/push/channels.ts). @react-native-firebase/messaging declares the colour
+           too (white, unless a firebase.json sets one), so this one replaces it. -->
+      <meta-data
+        android:name="com.google.firebase.messaging.default_notification_icon"
+        android:resource="@drawable/ic_notification" />
+      <meta-data
+        android:name="com.google.firebase.messaging.default_notification_color"
+        android:resource="@color/notification_accent"
+        tools:replace="android:resource" />
     </application>
 </manifest>

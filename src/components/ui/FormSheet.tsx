@@ -84,7 +84,9 @@ export default function FormSheet({ title, onClose, children }: Props) {
                 backdropComponent={renderBackdrop}
                 keyboardBehavior="interactive"
                 keyboardBlurBehavior="restore"
-                android_keyboardInputMode="adjustResize"
+                // Edge-to-edge is on, so Android does not shrink the window for the keyboard. "adjustPan" makes the
+                // sheet rise and shrink its scroll area above the keyboard, so the lower fields stay reachable.
+                android_keyboardInputMode="adjustPan"
                 backgroundStyle={backgroundStyle}
                 handleIndicatorStyle={handleIndicatorStyle}
             >

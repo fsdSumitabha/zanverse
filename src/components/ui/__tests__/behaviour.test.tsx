@@ -140,7 +140,8 @@ describe("Dialog", () => {
         expect(renderer.root.findByProps({ accessibilityLabel: "Note" })).toBeTruthy()
         const sheet = renderer.root.findByType(BottomSheetModal)
         expect(sheet.props.keyboardBehavior).toBe("interactive")
-        expect(sheet.props.android_keyboardInputMode).toBe("adjustResize")
+        // Edge-to-edge: Android does not resize the window, so the sheet must lift itself.
+        expect(sheet.props.android_keyboardInputMode).toBe("adjustPan")
     })
 
     test("back, the backdrop and the X button each call onClose", async () => {

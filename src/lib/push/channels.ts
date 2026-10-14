@@ -5,6 +5,13 @@ export const CALLBACK_CHANNEL_ID = "callbacks"
 /** Pushes from the CRM shown while the app is open. */
 export const CRM_CHANNEL_ID = "crm"
 
+/**
+ * The Android look of every notification the app shows: the white ZAN mark in the status bar
+ * (res/drawable/ic_notification.xml) on the brand navy. Without it Android draws the launcher icon as a white blob.
+ * Firebase shows its own pushes with the same two values, from AndroidManifest.xml and res/values/colors.xml.
+ */
+export const NOTIFICATION_APPEARANCE = { smallIcon: "ic_notification", color: "#183668" } as const
+
 let created: Promise<void> | null = null
 
 /**

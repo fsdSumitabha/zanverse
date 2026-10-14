@@ -1,0 +1,4 @@
+<resources>
+    <!-- Dark mode: neutral-950, the colour behind SplashView. -->
+    <color name="splash_background">#0A0A0A</color>
+</resources>

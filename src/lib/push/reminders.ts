@@ -11,7 +11,7 @@ import { REGIONS, parseRegionCode } from "@/lib/region"
 import { getRemindersEnabled } from "@/store/mmkv"
 import type { LeadSourceRow } from "@/types/leadSource"
 
-import { CALLBACK_CHANNEL_ID, ensureChannels } from "./channels"
+import { CALLBACK_CHANNEL_ID, NOTIFICATION_APPEARANCE, ensureChannels } from "./channels"
 import { ensureNotificationPermission } from "./permission"
 
 const ID_PREFIX = "callback-"
@@ -53,7 +53,7 @@ async function createReminder(row: ReminderRow, at: number): Promise<void> {
             title: `Call back ${row.name}`,
             body: `${formatPhoneForDisplay(row.phone, phoneCountry)} · ${row.lastNote || "no notes yet"}`,
             data: { url: `${DETAIL_PATH}${row._id}`, local: "1" },
-            android: { channelId: CALLBACK_CHANNEL_ID, pressAction: { id: "default" } },
+            android: { channelId: CALLBACK_CHANNEL_ID, ...NOTIFICATION_APPEARANCE, pressAction: { id: "default" } },
         },
         trigger,
     )

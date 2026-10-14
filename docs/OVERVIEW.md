@@ -79,6 +79,8 @@ D:\zanverse\
 ├── CLAUDE.md                  project instructions (loads this file and the style guide)
 ├── prompts/                   one file per session — paste them in order
 ├── docs/                      this file + the reference docs in §7
+├── logo/                      the ZAN mark as vectors, every app icon (Android, iOS, Play, Windows, web) and the
+│                              generator that writes them — see logo/README.md; regenerate, never hand-edit
 └── src/
     ├── api/                   client.ts (send, sendRaw, ApiError, 401 handling), endpoints.ts, navigationRef.ts
     ├── constants/             COPIED VERBATIM from the web's src/constants (18 files)

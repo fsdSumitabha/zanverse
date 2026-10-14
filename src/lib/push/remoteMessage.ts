@@ -1,7 +1,7 @@
 import notifee from "@notifee/react-native"
 import type { RemoteMessage } from "@react-native-firebase/messaging"
 
-import { CRM_CHANNEL_ID, ensureChannels } from "./channels"
+import { CRM_CHANNEL_ID, NOTIFICATION_APPEARANCE, ensureChannels } from "./channels"
 
 const FALLBACK_TITLE = "ZAN Services"
 
@@ -19,6 +19,6 @@ export async function displayRemoteMessage(message: RemoteMessage): Promise<void
         title: readText(message.notification?.title) ?? readText(message.data?.title) ?? FALLBACK_TITLE,
         body: readText(message.notification?.body) ?? readText(message.data?.body),
         data: message.data,
-        android: { channelId: CRM_CHANNEL_ID, pressAction: { id: "default" } },
+        android: { channelId: CRM_CHANNEL_ID, ...NOTIFICATION_APPEARANCE, pressAction: { id: "default" } },
     })
 }

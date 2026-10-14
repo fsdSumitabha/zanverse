@@ -103,7 +103,9 @@ export default function Sheet({ visible, onClose, accessibilityLabel, snapPoints
             backdropComponent={renderBackdrop}
             keyboardBehavior="interactive"
             keyboardBlurBehavior="restore"
-            android_keyboardInputMode="adjustResize"
+            // Edge-to-edge is on, so Android does not shrink the window for the keyboard. "adjustPan" makes the
+            // sheet lift itself above the keyboard; "adjustResize" made it wait for a resize that never comes.
+            android_keyboardInputMode="adjustPan"
             backgroundStyle={backgroundStyle}
             handleIndicatorStyle={handleIndicatorStyle}
         >

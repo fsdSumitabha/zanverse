@@ -48,7 +48,12 @@ describe("scheduleCallbackReminder", () => {
             title: "Call back Priya Sharma",
             body: "+91 98765 43210 · Asked for the owner",
             data: { url: "/admin/operations/lead-sources/64b7f0c2a1b2c3d4e5f60001", local: "1" },
-            android: { channelId: "callbacks", pressAction: { id: "default" } },
+            android: {
+                channelId: "callbacks",
+                smallIcon: "ic_notification",
+                color: "#183668",
+                pressAction: { id: "default" },
+            },
         })
         expect(entry?.trigger).toEqual({
             type: 0,
