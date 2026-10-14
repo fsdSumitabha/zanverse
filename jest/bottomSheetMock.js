@@ -2,6 +2,10 @@
 // renderer does not run. This keeps the parts the app relies on: a modal renders its content only between present()
 // and dismiss(), every dismissal calls onDismiss, a plain sheet's close() calls onClose, and the backdrop closes the
 // sheet it belongs to. Scrollables and the text input become their React Native counterparts.
+//
+// It also keeps a trap of the real modal (5.2.14): dismiss() on a modal that is not presented marks it "dismissing",
+// and the next present() then draws nothing. A second dismiss() clears the mark. On a phone this made every sheet
+// ignore its first tap, while this stand-in still opened it.
 
 const React = require("react")
 const RN = require("react-native")
@@ -22,24 +26,37 @@ function BottomSheetModalProvider({ children }) {
 const BottomSheetModal = React.forwardRef(function BottomSheetModal(props, ref) {
     const [isPresented, setIsPresented] = React.useState(false)
     const isPresentedRef = React.useRef(false)
+    const isDismissingRef = React.useRef(false)
     const onDismissRef = React.useRef(props.onDismiss)
     onDismissRef.current = props.onDismiss
 
-    const dismiss = React.useCallback(() => {
+    // The backdrop or a drag: a presented sheet closes itself and is ready to present again.
+    const close = React.useCallback(() => {
         if (!isPresentedRef.current) return
         isPresentedRef.current = false
         setIsPresented(false)
         onDismissRef.current?.()
     }, [])
 
+    const dismiss = React.useCallback(() => {
+        if (isPresentedRef.current) {
+            close()
+            return
+        }
+        // Not presented: the first call sets the mark, the next clears it and reports the dismissal.
+        isDismissingRef.current = !isDismissingRef.current
+        if (!isDismissingRef.current) onDismissRef.current?.()
+    }, [close])
+
     React.useImperativeHandle(ref, () => ({
         present() {
+            if (isDismissingRef.current) return
             isPresentedRef.current = true
             setIsPresented(true)
         },
         dismiss,
-        close: dismiss,
-        forceClose: dismiss,
+        close,
+        forceClose: close,
         expand() {},
         collapse() {},
         snapToIndex() {},
@@ -49,7 +66,7 @@ const BottomSheetModal = React.forwardRef(function BottomSheetModal(props, ref) 
     if (!isPresented) return null
     return React.createElement(
         CloseContext.Provider,
-        { value: dismiss },
+        { value: close },
         renderBackdrop(props.backdropComponent),
         props.children,
     )

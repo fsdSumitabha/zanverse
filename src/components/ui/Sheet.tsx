@@ -49,6 +49,8 @@ function renderBackdrop(props: BottomSheetBackdropProps) {
 export default function Sheet({ visible, onClose, accessibilityLabel, snapPoints, children }: Props) {
     const ref = useRef<BottomSheetModal>(null)
     const isVisibleRef = useRef(visible)
+    // True from present() until the library reports the sheet dismissed.
+    const isPresentedRef = useRef(false)
     const onCloseRef = useRef(onClose)
     onCloseRef.current = onClose
     const insets = useSafeAreaInsets()
@@ -58,8 +60,16 @@ export default function Sheet({ visible, onClose, accessibilityLabel, snapPoints
 
     useEffect(() => {
         isVisibleRef.current = visible
-        if (visible) ref.current?.present()
-        else ref.current?.dismiss()
+        if (visible) {
+            isPresentedRef.current = true
+            ref.current?.present()
+            return
+        }
+        // dismiss() on a sheet that is not presented, such as on mount or after a drag closed it, leaves the library
+        // "dismissing", and it then draws nothing on the next present(). So only a presented sheet is dismissed.
+        if (!isPresentedRef.current) return
+        isPresentedRef.current = false
+        ref.current?.dismiss()
     }, [visible])
 
     // The newest listener is asked first, so back closes the top sheet before it reaches the navigator.
@@ -74,6 +84,7 @@ export default function Sheet({ visible, onClose, accessibilityLabel, snapPoints
 
     // A drag or a backdrop tap dismissed the sheet while its owner still has it open: report the close.
     const handleDismiss = useCallback(() => {
+        isPresentedRef.current = false
         if (isVisibleRef.current) onCloseRef.current()
     }, [])
 

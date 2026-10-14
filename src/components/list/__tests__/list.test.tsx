@@ -161,6 +161,27 @@ describe("ListScreen", () => {
 
         expect(renderer.root.findByProps({ accessibilityLabel: "Filters, 2 on" })).toBeTruthy()
     })
+
+    it("opens the filters on the first press, and again after a backdrop tap closed them", async () => {
+        const renderer = await renderList(makeQuery({ items: ROWS, total: 2 }))
+        const filterButton = renderer.root.find(
+            (node) => node.props.accessibilityLabel === "Filters" && typeof node.props.onPress === "function",
+        )
+        const isOpen = () => getTexts(renderer).includes("All statuses")
+
+        await ReactTestRenderer.act(async () => filterButton.props.onPress())
+        expect(isOpen()).toBe(true)
+
+        const backdrop = renderer.root.find(
+            (node) => node.props.accessibilityLabel === "Close" && typeof node.props.onPress === "function",
+        )
+        await ReactTestRenderer.act(async () => backdrop.props.onPress())
+        expect(isOpen()).toBe(false)
+
+        // On a phone this press did nothing: the closed sheet had been told to dismiss, so the library skipped it.
+        await ReactTestRenderer.act(async () => filterButton.props.onPress())
+        expect(isOpen()).toBe(true)
+    })
 })
 
 describe("ListFilters", () => {
