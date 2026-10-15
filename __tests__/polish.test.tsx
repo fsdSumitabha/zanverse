@@ -13,11 +13,13 @@ import type { LeadSourceRow } from "@/types/leadSource"
 
 import {
     findPressable,
-    findPressableByText,
     flush,
     getCalls,
     getTexts,
     installFetchMock,
+    openFromProfileSheet,
+    openLeadSources,
+    openProfileSheet,
     press,
     renderApp,
     respond,
@@ -164,7 +166,7 @@ describe("the saved Today page", () => {
         const list = holdReply()
         const renderer = await start(AGENT, [{ path: LIST_PATH, reply: () => list.promise }])
 
-        await press(findPressableByText(renderer, "Calls"))
+        await openLeadSources(renderer)
         expect(getTexts(renderer)).toContain("Source a")
         expect(getListCalls()).toHaveLength(1)
 
@@ -183,7 +185,7 @@ describe("the saved Today page", () => {
         writeLeadSourcesToday(makePage([makeRow("a")]), TODAY)
         const renderer = await start(AGENT, [{ path: LIST_PATH, reply: failNetwork }])
 
-        await press(findPressableByText(renderer, "Calls"))
+        await openLeadSources(renderer)
         const texts = getTexts(renderer)
         expect(texts).toEqual(expect.arrayContaining(["Source a", "Showing saved data — you're offline"]))
         await unmountApp(renderer)
@@ -198,7 +200,7 @@ describe("the saved Today page", () => {
             },
         ])
 
-        await press(findPressableByText(renderer, "Calls"))
+        await openLeadSources(renderer)
         expect(getTexts(renderer)).toEqual(expect.arrayContaining(["You're offline", "Connect to load this screen."]))
         isDown = false
         await press(findRetry(renderer.root.findByType(LeadSourcesScreen)))
@@ -224,8 +226,7 @@ describe("offline", () => {
             },
         ])
         await setNetwork(false)
-        await press(findPressableByText(renderer, "More"))
-        await press(findPressable(renderer, "Activity Logs"))
+        await openFromProfileSheet(renderer, "Activity Logs")
         expect(getTexts(renderer)).toEqual(expect.arrayContaining(["You're offline", "You are offline"]))
 
         await setNetwork(true)
@@ -239,7 +240,7 @@ describe("offline", () => {
         const renderer = await start(AGENT, [
             { path: LIST_PATH, reply: () => respond(200, { success: true, ...makePage([makeRow("a")]) }) },
         ])
-        await press(findPressableByText(renderer, "Calls"))
+        await openLeadSources(renderer)
         await setNetwork(false)
 
         expect(renderer.root.findAllByType(LeadSourcesScreen)).toHaveLength(1)
@@ -292,8 +293,8 @@ describe("logout", () => {
         ])
         expect(readCachedMe()).not.toBeNull()
 
-        await press(findPressableByText(renderer, "More"))
-        await press(findPressable(renderer, "Logout"))
+        await openProfileSheet(renderer)
+        await press(findPressable(renderer, "Log Out"))
         expect(readCachedMe()).toBeNull()
         expect(readLeadSourcesToday(TODAY)).toBeNull()
         expect(getActiveRegion()).toBeNull()

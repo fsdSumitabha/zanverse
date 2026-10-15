@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 
 import { renderScreenLayout } from "@/navigation/ScreenLayout"
 import { getStackScreenOptions } from "@/navigation/stackOptions"
+import { renderPageScreens } from "@/navigation/stacks/pageScreens"
 import type { ProjectsStackParamList } from "@/navigation/types"
 import ProjectDetailScreen from "@/screens/projects/ProjectDetailScreen"
 import ProjectEditScreen from "@/screens/projects/ProjectEditScreen"
@@ -16,6 +17,7 @@ export default function ProjectsStack() {
             <Stack.Screen name="ProjectsList" component={ProjectsListScreen} />
             <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
             <Stack.Screen name="ProjectEdit" component={ProjectEditScreen} />
+            {renderPageScreens(Stack)}
         </Stack.Navigator>
     )
 }

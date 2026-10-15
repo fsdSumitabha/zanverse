@@ -1,10 +1,10 @@
 import { Text, TextInput } from "react-native"
 import ReactTestRenderer from "react-test-renderer"
 
-import { navigationRef } from "@/api/navigationRef"
 import DateField from "@/components/list/DateField"
 import { INTERACTION_TYPE_META } from "@/constants/interactionTypes"
 import { LEAD_STATUS_META } from "@/constants/leadStatus"
+import { openPage } from "@/navigation/openPage"
 import ActivityLogsScreen from "@/screens/activityLogs/ActivityLogsScreen"
 import ProfileScreen from "@/screens/profile/ProfileScreen"
 import { clearToken, saveToken } from "@/store/keychain"
@@ -17,6 +17,7 @@ import {
     getCalls,
     getTexts,
     installFetchMock,
+    openFromProfileSheet,
     press,
     renderApp,
     respond,
@@ -130,8 +131,7 @@ async function openLogs(user: object = ADMIN, extra: FetchRoute[] = []) {
     await saveToken("jwt-1")
     routeFetch(fetchMock, routes(user, extra))
     const renderer = await renderApp()
-    await press(findPressableByText(renderer, "More"))
-    await press(findPressable(renderer, "Activity Logs"))
+    await openFromProfileSheet(renderer, "Activity Logs")
     return renderer
 }
 
@@ -139,7 +139,7 @@ function getLogCalls(): string[] {
     return getCalls(fetchMock).filter((call) => call.startsWith(`GET ${ACTIVITY}?`))
 }
 
-// The Dashboard tab's feed is mounted too, so the list is looked for inside the screen.
+// The Leads list under the page is mounted too, so the list is looked for inside the screen.
 function getLogList(renderer: ReactTestRenderer.ReactTestRenderer) {
     return renderer.root
         .findByType(ActivityLogsScreen)
@@ -252,7 +252,8 @@ describe("activity logs", () => {
     it("filters by Lead (code 0), an inclusive To date and a user, each from page 1", async () => {
         const renderer = await openLogs()
 
-        await press(findPressable(renderer, "Filters"))
+        // The page sits over the Leads list, which has a Filters button of its own.
+        await press(findPressable({ root: renderer.root.findByType(ActivityLogsScreen) }, "Filters"))
         await press(findLastPressableByText(renderer, "Lead"))
         expect(getLogCalls().at(-1)).toBe(`GET ${ACTIVITY}?page=1&limit=15&entityType=0`)
 
@@ -281,12 +282,12 @@ describe("activity logs", () => {
     })
 
     it("shows a role-60 account the Restricted area card, whose button opens the profile", async () => {
-        // Role 60 has no Activity Logs row in More, as on the web's menu; a deep link still lands on the screen.
+        // Role 60 has no Activity Logs row in the profile sheet, as on the web's menu; a deep link still lands on it.
         await saveToken("jwt-1")
         routeFetch(fetchMock, routes(AGENT, []))
         const renderer = await renderApp()
         await ReactTestRenderer.act(async () => {
-            navigationRef.navigate("App", { screen: "MoreTab", params: { screen: "ActivityLogs", initial: false } })
+            openPage("ActivityLogs")
         })
         await flush()
         expect(getTexts(renderer)).toEqual(expect.arrayContaining(["Restricted area"]))

@@ -164,7 +164,6 @@ export default function ClientDetailScreen() {
                 <Fab
                     accessibilityLabel="Create New Project"
                     onPress={() => navigation.navigate("ProjectCreate", { clientId: id })}
-                    isAboveTabBar
                 />
             )}
         </View>

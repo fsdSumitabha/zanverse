@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 
 import { renderScreenLayout } from "@/navigation/ScreenLayout"
 import { getStackScreenOptions } from "@/navigation/stackOptions"
+import { renderPageScreens } from "@/navigation/stacks/pageScreens"
 import type { UsersStackParamList } from "@/navigation/types"
 import UserCreateScreen from "@/screens/users/UserCreateScreen"
 import UserEditScreen from "@/screens/users/UserEditScreen"
@@ -16,6 +17,7 @@ export default function UsersStack() {
             <Stack.Screen name="UsersList" component={UsersListScreen} />
             <Stack.Screen name="UserCreate" component={UserCreateScreen} />
             <Stack.Screen name="UserEdit" component={UserEditScreen} />
+            {renderPageScreens(Stack)}
         </Stack.Navigator>
     )
 }

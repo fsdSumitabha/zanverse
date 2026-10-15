@@ -5,6 +5,7 @@ import ReactTestRenderer from "react-test-renderer"
 import { navigationRef } from "@/api/navigationRef"
 import Fab from "@/components/ui/Fab"
 import { notify } from "@/lib/notify"
+import UsersListScreen from "@/screens/users/UsersListScreen"
 import { clearToken, saveToken } from "@/store/keychain"
 import { saveActiveRegion } from "@/store/mmkv"
 
@@ -16,6 +17,7 @@ import {
     getTexts,
     installFetchMock,
     installRecordingFormData,
+    openFromProfileSheet,
     press,
     renderApp,
     respond,
@@ -85,7 +87,7 @@ async function openUsers(user: object = ADMIN, extra: FetchRoute[] = []) {
     await saveToken("jwt-1")
     routeFetch(fetchMock, routes(user, extra))
     const renderer = await renderApp()
-    await press(findPressableByText(renderer, "Users"))
+    await openFromProfileSheet(renderer, "Users & Staff Directory")
     return renderer
 }
 
@@ -143,8 +145,9 @@ describe("users list", () => {
         ]
         expect(expected.filter((text) => !texts.includes(text))).toEqual([])
         expect(findPressable(renderer, "Edit Meera Shah")).toBeTruthy()
-        // The header button's text is in `expected`; the floating button sits over the list.
-        expect(renderer.root.findAllByType(Fab)).toHaveLength(1)
+        // The header button's text is in `expected`; the floating button sits over the list. The Leads list under the
+        // profile sheet's tab has a Fab of its own, so only the Users list is counted.
+        expect(renderer.root.findByType(UsersListScreen).findAllByType(Fab)).toHaveLength(1)
         await unmountApp(renderer)
     })
 

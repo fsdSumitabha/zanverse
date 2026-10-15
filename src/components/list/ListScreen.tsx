@@ -3,6 +3,7 @@ import { useState, type ComponentType, type ReactElement, type ReactNode } from 
 import { FlatList, Pressable, RefreshControl, Text, View, useColorScheme } from "react-native"
 
 import { AccessDenied, EmptyState, OfflineNotice, SkeletonList } from "@/components/ui"
+import { useBottomClearance } from "@/hooks/useBottomClearance"
 import type { ListQueryResult } from "@/hooks/useListQuery"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { BRAND_COLOR, PALETTE } from "@/theme"
@@ -29,7 +30,7 @@ interface Props<T extends { _id: string }> {
     headerRight?: ReactNode
     /** Under the search row, such as a create button. */
     headerExtra?: ReactNode
-    /** Extra space under the last row, such as for a floating button. */
+    /** Extra space under the last row, such as for a floating button. The floating tab bar is cleared already. */
     bottomInset?: number
 }
 
@@ -65,6 +66,7 @@ export default function ListScreen<T extends { _id: string }>({
     bottomInset = 0,
 }: Props<T>) {
     const [isFilterOpen, setIsFilterOpen] = useState(false)
+    const bottomClearance = useBottomClearance()
     const isDarkMode = useColorScheme() === "dark"
     const filters: ListFilterValues = { status: query.query.status, from: query.query.from, to: query.query.to }
     const activeFilterCount = getActiveFilterCount(filters)
@@ -143,7 +145,11 @@ export default function ListScreen<T extends { _id: string }>({
                 ListHeaderComponent={header}
                 ListEmptyComponent={empty}
                 ListFooterComponent={
-                    query.loadingMore ? <SkeletonComponent /> : <View style={{ height: FOOTER_HEIGHT + bottomInset }} />
+                    query.loadingMore ? (
+                        <SkeletonComponent />
+                    ) : (
+                        <View style={{ height: FOOTER_HEIGHT + bottomInset + bottomClearance }} />
+                    )
                 }
                 // The gap spaces the rows, so no separator component is needed.
                 contentContainerClassName="gap-3 p-4"

@@ -1,6 +1,7 @@
 import { CalendarDays, ListChecks, Trash2, UserRoundPlus, X, type LucideIcon } from "lucide-react-native"
 import { Pressable, Text, View } from "react-native"
 
+import { useBottomClearance } from "@/hooks/useBottomClearance"
 import { enableIconClassNames } from "@/lib/iconClassName"
 
 export type BulkDialog = "status" | "assign" | "day" | "delete"
@@ -12,9 +13,8 @@ interface Props {
     onClear: () => void
 }
 
-// The bar's gap above the bottom of the screen. A tab screen already ends at the tab bar's top edge, and the tab
-// bar's height already includes the gesture-bar inset (session 1 finding), so no inset is added here.
-const BAR_STYLE = { bottom: 16 }
+// The bar's gap above whatever covers the bottom of the screen: the floating tab bar or the gesture bar.
+const BAR_GAP = 16
 // The web's shadow-2xl, as Android elevation.
 const BAR_SHADOW = { elevation: 12 }
 const ICON_SIZE = 18
@@ -47,15 +47,21 @@ function BarButton({
 }
 
 /**
- * Actions for the selected rows, floating above the tab bar while at least one row is selected. Everyone can set a
- * status on several rows; assigning, moving to a day and deleting are for managers. Ported from the web's BulkBar.tsx.
+ * Actions for the selected rows, floating above the tab bar or the gesture bar while at least one row is selected.
+ * Everyone can set a status on several rows; assigning, moving to a day and deleting are for managers. Ported from the
+ * web's BulkBar.tsx.
  * As on the web at phone width, the buttons show icons only; each carries its label for screen readers.
  */
 export default function BulkBar({ count, isManager, onOpen, onClear }: Props) {
+    const bottomClearance = useBottomClearance()
     if (count === 0) return null
 
     return (
-        <View pointerEvents="box-none" className="absolute inset-x-0 items-center px-3" style={BAR_STYLE}>
+        <View
+            pointerEvents="box-none"
+            className="absolute inset-x-0 items-center px-3"
+            style={{ bottom: bottomClearance + BAR_GAP }}
+        >
             <View
                 accessibilityRole="toolbar"
                 accessibilityLabel="Actions for the selected lead sources"

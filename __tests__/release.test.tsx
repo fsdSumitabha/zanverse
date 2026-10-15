@@ -8,9 +8,9 @@ import { clearAll, saveActiveRegion } from "@/store/mmkv"
 
 import {
     findPressable,
-    findPressableByText,
     flush,
     installFetchMock,
+    openLeadSources,
     press,
     renderApp,
     respond,
@@ -106,7 +106,7 @@ describe("release build", () => {
             { path: `${UPLOADS}/up1`, reply: () => respond(200, { success: true, data: REPORT }) },
         ])
         const renderer = await renderApp()
-        await press(findPressableByText(renderer, "Calls"))
+        await openLeadSources(renderer)
         expect(
             ["leadSourceRow", "statusMenuTrigger", "uploadSheetButton"].filter((id) => !hasTestId(renderer, id)),
         ).toEqual([])

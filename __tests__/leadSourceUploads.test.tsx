@@ -17,6 +17,7 @@ import {
     getCalls,
     getTexts,
     installFetchMock,
+    openLeadSources,
     press,
     renderApp,
     respond,
@@ -126,7 +127,7 @@ async function openCalls(user: object = ADMIN, extra: FetchRoute[] = []) {
     await saveToken("jwt-1")
     routeFetch(fetchMock, routes(user, extra))
     const renderer = await renderApp()
-    await press(findPressableByText(renderer, "Calls"))
+    await openLeadSources(renderer)
     return renderer
 }
 

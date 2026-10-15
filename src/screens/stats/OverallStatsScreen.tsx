@@ -136,7 +136,7 @@ export default function OverallStatsScreen() {
                     byStatus={data.meetings.byStatus}
                     meta={STATS_PALETTE.MEETING_STATUS_META}
                     variant="pie"
-                    onPressTitle={() => openTabScreen("MoreTab", "Meetings", undefined, role)}
+                    onPressTitle={() => openTabScreen("MeetingsTab", "Meetings", undefined, role)}
                 />
                 <BudgetCard projects={data.projects} />
                 <RoleCountsCard users={data.users} />

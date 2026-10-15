@@ -2,6 +2,9 @@ import { LEAD_SOURCE_ACCESS_ROLES, LEAD_SOURCE_MANAGE_ROLES } from "@/constants/
 
 import type { AppScreenName } from "./types"
 
+/** Who may open the staff list: the proxy's `/users` entry. The Users tab and the profile sheet's row use it too. */
+export const USERS_LIST_ROLES: readonly number[] = [10, 45, 20, 69]
+
 /**
  * Which roles may open a screen. Ported from `routePermissions` in the web's src/proxy.ts, which redirects on
  * navigation. A phone has no proxy, so the stacks check this before rendering a screen. The API stays the real gate:
@@ -10,7 +13,7 @@ import type { AppScreenName } from "./types"
  * A screen absent from this map is open to any signed-in role, as on the web.
  */
 export const SCREEN_ROLES: Partial<Record<AppScreenName, readonly number[]>> = {
-    UsersList: [10, 45, 20, 69],
+    UsersList: USERS_LIST_ROLES,
     UserCreate: [10, 20, 69],
     UserEdit: [10, 20],
     LeadCreate: [10, 15, 45, 50, 60, 69, 70],

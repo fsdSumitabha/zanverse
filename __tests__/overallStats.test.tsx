@@ -16,6 +16,7 @@ import {
     flush,
     getCalls,
     installFetchMock,
+    openFromProfileSheet,
     press,
     renderApp,
     respond,
@@ -100,8 +101,7 @@ async function openStats(extra: FetchRoute[] = []) {
     await saveToken("jwt-1")
     routeFetch(fetchMock, routes(extra))
     const renderer = await renderApp()
-    await press(findPressableByText(renderer, "More"))
-    await press(findPressable(renderer, "Overall Stats"))
+    await openFromProfileSheet(renderer, "Overall Stats")
     return renderer
 }
 
@@ -141,7 +141,7 @@ beforeEach(async () => {
 })
 
 describe("overall stats", () => {
-    it("opens from More for a non-admin, with the title, the stamp and the four KPIs", async () => {
+    it("opens from the profile sheet for a non-admin, with the title, the stamp and the four KPIs", async () => {
         const renderer = await openStats()
         const texts = textsIn(getScreen(renderer))
 
@@ -315,7 +315,8 @@ describe("overall stats", () => {
             expect.arrayContaining(["Could not load the overview", "Failed to compute stats"]),
         )
         isDown = false
-        await press(findPressableByText(renderer, "Try again"))
+        // The page sits over the Leads list, which has a Try again of its own.
+        await press(findPressableByText({ root: getScreen(renderer) }, "Try again"))
         expect(textsIn(getScreen(renderer))).toContain("3 of 20 leads")
         await unmountApp(renderer)
     })

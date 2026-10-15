@@ -13,6 +13,9 @@ export interface MockResponse {
 
 export type FetchMock = jest.Mock<Promise<MockResponse>, [string, RequestInit]>
 
+/** The whole app, or one part of it such as `{ root: renderer.root.findByType(SomeScreen) }`, for the finders below. */
+export type Searchable = Pick<ReactTestRenderer.ReactTestRenderer, "root">
+
 /** A fetch Response with only what client.ts reads. */
 export function respond(status: number, body: unknown): MockResponse {
     return { status, ok: status >= 200 && status < 300, json: () => Promise.resolve(body) }
@@ -26,7 +29,7 @@ export function installFetchMock(): FetchMock {
 }
 
 /** Every string rendered inside a Text. */
-export function getTexts(renderer: ReactTestRenderer.ReactTestRenderer): string[] {
+export function getTexts(renderer: Searchable): string[] {
     return renderer.root.findAllByType(Text).map((node) => {
         const children = node.props.children
         return Array.isArray(children) ? children.join("") : String(children)
@@ -59,7 +62,7 @@ export async function unmountApp(renderer: ReactTestRenderer.ReactTestRenderer):
 }
 
 /** The nearest pressable whose accessibility label matches. */
-export function findPressable(renderer: ReactTestRenderer.ReactTestRenderer, label: string | RegExp) {
+export function findPressable(renderer: Searchable, label: string | RegExp) {
     return renderer.root.find(
         (node) =>
             typeof node.props.onPress === "function" &&
@@ -71,7 +74,7 @@ export function findPressable(renderer: ReactTestRenderer.ReactTestRenderer, lab
 }
 
 /** The nearest pressable that holds a Text with exactly this string. A title with the same text is skipped. */
-export function findPressableByText(renderer: ReactTestRenderer.ReactTestRenderer, text: string) {
+export function findPressableByText(renderer: Searchable, text: string) {
     for (const textNode of renderer.root.findAllByType(Text)) {
         if (textNode.props.children !== text) continue
         let node = textNode.parent
@@ -88,6 +91,42 @@ export async function press(node: ReactTestRenderer.ReactTestInstance): Promise<
         await Promise.resolve()
     })
     await flush()
+}
+
+/** The floating bar's items, by label, in order. */
+export function getBarLabels(renderer: ReactTestRenderer.ReactTestRenderer): string[] {
+    return renderer.root
+        .findAll((node) => node.props.accessibilityRole === "tab" && typeof node.props.onPress === "function")
+        .map((node) => node.props.accessibilityLabel as string)
+}
+
+/** Opens the profile sheet from a top bar's avatar. Every mounted screen's top bar has one, and each opens the same sheet. */
+export async function openProfileSheet(renderer: ReactTestRenderer.ReactTestRenderer): Promise<void> {
+    const [avatar] = renderer.root.findAll(
+        (node) => node.props.accessibilityLabel === "Profile menu" && typeof node.props.onPress === "function",
+    )
+    await press(avatar)
+}
+
+/** Opens a row of the profile sheet, such as "Dashboard" or "Lead Sources & Uploads". */
+export async function openFromProfileSheet(renderer: ReactTestRenderer.ReactTestRenderer, label: string) {
+    await openProfileSheet(renderer)
+    await press(findPressable(renderer, label))
+}
+
+/**
+ * Opens Lead Sources the way the role reaches it: the Calls item in the floating bar for a role whose bar has room for
+ * it (65, 69), the profile sheet's row for everyone else.
+ */
+export async function openLeadSources(renderer: ReactTestRenderer.ReactTestRenderer): Promise<void> {
+    const [barItem] = renderer.root.findAll(
+        (node) =>
+            node.props.accessibilityRole === "tab" &&
+            node.props.accessibilityLabel === "Calls" &&
+            typeof node.props.onPress === "function",
+    )
+    if (barItem) await press(barItem)
+    else await openFromProfileSheet(renderer, "Lead Sources & Uploads")
 }
 
 export interface FetchRoute {

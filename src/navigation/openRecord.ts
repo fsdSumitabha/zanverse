@@ -2,7 +2,7 @@ import { navigationRef } from "@/api/navigationRef"
 import { notify } from "@/lib/notify"
 
 import { getTargetNavigation, type LinkTarget } from "./linking"
-import { getNavItemsForRole } from "./navItems"
+import { canOpenTab } from "./navItems"
 
 const FORBIDDEN_MESSAGE = "You aren't authorized to perform this action."
 
@@ -11,8 +11,7 @@ const FORBIDDEN_MESSAGE = "You aren't authorized to perform this action."
  * A role without that tab gets the web's 403 line instead of a jump that does nothing.
  */
 export function openRecord(target: LinkTarget, role: number | null): void {
-    const hasTab = getNavItemsForRole(role).some((item) => item.tab === target.tab)
-    if (!hasTab) {
+    if (!canOpenTab(target.tab, role)) {
         notify.error(FORBIDDEN_MESSAGE)
         return
     }

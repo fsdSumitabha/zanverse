@@ -32,7 +32,7 @@ export default function WriteRegionField({ region }: Props) {
                 accessibilityLabel={
                     value
                         ? `Region: ${REGIONS[value].label}` +
-                          (pinned ? ". To save in another region, switch region in More." : "")
+                          (pinned ? ". To save in another region, switch region in the profile menu." : "")
                         : "Region"
                 }
                 className={FIXED_CLASSES}
@@ -43,7 +43,7 @@ export default function WriteRegionField({ region }: Props) {
             </View>
             {pinned && (
                 <Text className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                    To save in another region, switch region in More.
+                    To save in another region, switch region in the profile menu.
                 </Text>
             )}
         </Field>

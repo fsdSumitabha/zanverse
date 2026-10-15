@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 
 import { renderScreenLayout } from "@/navigation/ScreenLayout"
 import { getStackScreenOptions } from "@/navigation/stackOptions"
+import { renderPageScreens } from "@/navigation/stacks/pageScreens"
 import type { LeadsStackParamList } from "@/navigation/types"
 import LeadConvertScreen from "@/screens/leads/LeadConvertScreen"
 import LeadCreateScreen from "@/screens/leads/LeadCreateScreen"
@@ -20,6 +21,7 @@ export default function LeadsStack() {
             <Stack.Screen name="LeadCreate" component={LeadCreateScreen} />
             <Stack.Screen name="LeadEdit" component={LeadEditScreen} />
             <Stack.Screen name="LeadConvert" component={LeadConvertScreen} />
+            {renderPageScreens(Stack)}
         </Stack.Navigator>
     )
 }

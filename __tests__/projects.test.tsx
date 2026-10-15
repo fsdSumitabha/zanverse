@@ -1,6 +1,7 @@
 import { Alert } from "react-native"
 
 import { notify } from "@/lib/notify"
+import ProjectsListScreen from "@/screens/projects/ProjectsListScreen"
 import { clearToken, saveToken } from "@/store/keychain"
 import { saveActiveRegion } from "@/store/mmkv"
 
@@ -121,7 +122,8 @@ describe("projects list", () => {
     it("offers all eight statuses in the filter sheet and filters by In Progress from page 1", async () => {
         const renderer = await openProjects()
 
-        await press(findPressable(renderer, "Filters"))
+        // The Leads list the app opens on has a Filters button of its own.
+        await press(findPressable({ root: renderer.root.findByType(ProjectsListScreen) }, "Filters"))
         for (const label of [
             "Discussion",
             "Proposal Sent",

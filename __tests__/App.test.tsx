@@ -9,8 +9,11 @@ import {
     findPressable,
     findPressableByText,
     flush,
+    getBarLabels,
     getTexts,
     installFetchMock,
+    openFromProfileSheet,
+    openProfileSheet,
     press,
     renderApp,
     respond,
@@ -29,15 +32,11 @@ const ADMIN = {
     activeRegion: "ALL",
 }
 
-const TAB_LABELS = ["Dashboard", "Leads", "Calls", "Clients", "Projects", "Users", "More"]
-
 let fetchMock: FetchMock
 
-// The notification bell and the Dashboard tab fetch on their own, so calls are found by URL, not by position.
-const BACKGROUND_CALLS = [
-    /\/api\/notifications/,
-    /\/api\/admin\/operations(\/stats|\/meetings\?range=upcoming|\?page=)/,
-]
+// The notification bell and the Leads list the app opens on fetch on their own, so calls are found by URL, not by
+// position.
+const BACKGROUND_CALLS = [/\/api\/notifications/, /\/api\/admin\/operations\/leads\?page=/]
 
 function getForegroundCalls() {
     return fetchMock.mock.calls.filter(([url]) => !BACKGROUND_CALLS.some((pattern) => pattern.test(url)))
@@ -47,11 +46,6 @@ async function signInAs(user: object): Promise<ReactTestRenderer.ReactTestRender
     await saveToken("jwt-1")
     fetchMock.mockResolvedValueOnce(respond(200, { success: true, data: user }))
     return renderApp()
-}
-
-function getTabLabels(renderer: ReactTestRenderer.ReactTestRenderer): string[] {
-    const texts = getTexts(renderer)
-    return TAB_LABELS.filter((label) => texts.includes(label))
 }
 
 beforeEach(async () => {
@@ -77,7 +71,7 @@ describe("boot", () => {
         const renderer = await signInAs(ADMIN)
 
         expect(fetchMock.mock.calls[0][0]).toBe(`${API_BASE_URL}/api/auth/me`)
-        expect(getTexts(renderer)).toContain("Dashboard")
+        expect(getBarLabels(renderer)).toEqual(["Leads", "Clients", "Projects", "Meetings"])
         expect(getActiveRegion()).toBe("ALL")
         await unmountApp(renderer)
     })
@@ -95,39 +89,57 @@ describe("boot", () => {
 })
 
 describe("tabs by role", () => {
-    it("shows an Admin all six tabs plus More", async () => {
+    it("shows an Admin the four main tabs in the floating bar, and opens on Leads", async () => {
         const renderer = await signInAs(ADMIN)
 
-        expect(getTabLabels(renderer)).toEqual(TAB_LABELS)
+        expect(getBarLabels(renderer)).toEqual(["Leads", "Clients", "Projects", "Meetings"])
+        expect(renderer.root.findByProps({ accessibilityRole: "header" }).props.children).toBe("Leads")
         await unmountApp(renderer)
     })
 
-    it("shows a US Sales Agent (65) Dashboard, Leads, Calls and More only", async () => {
+    it("gives a US Sales Agent (65) Calls in the slots Clients and Projects leave free", async () => {
         const renderer = await signInAs({ ...ADMIN, role: 65, regions: ["US"], activeRegion: "US" })
 
-        expect(getTabLabels(renderer)).toEqual(["Dashboard", "Leads", "Calls", "More"])
+        expect(getBarLabels(renderer)).toEqual(["Leads", "Calls", "Meetings"])
         await unmountApp(renderer)
     })
 })
 
-describe("More", () => {
+describe("profile sheet", () => {
     it("shows Activity Logs to an Admin and hides it from a Digital Marketer (50)", async () => {
         const admin = await signInAs(ADMIN)
-        await press(findPressableByText(admin, "More"))
+        await openProfileSheet(admin)
+        expect(getTexts(admin)).toEqual(
+            expect.arrayContaining(["Asha Rao", "Admin", "Users & Staff Directory", "Lead Sources & Uploads"]),
+        )
         expect(getTexts(admin)).toContain("Activity Logs")
-        expect(getTexts(admin)).toContain("Asha Rao")
         await unmountApp(admin)
 
         const marketer = await signInAs({ ...ADMIN, role: 50, regions: ["IN"], activeRegion: "IN" })
-        await press(findPressableByText(marketer, "More"))
-        expect(getTexts(marketer)).toContain("Meetings")
+        await openProfileSheet(marketer)
+        expect(getTexts(marketer)).toEqual(expect.arrayContaining(["Dashboard", "App Settings", "Log Out"]))
         expect(getTexts(marketer)).not.toContain("Activity Logs")
+        expect(getTexts(marketer)).not.toContain("Users & Staff Directory")
         await unmountApp(marketer)
+    })
+
+    it("opens a page over the tab, hides the bar, and Back brings both back", async () => {
+        const renderer = await signInAs(ADMIN)
+        const getBarPointerEvents = () =>
+            renderer.root.findByProps({ accessibilityRole: "tablist" }).parent?.props.pointerEvents
+
+        expect(getBarPointerEvents()).toBe("box-none")
+        await openFromProfileSheet(renderer, "Dashboard")
+        expect(getBarPointerEvents()).toBe("none")
+
+        await press(findPressable(renderer, "Navigate up"))
+        expect(getBarPointerEvents()).toBe("box-none")
+        await unmountApp(renderer)
     })
 
     it("switches region: posts it, trusts data.active, and the next request carries it", async () => {
         const renderer = await signInAs(ADMIN)
-        await press(findPressableByText(renderer, "More"))
+        await openProfileSheet(renderer)
 
         // 1. Open the switcher and pick the United States. The server answers with what it allowed.
         await press(findPressable(renderer, /^Showing every region you cover: IN, US/))
@@ -141,11 +153,13 @@ describe("More", () => {
         expect(getActiveRegion()).toBe("US")
 
         // 2. The tabs remounted, back on the same tab, and the pill shows the server's answer.
+        await openProfileSheet(renderer)
         expect(findPressable(renderer, "Working in United States. Press to change.")).toBeTruthy()
 
         // 3. The next request carries the new region.
+        await press(findPressable(renderer, "App Settings"))
         fetchMock.mockResolvedValueOnce(respond(200, { success: true, data: [] }))
-        await press(findPressableByText(renderer, "Send a test request"))
+        await press(findPressable(renderer, "Send a test request"))
         const lastCall = getForegroundCalls().at(-1)
         expect((lastCall?.[1].headers as Record<string, string>)["X-Active-Region"]).toBe("US")
         await unmountApp(renderer)
@@ -153,7 +167,7 @@ describe("More", () => {
 
     it("shows a one-region account a plain badge with nothing to press", async () => {
         const renderer = await signInAs({ ...ADMIN, role: 60, regions: ["IN"], activeRegion: "IN" })
-        await press(findPressableByText(renderer, "More"))
+        await openProfileSheet(renderer)
 
         const badge = renderer.root.findByProps({ accessibilityLabel: "Working in India" })
         expect(badge.props.onPress).toBeUndefined()
@@ -162,10 +176,10 @@ describe("More", () => {
 
     it("logs out: tells the server, clears the session and opens Login at once", async () => {
         const renderer = await signInAs(ADMIN)
-        await press(findPressableByText(renderer, "More"))
+        await openProfileSheet(renderer)
 
         fetchMock.mockResolvedValueOnce(respond(200, { success: true, message: "Logged out successfully" }))
-        await press(findPressable(renderer, "Logout"))
+        await press(findPressable(renderer, "Log Out"))
 
         const calls = getForegroundCalls()
         expect(calls[1][0]).toBe(`${API_BASE_URL}/api/auth/logout`)

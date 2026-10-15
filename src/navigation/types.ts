@@ -5,12 +5,22 @@ export interface IdParams {
     id: string
 }
 
-export type DashboardStackParamList = {
+/**
+ * The pages every tab's stack can open over its first screen: the profile sheet's destinations and the top bar's
+ * search and bell. They open in the tab you are in, so Back returns to where you were.
+ */
+export type PageParamList = {
     Dashboard: undefined
     Search: undefined
+    OverallStats: undefined
+    ActivityLogs: undefined
+    Notifications: undefined
+    Profile: undefined
+    ProfileEdit: undefined
+    Settings: undefined
 }
 
-export type LeadsStackParamList = {
+export type LeadsStackParamList = PageParamList & {
     LeadsList: undefined
     LeadDetail: IdParams
     LeadCreate: undefined
@@ -18,7 +28,7 @@ export type LeadsStackParamList = {
     LeadConvert: IdParams
 }
 
-export type CallsStackParamList = {
+export type CallsStackParamList = PageParamList & {
     /** A report's "Open the N imported sources" opens the list on one upload, in the All tab. */
     LeadSources: { view?: "today" | "upcoming" | "unscheduled" | "closed" | "all"; upload?: string } | undefined
     LeadSourceDetail: { sourceId: string }
@@ -27,7 +37,7 @@ export type CallsStackParamList = {
     LeadSourceReport: { uploadId: string }
 }
 
-export type ClientsStackParamList = {
+export type ClientsStackParamList = PageParamList & {
     /** The dashboard's Active Clients tile opens the list on status 1. */
     ClientsList: { status?: string } | undefined
     ClientDetail: IdParams
@@ -38,38 +48,33 @@ export type ClientsStackParamList = {
     ProjectCreate: { clientId: string }
 }
 
-export type ProjectsStackParamList = {
+export type ProjectsStackParamList = PageParamList & {
     ProjectsList: undefined
     ProjectDetail: IdParams
     ProjectEdit: IdParams
 }
 
-export type UsersStackParamList = {
+export type MeetingsStackParamList = PageParamList & {
+    /** The dashboard's meetings card opens the list on the upcoming range. */
+    Meetings: { range?: string } | undefined
+}
+
+export type UsersStackParamList = PageParamList & {
     UsersList: undefined
     UserCreate: undefined
     UserEdit: IdParams
 }
 
-export type MoreStackParamList = {
-    More: undefined
-    /** The dashboard's meetings card opens the list on the upcoming range. */
-    Meetings: { range?: string } | undefined
-    OverallStats: undefined
-    ActivityLogs: undefined
-    Notifications: undefined
-    Profile: undefined
-    ProfileEdit: undefined
-}
-
 export type TabParamList = {
-    DashboardTab: NavigatorScreenParams<DashboardStackParamList>
     LeadsTab: NavigatorScreenParams<LeadsStackParamList>
-    CallsTab: NavigatorScreenParams<CallsStackParamList>
     ClientsTab: NavigatorScreenParams<ClientsStackParamList>
     ProjectsTab: NavigatorScreenParams<ProjectsStackParamList>
+    MeetingsTab: NavigatorScreenParams<MeetingsStackParamList>
+    CallsTab: NavigatorScreenParams<CallsStackParamList>
     UsersTab: NavigatorScreenParams<UsersStackParamList>
-    MoreTab: NavigatorScreenParams<MoreStackParamList>
 }
+
+export type TabName = keyof TabParamList
 
 /** A meeting attendee, as the picker returns it to the meeting form. */
 export interface AttendeeOption {
@@ -100,13 +105,12 @@ export type RootStackParamList = {
 
 /** Every screen inside a tab, by name. */
 export type AppScreenName =
-    | keyof DashboardStackParamList
     | keyof LeadsStackParamList
     | keyof CallsStackParamList
     | keyof ClientsStackParamList
     | keyof ProjectsStackParamList
+    | keyof MeetingsStackParamList
     | keyof UsersStackParamList
-    | keyof MoreStackParamList
 
 // Types `useNavigation()` and `navigationRef` without a generic, as React Navigation's docs recommend.
 declare global {

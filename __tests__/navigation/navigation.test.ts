@@ -1,9 +1,9 @@
 import { getStateFromPath } from "@react-navigation/native"
 
-import { getMoreItemsForRole } from "@/navigation/moreItems"
-import { getNavItemsForRole, NAV_ITEMS } from "@/navigation/navItems"
+import { getBarItemsForRole, getNavItemsForRole, NAV_ITEMS } from "@/navigation/navItems"
 import { canOpen } from "@/navigation/permissions"
 import { getTargetNavigation, linking, resolveNotificationPath } from "@/navigation/linking"
+import { getSheetSectionsForRole } from "@/navigation/sheetItems"
 
 const ID = "64b7f0c2a1b2c3d4e5f60718"
 
@@ -11,36 +11,86 @@ function getTabNames(role: number): string[] {
     return getNavItemsForRole(role).map((item) => item.name)
 }
 
+function getBarNames(role: number | null): string[] {
+    return getBarItemsForRole(role).map((item) => item.name)
+}
+
 describe("navItems", () => {
-    it("keeps the web's order and labels", () => {
+    it("lists every tab, the four bar tabs first", () => {
         expect(NAV_ITEMS.map((item) => item.name)).toEqual([
-            "Dashboard",
             "Leads",
-            "Calls",
             "Clients",
             "Projects",
+            "Meetings",
+            "Calls",
             "Users",
         ])
     })
 
-    it("filters by role exactly as MobileNav does", () => {
-        expect(getTabNames(10)).toEqual(["Dashboard", "Leads", "Calls", "Clients", "Projects", "Users"])
-        expect(getTabNames(65)).toEqual(["Dashboard", "Leads", "Calls"])
-        expect(getTabNames(69)).toEqual(["Dashboard", "Leads", "Calls", "Clients", "Users"])
-        expect(getTabNames(20)).toEqual(["Dashboard", "Leads", "Clients", "Projects", "Users"])
-        expect(getTabNames(80)).toEqual(["Dashboard", "Leads", "Clients", "Projects"])
+    it("gives a role only the tabs it may open", () => {
+        expect(getTabNames(10)).toEqual(["Leads", "Clients", "Projects", "Meetings", "Calls", "Users"])
+        expect(getTabNames(65)).toEqual(["Leads", "Meetings", "Calls"])
+        expect(getTabNames(69)).toEqual(["Leads", "Clients", "Meetings", "Calls", "Users"])
+        expect(getTabNames(20)).toEqual(["Leads", "Clients", "Projects", "Meetings", "Users"])
+        expect(getTabNames(80)).toEqual(["Leads", "Clients", "Projects", "Meetings"])
+        expect(getTabNames(90)).toEqual([])
         expect(getNavItemsForRole(null)).toEqual([])
+    })
+
+    it("opens Users to the proxy's /users roles, as the doc's table does", () => {
+        expect(getTabNames(45)).toContain("Users")
+        expect(getTabNames(15)).not.toContain("Users")
     })
 })
 
-describe("moreItems", () => {
-    it("shows Activity Logs to Admin and HR only", () => {
-        const names = (role: number) => getMoreItemsForRole(role).map((item) => item.name)
+describe("the floating bar", () => {
+    it("shows the four main tabs to a role that may open them", () => {
+        expect(getBarNames(10)).toEqual(["Leads", "Clients", "Projects", "Meetings"])
+        expect(getBarNames(20)).toEqual(["Leads", "Clients", "Projects", "Meetings"])
+        expect(getBarNames(60)).toEqual(["Leads", "Clients", "Projects", "Meetings"])
+    })
 
-        expect(names(10)).toEqual(["Meetings", "Overall Stats", "Activity Logs", "Notifications", "Profile"])
-        expect(names(50)).toEqual(["Meetings", "Overall Stats", "Notifications", "Profile"])
-        expect(names(65)).toEqual(["Meetings", "Notifications", "Profile"])
-        expect(names(90)).toEqual(["Notifications", "Profile"])
+    it("puts Calls beside Leads in a free slot", () => {
+        expect(getBarNames(65)).toEqual(["Leads", "Calls", "Meetings"])
+        expect(getBarNames(69)).toEqual(["Leads", "Calls", "Clients", "Meetings"])
+    })
+
+    it("is empty for a role with no tab", () => {
+        expect(getBarNames(90)).toEqual([])
+        expect(getBarNames(null)).toEqual([])
+    })
+})
+
+describe("profile sheet", () => {
+    function getSheet(role: number) {
+        const barTabs = getBarItemsForRole(role).map((item) => item.tab)
+        return getSheetSectionsForRole(role, barTabs).map((section) => [
+            section.title,
+            section.links.map((link) => link.name),
+        ])
+    }
+
+    it("shows an Admin every tool", () => {
+        expect(getSheet(10)).toEqual([
+            ["Operations & management", ["Users & Staff Directory", "Lead Sources & Uploads"]],
+            ["Insights", ["Dashboard", "Overall Stats", "Activity Logs"]],
+        ])
+    })
+
+    it("leaves out a tab that is already in the bar, and what the role may not open", () => {
+        expect(getSheet(65)).toEqual([["Insights", ["Dashboard"]]])
+        expect(getSheet(69)).toEqual([
+            ["Operations & management", ["Users & Staff Directory"]],
+            ["Insights", ["Dashboard"]],
+        ])
+        expect(getSheet(50)).toEqual([
+            ["Operations & management", ["Lead Sources & Uploads"]],
+            ["Insights", ["Dashboard", "Overall Stats"]],
+        ])
+    })
+
+    it("drops empty sections", () => {
+        expect(getSheet(90)).toEqual([])
     })
 })
 
@@ -136,8 +186,10 @@ describe("linking", () => {
         expect(getRoutes("users/create")).toContain("UserCreate")
     })
 
-    it("reaches the More destinations", () => {
-        expect(getRoutes("activity-logs")).toEqual(["App", "MoreTab", "More", "ActivityLogs"])
+    it("opens the Meetings tab, and a page over the Leads list", () => {
+        expect(getRoutes("meetings")).toEqual(["App", "MeetingsTab", "Meetings"])
+        expect(getRoutes("activity-logs")).toEqual(["App", "LeadsTab", "LeadsList", "ActivityLogs"])
+        expect(getRoutes("settings")).toEqual(["App", "LeadsTab", "LeadsList", "Settings"])
         expect(getRoutes(`clients/${ID}/projects/create`)).toContain("ProjectCreate")
     })
 })

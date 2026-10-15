@@ -60,7 +60,7 @@ const ITEMS: StatItem[] = [
         label: "Meetings This Week",
         icon: CalendarClock,
         accent: "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400",
-        tab: "MoreTab",
+        tab: "MeetingsTab",
         screen: "Meetings",
     },
 ]

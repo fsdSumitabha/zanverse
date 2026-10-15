@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 
 import { renderScreenLayout } from "@/navigation/ScreenLayout"
 import { getStackScreenOptions } from "@/navigation/stackOptions"
+import { renderPageScreens } from "@/navigation/stacks/pageScreens"
 import type { CallsStackParamList } from "@/navigation/types"
 import LeadSourceDetailScreen from "@/screens/leadSources/LeadSourceDetailScreen"
 import LeadSourceReportScreen from "@/screens/leadSources/LeadSourceReportScreen"
@@ -20,6 +21,7 @@ export default function CallsStack() {
             <Stack.Screen name="LeadSourceUploads" component={LeadSourceUploadsScreen} />
             <Stack.Screen name="LeadSourceUpload" component={LeadSourceUploadScreen} />
             <Stack.Screen name="LeadSourceReport" component={LeadSourceReportScreen} />
+            {renderPageScreens(Stack)}
         </Stack.Navigator>
     )
 }

@@ -27,7 +27,7 @@ web never could: tap a row and the dialer opens.
 | Area | Decision |
 |---|---|
 | **Styling** | **NativeWind** — the web's Tailwind class strings are copied verbatim, so all `*_META` colour maps keep working. **Settled in session 1: `nativewind@4.2.7` + `tailwindcss@3.4.19`.** v5 (5.0.0-rc.0) failed: its Metro transformer is Expo's and needs the `expo` package. Do not re-open this until v5 is stable and works without Expo. Details in `prompts/README.md`. |
-| **Navigation** | React Navigation 7: native-stack root (Splash → Auth → App), bottom tabs built from the web's `MobileNav` items with the same role arrays. |
+| **Navigation** | React Navigation 7: native-stack root (Splash → Auth → App), then the tabs from [`navigation-architecure.md`](navigation-architecure.md). A floating Material 3 Expressive bar shows Leads, Clients, Projects and Meetings (a role that lacks one gets Calls in the free slot). The top bar's avatar opens a profile sheet with Users, Lead Sources, Dashboard, Overall Stats, Activity Logs, App Settings and Log Out. Those pages are registered in every tab's stack, so they open over the current tab. Tab role arrays are the web's. The HR layout (roles 20–29) is not built; HR uses the CRM layout. |
 | **Data** | Plain `fetch` + `useState`/`useEffect`, like the web. One `src/api/client.ts` (ported from the web's `lead-sources/api.ts` + `handleAuthError.ts`), one `useListQuery` hook for every list. No TanStack Query, no Redux. |
 | **Auth** | JWT in `react-native-keychain`, sent as `Authorization: Bearer`. Needs the backend changes in `BACKEND_CHANGES.md` — **session 4 is blocked until they are on the dev API**. |
 | **Region** | Active region sent as `X-Active-Region`; switching clears caches and refetches instead of the web's `location.reload()`. |
@@ -187,10 +187,10 @@ Each session is one prompt file in `prompts/`, ends with a working app, and fini
 4. **The dashboard feed is unpaginated** — it returns every lead, client and project with a timeline. Paginate it
    server-side, and virtualize the list regardless.
 5. **Cookies may appear to work** on Android because `fetch` has a cookie jar. Do not build on that; use the Bearer token.
-6. **Edge-to-edge is on** — content draws under the status and gesture bars. Floating buttons need
-   `useBottomTabBarHeight() + insets.bottom`. **Session 1 finding:** `useBottomTabBarHeight()` already includes
-   `insets.bottom`, and a tab screen already ends at the tab bar's top edge, so that sum counts the inset twice.
-   Check the spike screen's printed numbers on a device before session 6 (see `prompts/README.md`).
+6. **Edge-to-edge is on** — content draws under the status and gesture bars. The floating tab bar shows only on a
+   tab's first screen and floats over it; every other tab screen stops above the gesture bar (`ScreenLayout`).
+   Floating buttons and list ends use `useBottomClearance()`, which covers both cases. Do not use
+   `useBottomTabBarHeight()`: the custom bar does not report its height.
 7. **Constants drift** between the two copies (see §8).
 8. **Release builds differ from debug** — R8 minification breaks reflection-based native modules. Test a release build
    in session 22, not at launch.

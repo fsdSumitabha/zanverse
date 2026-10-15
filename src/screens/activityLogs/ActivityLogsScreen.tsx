@@ -10,10 +10,10 @@ import FilterButton from "@/components/activityLog/FilterButton"
 import RestrictedArea from "@/components/activityLog/RestrictedArea"
 import { useAuth } from "@/contexts/AuthContext"
 import { enableIconClassNames } from "@/lib/iconClassName"
-import type { MoreStackParamList } from "@/navigation/types"
+import type { PageParamList } from "@/navigation/types"
 import { EMPTY_FILTERS, type ActivityLogFilterState } from "@/types/activityLog"
 
-type Navigation = NativeStackNavigationProp<MoreStackParamList, "ActivityLogs">
+type Navigation = NativeStackNavigationProp<PageParamList, "ActivityLogs">
 
 /** Roles that see every tracked change. The API scopes anyone else to their own rows. */
 const ADMIN_ROLES = [10, 20]

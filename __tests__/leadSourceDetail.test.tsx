@@ -14,6 +14,7 @@ import {
     getCalls,
     getTexts,
     installFetchMock,
+    openLeadSources,
     press,
     renderApp,
     respond,
@@ -122,7 +123,7 @@ async function openSource(user: object = AGENT, extra: FetchRoute[] = []) {
         },
     ])
     const renderer = await renderApp()
-    await press(findPressableByText(renderer, "Calls"))
+    await openLeadSources(renderer)
     await press(findPressable(renderer, "Acme Traders"))
     return renderer
 }

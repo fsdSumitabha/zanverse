@@ -16,6 +16,7 @@ import {
     getCalls,
     getTexts,
     installFetchMock,
+    openFromProfileSheet,
     press,
     renderApp,
     respond,
@@ -125,10 +126,13 @@ function routes(user: object, extra: FetchRoute[]): FetchRoute[] {
     ]
 }
 
+// The Dashboard is a page now, from the profile sheet, over the Leads list the app opens on.
 async function openDashboard(user: object = ADMIN, extra: FetchRoute[] = []) {
     await saveToken("jwt-1")
     routeFetch(fetchMock, routes(user, extra))
-    return renderApp()
+    const renderer = await renderApp()
+    await openFromProfileSheet(renderer, "Dashboard")
+    return renderer
 }
 
 function countCalls(prefix: string): number {
@@ -190,12 +194,11 @@ describe("dashboard feed", () => {
     it("opens a lead, a client and a project in their own tabs", async () => {
         const renderer = await openDashboard()
 
+        // The Dashboard page stays mounted under each record it opens, so its rows can be pressed in turn.
         await press(findPressable(renderer, "Acme Lead"))
         expect(getCalls(fetchMock)).toContain(`GET /api/admin/operations/leads/${LEAD_ID}`)
-        await press(findPressableByText(renderer, "Dashboard"))
         await press(findPressable(renderer, "Beta Client"))
         expect(getCalls(fetchMock)).toContain(`GET /api/admin/operations/clients/${CLIENT_ID}`)
-        await press(findPressableByText(renderer, "Dashboard"))
         await press(findPressable(renderer, "Gamma Build"))
         expect(getCalls(fetchMock)).toContain(`GET /api/admin/operations/projects/${PROJECT_ID}`)
         await unmountApp(renderer)

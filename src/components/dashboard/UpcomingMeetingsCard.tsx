@@ -11,6 +11,7 @@ import { MEETING_TYPE } from "@/constants/meetingTypes"
 import { useAuth } from "@/contexts/AuthContext"
 import { navigateToEntity, openTabScreen } from "@/lib/entityNav"
 import { enableIconClassNames } from "@/lib/iconClassName"
+import { openPage } from "@/navigation/openPage"
 
 interface MeetingItem {
     _id: string
@@ -75,7 +76,7 @@ export default function UpcomingMeetingsCard({ refreshKey }: { refreshKey: numbe
                     Upcoming meetings
                 </Text>
                 <Pressable
-                    onPress={() => openTabScreen("MoreTab", "Meetings", { range: "upcoming" }, role)}
+                    onPress={() => openTabScreen("MeetingsTab", "Meetings", { range: "upcoming" }, role)}
                     accessibilityRole="link"
                     className="min-h-[44px] justify-center px-2"
                 >
@@ -132,7 +133,7 @@ export default function UpcomingMeetingsCard({ refreshKey }: { refreshKey: numbe
             )}
 
             <Pressable
-                onPress={() => openTabScreen("MoreTab", "OverallStats", undefined, role)}
+                onPress={() => openPage("OverallStats")}
                 accessibilityRole="link"
                 className="min-h-[44px] flex-row items-center gap-2 px-3 active:bg-neutral-50 dark:active:bg-neutral-800/50"
             >

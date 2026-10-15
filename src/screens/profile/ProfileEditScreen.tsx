@@ -15,11 +15,11 @@ import { useDetailQuery } from "@/hooks/useDetailQuery"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { notify } from "@/lib/notify"
 import { pickAvatarImage } from "@/lib/pickAvatar"
-import type { MoreStackParamList } from "@/navigation/types"
+import type { PageParamList } from "@/navigation/types"
 import type { AuthProfileUser } from "@/types/authProfile"
 import { useOfflineReason } from "@/hooks/useIsOnline"
 
-type Navigation = NativeStackNavigationProp<MoreStackParamList, "ProfileEdit">
+type Navigation = NativeStackNavigationProp<PageParamList, "ProfileEdit">
 
 const COMPACT_AVATAR = 80
 const MIN_PASSWORD = 6

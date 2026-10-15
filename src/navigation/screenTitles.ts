@@ -25,11 +25,11 @@ export const SCREEN_TITLES: Record<AppScreenName, string> = {
     UsersList: "Users",
     UserCreate: "Create User",
     UserEdit: "Edit User",
-    More: "More",
     Meetings: "Meetings",
     OverallStats: "Overall Stats",
     ActivityLogs: "Activity Logs",
     Notifications: "Notifications",
     Profile: "Profile",
     ProfileEdit: "Edit profile",
+    Settings: "Settings",
 }

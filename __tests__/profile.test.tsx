@@ -13,6 +13,8 @@ import {
     getTexts,
     installFetchMock,
     installRecordingFormData,
+    openFromProfileSheet,
+    openProfileSheet,
     press,
     renderApp,
     respond,
@@ -67,8 +69,7 @@ async function openProfile(extra: FetchRoute[] = []) {
     await saveToken("jwt-1")
     routeFetch(fetchMock, routes(extra))
     const renderer = await renderApp()
-    await press(findPressableByText(renderer, "More"))
-    await press(findPressable(renderer, "Profile"))
+    await openFromProfileSheet(renderer, "My profile")
     return renderer
 }
 
@@ -158,18 +159,16 @@ describe("profile", () => {
         await unmountApp(renderer)
     })
 
-    it("opens Profile from the header avatar menu", async () => {
+    it("opens Profile from the profile sheet's account row", async () => {
         await saveToken("jwt-1")
         routeFetch(fetchMock, routes([]))
         const renderer = await renderApp()
 
-        await press(
-            renderer.root.findAll(
-                (node) => node.props.accessibilityLabel === "Profile menu" && typeof node.props.onPress === "function",
-            )[0],
+        await openProfileSheet(renderer)
+        expect(getTexts(renderer)).toEqual(
+            expect.arrayContaining(["Asha Rao", "Admin", "asha@zan.test", "App Settings", "Log Out"]),
         )
-        expect(getTexts(renderer)).toEqual(expect.arrayContaining(["Signed in", "Asha Rao", "Edit profile", "Logout"]))
-        await press(findPressableByText(renderer, "Profile"))
+        await press(findPressable(renderer, "My profile"))
         expect(renderer.root.findAllByType(ProfileScreen)).toHaveLength(1)
         await unmountApp(renderer)
     })

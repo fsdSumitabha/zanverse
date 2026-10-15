@@ -1,7 +1,7 @@
 import { navigationRef } from "@/api/navigationRef"
 import { ENTITY_TYPE, type EntityType } from "@/constants/entityTypes"
 import { notify } from "@/lib/notify"
-import { getNavItemsForRole } from "@/navigation/navItems"
+import { canOpenTab } from "@/navigation/navItems"
 import { canOpen } from "@/navigation/permissions"
 import type { TabParamList } from "@/navigation/types"
 
@@ -71,8 +71,7 @@ export function getInteractionParentTarget(
  * line, not a jump that ends on AccessDenied.
  */
 export function openActivityTarget(target: ActivityTarget, role: number | null): void {
-    const hasTab = getNavItemsForRole(role).some((item) => item.tab === target.tab)
-    if (!hasTab || !canOpen(target.screen, role)) {
+    if (!canOpenTab(target.tab, role) || !canOpen(target.screen, role)) {
         notify.error(FORBIDDEN_MESSAGE)
         return
     }

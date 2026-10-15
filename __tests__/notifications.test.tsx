@@ -4,6 +4,7 @@ import Swipeable from "react-native-gesture-handler/Swipeable"
 import ReactTestRenderer from "react-test-renderer"
 
 import { notify } from "@/lib/notify"
+import { openPage } from "@/navigation/openPage"
 import NotificationsScreen from "@/screens/notifications/NotificationsScreen"
 import { clearToken, saveToken } from "@/store/keychain"
 import { saveActiveRegion } from "@/store/mmkv"
@@ -124,8 +125,10 @@ async function signIn(extra: FetchRoute[] = []) {
 
 async function openInbox(extra: FetchRoute[] = []) {
     const renderer = await signIn(extra)
-    await press(findPressableByText(renderer, "More"))
-    await press(findPressable(renderer, "Notifications"))
+    // Straight to the page, as zanverse://notifications does. The bell marks the rows seen as well, and these tests
+    // count the inbox's own call.
+    await ReactTestRenderer.act(async () => openPage("Notifications"))
+    await flush()
     return renderer
 }
 

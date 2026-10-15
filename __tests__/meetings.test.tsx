@@ -73,7 +73,6 @@ async function openMeetings(user: object = ADMIN, extra: FetchRoute[] = []) {
         { path: /^\/api\/admin\/operations\/meetings\?/, reply: (_init, path) => listReply(path) },
     ])
     const renderer = await renderApp()
-    await press(findPressableByText(renderer, "More"))
     await press(findPressable(renderer, "Meetings"))
     return renderer
 }

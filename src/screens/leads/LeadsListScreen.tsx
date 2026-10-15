@@ -59,7 +59,7 @@ export default function LeadsListScreen() {
                 }
                 bottomInset={canCreate ? FAB_SPACE : 0}
             />
-            {canCreate && <Fab accessibilityLabel="Create New Lead" onPress={openCreate} isAboveTabBar />}
+            {canCreate && <Fab accessibilityLabel="Create New Lead" onPress={openCreate} />}
         </View>
     )
 }

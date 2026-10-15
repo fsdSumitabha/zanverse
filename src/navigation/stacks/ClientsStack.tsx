@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 
 import { renderScreenLayout } from "@/navigation/ScreenLayout"
 import { getStackScreenOptions } from "@/navigation/stackOptions"
+import { renderPageScreens } from "@/navigation/stacks/pageScreens"
 import type { ClientsStackParamList } from "@/navigation/types"
 import ClientDetailScreen from "@/screens/clients/ClientDetailScreen"
 import ClientEditScreen from "@/screens/clients/ClientEditScreen"
@@ -20,6 +21,7 @@ export default function ClientsStack() {
             <Stack.Screen name="ClientEdit" component={ClientEditScreen} />
             <Stack.Screen name="ClientProjects" component={ClientProjectsScreen} />
             <Stack.Screen name="ProjectCreate" component={ProjectCreateScreen} />
+            {renderPageScreens(Stack)}
         </Stack.Navigator>
     )
 }

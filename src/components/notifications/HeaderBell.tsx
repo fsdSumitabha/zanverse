@@ -1,24 +1,24 @@
 import { Bell } from "lucide-react-native"
 import { Pressable, Text, View } from "react-native"
 
-import { navigationRef } from "@/api/navigationRef"
 import { useNotifications } from "@/contexts/NotificationContext"
 import { enableIconClassNames } from "@/lib/iconClassName"
+import { openPage } from "@/navigation/openPage"
 
 const MAX_SHOWN = 9
 
 enableIconClassNames(Bell)
 
 /**
- * The bell in every stack header, with the unseen count. A tap opens the Notifications screen, which is the phone's
- * version of the web's dropdown, and marks the rows seen.
+ * The bell in every top bar, with the unseen count. A tap opens the Notifications page over the current tab, which is
+ * the phone's version of the web's dropdown, and marks the rows seen.
  */
 export default function HeaderBell() {
     const { unseen, markSeen } = useNotifications()
 
     function open() {
         if (unseen > 0) markSeen()
-        navigationRef.navigate("App", { screen: "MoreTab", params: { screen: "Notifications", initial: false } })
+        openPage("Notifications")
     }
 
     return (

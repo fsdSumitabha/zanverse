@@ -15,11 +15,11 @@ import { Card, SkeletonBlock } from "@/components/ui"
 import { useAuth } from "@/contexts/AuthContext"
 import { useDetailQuery } from "@/hooks/useDetailQuery"
 import { enableIconClassNames } from "@/lib/iconClassName"
-import type { MoreStackParamList } from "@/navigation/types"
+import type { PageParamList } from "@/navigation/types"
 import { EMPTY_FILTERS, type ActivityLogFilterState } from "@/types/activityLog"
 import type { AuthProfileUser } from "@/types/authProfile"
 
-type Navigation = NativeStackNavigationProp<MoreStackParamList, "Profile">
+type Navigation = NativeStackNavigationProp<PageParamList, "Profile">
 
 enableIconClassNames(Activity, Pencil)
 

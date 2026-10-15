@@ -57,7 +57,7 @@ export default function UsersListScreen() {
                 }
                 bottomInset={canCreate ? FAB_SPACE : 0}
             />
-            {canCreate && <Fab accessibilityLabel="Create New User" onPress={openCreate} isAboveTabBar />}
+            {canCreate && <Fab accessibilityLabel="Create New User" onPress={openCreate} />}
         </View>
     )
 }

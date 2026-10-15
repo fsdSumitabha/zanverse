@@ -2,23 +2,15 @@ import { Plus, type LucideIcon } from "lucide-react-native"
 import { Pressable } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
+import { useBottomClearance } from "@/hooks/useBottomClearance"
 import { PALETTE } from "@/theme"
 
 interface Props {
     onPress: () => void
     accessibilityLabel: string
     icon?: LucideIcon
-    /**
-     * Added to the bottom offset. Session 5 decides what goes here on tab screens. Note the session 1 finding in
-     * prompts/README.md: useBottomTabBarHeight() already includes insets.bottom, and a tab screen already ends at
-     * the tab bar, so passing the tab bar height may lift the button too far. Check it on a device.
-     */
+    /** Added to the bottom offset, on top of the floating tab bar or the gesture bar. */
     extraBottom?: number
-    /**
-     * True on a tab screen. The screen already ends at the tab bar's top edge, and the tab bar already covers the
-     * gesture bar, so the bottom inset is not added (the session 1 finding).
-     */
-    isAboveTabBar?: boolean
 }
 
 const FAB_SIZE = 56
@@ -34,17 +26,13 @@ const FAB_SHADOW = {
 }
 
 /**
- * The bottom-right floating button. Edge-to-edge is on, so it adds the bottom inset to clear the gesture bar.
- * Its parent must fill the screen (or the area it floats over), because it is positioned absolutely.
+ * The bottom-right floating button. It sits above the floating tab bar on a tab's list, and above the gesture bar
+ * everywhere else (useBottomClearance). Its parent must fill the screen (or the area it floats over), because it is
+ * positioned absolutely.
  */
-export default function Fab({
-    onPress,
-    accessibilityLabel,
-    icon: Icon = Plus,
-    extraBottom,
-    isAboveTabBar = false,
-}: Props) {
+export default function Fab({ onPress, accessibilityLabel, icon: Icon = Plus, extraBottom }: Props) {
     const insets = useSafeAreaInsets()
+    const bottomClearance = useBottomClearance()
 
     return (
         <Pressable
@@ -59,7 +47,7 @@ export default function Fab({
                     width: FAB_SIZE,
                     height: FAB_SIZE,
                     right: insets.right + EDGE_GAP,
-                    bottom: (isAboveTabBar ? 0 : insets.bottom) + (extraBottom ?? 0) + EDGE_GAP,
+                    bottom: bottomClearance + (extraBottom ?? 0) + EDGE_GAP,
                 },
             ]}
         >

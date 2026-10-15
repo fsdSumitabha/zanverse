@@ -36,9 +36,9 @@ function FeedError({ message, onRetry }: { message: string; onRetry: () => void 
 }
 
 /**
- * The Dashboard tab: the four counters, the next meetings and the Lead / Client / Project feed, newest interaction
- * first, as one scrolling list. Pull-to-refresh reloads all three. Ported from the web's operations/page.tsx plus the
- * StatsPanel and UpcomingMeetingsPanel from its desktop aside.
+ * The Dashboard page, from the profile sheet: the four counters, the next meetings and the Lead / Client / Project
+ * feed, newest interaction first, as one scrolling list. Pull-to-refresh reloads all three. Ported from the web's
+ * operations/page.tsx plus the StatsPanel and UpcomingMeetingsPanel from its desktop aside.
  */
 export default function DashboardScreen() {
     const { role } = useAuth()

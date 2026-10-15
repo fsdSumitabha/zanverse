@@ -7,9 +7,9 @@ import { getToken } from "@/store/keychain"
 import type {
     CallsStackParamList,
     ClientsStackParamList,
-    DashboardStackParamList,
     LeadsStackParamList,
-    MoreStackParamList,
+    MeetingsStackParamList,
+    PageParamList,
     ProjectsStackParamList,
     RootStackParamList,
     UsersStackParamList,
@@ -100,6 +100,18 @@ function subscribe(listener: (url: string) => void) {
     return () => subscription.remove()
 }
 
+// The pages exist in every tab, but a path can lead to one place only: the Leads tab, which every CRM role has.
+const PAGE_PATHS: Record<keyof PageParamList, string> = {
+    Dashboard: "dashboard",
+    Search: "search",
+    OverallStats: "overall-stats",
+    ActivityLogs: "activity-logs",
+    Notifications: "notifications",
+    Profile: "profile",
+    ProfileEdit: "profile/edit",
+    Settings: "settings",
+}
+
 // Each tab's paths, typed against its own stack. React Navigation cannot infer the nested types through
 // NavigatorScreenParams, so the map below is cast once and these carry the checking.
 const LEADS_PATHS: PathConfig<LeadsStackParamList> = {
@@ -110,6 +122,7 @@ const LEADS_PATHS: PathConfig<LeadsStackParamList> = {
         LeadDetail: "leads/:id",
         LeadEdit: "leads/:id/edit",
         LeadConvert: "leads/:id/convert",
+        ...PAGE_PATHS,
     },
 }
 
@@ -153,21 +166,9 @@ const USERS_PATHS: PathConfig<UsersStackParamList> = {
     },
 }
 
-const MORE_PATHS: PathConfig<MoreStackParamList> = {
-    initialRouteName: "More",
-    screens: {
-        More: "more",
-        Meetings: "meetings",
-        OverallStats: "overall-stats",
-        ActivityLogs: "activity-logs",
-        Notifications: "notifications",
-        Profile: "profile",
-        ProfileEdit: "profile/edit",
-    },
-}
-
-const DASHBOARD_PATHS: PathConfig<DashboardStackParamList> = {
-    screens: { Dashboard: "", Search: "search" },
+const MEETINGS_PATHS: PathConfig<MeetingsStackParamList> = {
+    initialRouteName: "Meetings",
+    screens: { Meetings: "meetings" },
 }
 
 /**
@@ -182,13 +183,12 @@ export const linking: LinkingOptions<RootStackParamList> = {
         screens: {
             App: {
                 screens: {
-                    DashboardTab: DASHBOARD_PATHS,
                     LeadsTab: LEADS_PATHS,
-                    CallsTab: CALLS_PATHS,
                     ClientsTab: CLIENTS_PATHS,
                     ProjectsTab: PROJECTS_PATHS,
+                    MeetingsTab: MEETINGS_PATHS,
+                    CallsTab: CALLS_PATHS,
                     UsersTab: USERS_PATHS,
-                    MoreTab: MORE_PATHS,
                 },
             },
         },

@@ -16,6 +16,9 @@ import {
     getCalls,
     getTexts,
     installFetchMock,
+    openFromProfileSheet,
+    openLeadSources,
+    openProfileSheet,
     press,
     renderApp,
     respond,
@@ -120,7 +123,7 @@ describe("callback reminders", () => {
         rows = [makeRow(SOURCE_A, { status: 30, callbackAt: IN_TWO_HOURS }), makeRow(SOURCE_B)]
         const renderer = await start()
 
-        await press(findPressableByText(renderer, "Calls"))
+        await openLeadSources(renderer)
         await settle()
         expect([...scheduledTriggers.keys()]).toEqual([`callback-${SOURCE_A}`])
         expect(scheduledTriggers.get(`callback-${SOURCE_A}`)?.notification.title).toBe("Call back Source 1")
@@ -136,7 +139,7 @@ describe("callback reminders", () => {
                 reply: () => respond(200, { success: true, data: makeRow(SOURCE_A, { status: 50 }) }),
             },
         ])
-        await press(findPressableByText(renderer, "Calls"))
+        await openLeadSources(renderer)
         await settle()
         expect(scheduledTriggers.has(`callback-${SOURCE_A}`)).toBe(true)
 
@@ -151,7 +154,7 @@ describe("callback reminders", () => {
     it("says where the reminder rings under the callback picker", async () => {
         rows = [makeRow(SOURCE_A)]
         const renderer = await start()
-        await press(findPressableByText(renderer, "Calls"))
+        await openLeadSources(renderer)
         await press(findPressable(renderer, "Status: New. Press to change."))
         await press(findPressable(renderer, "Call Back"))
 
@@ -194,8 +197,7 @@ describe("callback reminders", () => {
                     }),
             },
         ])
-        await press(findPressableByText(renderer, "More"))
-        await press(findPressable(renderer, "Profile"))
+        await openFromProfileSheet(renderer, "My profile")
 
         const toggle = () =>
             renderer.root.find(
@@ -279,7 +281,7 @@ describe("push token", () => {
         await settle()
         expect(bodies).toEqual([{ method: "POST", body: { token: "fcm-token", platform: "ios" } }])
 
-        await press(findPressableByText(renderer, "Calls"))
+        await openLeadSources(renderer)
         await press(findPressable(renderer, "Status: New. Press to change."))
         await press(findPressable(renderer, "Call Back"))
         expect(getTexts(renderer)).toContain("Reminder on this phone and by push")
@@ -300,8 +302,8 @@ describe("push token", () => {
             }),
         )
 
-        await press(findPressableByText(renderer, "More"))
-        await press(findPressable(renderer, "Logout"))
+        await openProfileSheet(renderer)
+        await press(findPressable(renderer, "Log Out"))
         await settle()
         expect(bodies.at(-1)).toEqual({ method: "DELETE", body: { token: "fcm-token" } })
         await unmountApp(renderer)

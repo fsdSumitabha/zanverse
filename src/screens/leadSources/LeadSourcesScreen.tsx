@@ -18,6 +18,7 @@ import StatusMenuSheet from "@/components/leadSources/StatusMenuSheet"
 import { AccessDenied, OfflineNotice } from "@/components/ui"
 import { canManageLeadSources } from "@/constants/leadSourceRoles"
 import { useAuth } from "@/contexts/AuthContext"
+import { useBottomClearance } from "@/hooks/useBottomClearance"
 import { useIsOnline } from "@/hooks/useIsOnline"
 import { useLeadSourceList } from "@/hooks/useLeadSourceList"
 import { useNow } from "@/hooks/useNow"
@@ -31,9 +32,10 @@ type Navigation = NativeStackNavigationProp<CallsStackParamList, "LeadSources">
 
 const SKELETON_ROWS = 8
 const NOW_TICK_MS = 15_000
-// Room under the last row: the floating bulk bar while rows are selected, a small gap otherwise.
-const CONTENT_WITH_BAR = { paddingBottom: 96 }
-const CONTENT_PLAIN = { paddingBottom: 16 }
+// Room under the last row: the floating bulk bar while rows are selected, a small gap otherwise. The floating tab bar,
+// when it shows here, is added on top.
+const BULK_BAR_SPACE = 96
+const PLAIN_SPACE = 16
 
 const SKELETON_KEYS = Array.from({ length: SKELETON_ROWS }, (_, i) => i)
 
@@ -54,6 +56,7 @@ function SkeletonRows() {
  */
 export default function LeadSourcesScreen() {
     const navigation = useNavigation<Navigation>()
+    const bottomClearance = useBottomClearance()
     const params = useRoute<RouteProp<CallsStackParamList, "LeadSources">>().params
     const { role } = useAuth()
     const isManager = canManageLeadSources(role)
@@ -206,7 +209,9 @@ export default function LeadSourcesScreen() {
                     />
                 }
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={isSelecting ? CONTENT_WITH_BAR : CONTENT_PLAIN}
+                contentContainerStyle={{
+                    paddingBottom: bottomClearance + (isSelecting ? BULK_BAR_SPACE : PLAIN_SPACE),
+                }}
             />
 
             <BulkBar
