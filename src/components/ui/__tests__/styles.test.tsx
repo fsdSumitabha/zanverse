@@ -6,6 +6,7 @@ import Badge from "@/components/ui/Badge"
 import Button from "@/components/ui/Button"
 import Card from "@/components/ui/Card"
 import Input from "@/components/ui/Input"
+import Textarea from "@/components/ui/Textarea"
 import { LEAD_SOURCE_STATUS_META } from "@/constants/leadSourceStatus"
 import { LEAD_STATUS_META } from "@/constants/leadStatus"
 
@@ -148,5 +149,16 @@ describe("Input", () => {
         await setScheme("dark")
         const renderer = await renderTree(<Input value="" onChangeText={() => undefined} />)
         expect(lower(getStyle(renderer.root.findByType(TextInput)).backgroundColor)).toBe("#262626")
+    })
+
+    test("a one-line field is a fixed 44 dp whatever is typed, and a Textarea grows from its minimum", async () => {
+        // On Android 15, a field sized from its text grew when some letters, such as y or Q, were typed.
+        const line = await renderTree(<Input label="Name" value="Quay" onChangeText={() => undefined} />)
+        expect(getStyle(line.root.findByType(TextInput))).toMatchObject({ height: 44, paddingTop: 0, paddingBottom: 0 })
+
+        const area = await renderTree(<Textarea label="Notes" value="Quay" onChangeText={() => undefined} />)
+        const areaStyle = getStyle(area.root.findByType(TextInput))
+        expect(areaStyle.height).toBeUndefined()
+        expect(areaStyle.minHeight).toBe(96)
     })
 })

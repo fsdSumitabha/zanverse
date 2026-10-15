@@ -1,7 +1,7 @@
 import { Eye, EyeOff } from "lucide-react-native"
 import { Pressable, Text, TextInput, View } from "react-native"
 
-import { FIELD_CLASSES } from "@/components/ui"
+import { FIELD_CLASSES, SINGLE_LINE_INPUT_STYLE } from "@/components/ui"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { PALETTE } from "@/theme"
 
@@ -33,6 +33,7 @@ export default function PasswordField({ label, value, onChange, autoComplete, is
                     accessibilityLabel={label}
                     placeholderTextColor={PALETTE["neutral-400"]}
                     className={`${FIELD_CLASSES} pr-12`}
+                    style={SINGLE_LINE_INPUT_STYLE}
                 />
                 <Pressable
                     onPress={onToggleShow}

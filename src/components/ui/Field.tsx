@@ -31,6 +31,13 @@ export const FIELD_BOX_CLASSES = `${FIELD.container} min-h-[44px]`
 /** The field's text classes alone. */
 export const FIELD_TEXT_CLASSES = FIELD.text
 
+/**
+ * The box of a one-line TextInput: a fixed 44 dp, with no top or bottom padding, so Android centres the line in it.
+ * With only a minimum height, React Native measured the box from the typed text on every key, and on Android 15 some
+ * letters made it taller. In style, because FIELD_CLASSES' `py-2` would beat a padding class by stylesheet order.
+ */
+export const SINGLE_LINE_INPUT_STYLE = { height: 44, paddingTop: 0, paddingBottom: 0 } as const
+
 // The label and error classes of the web's LeadForm.
 const LABEL_CLASSES = "mb-1 text-sm text-gray-600 dark:text-gray-300"
 const ERROR_CLASSES = "mt-1 text-xs text-red-600 dark:text-red-400"

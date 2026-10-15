@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Pressable, Text, View } from "react-native"
 
 import DateField from "@/components/list/DateField"
-import { Button, FIELD_BOX_CLASSES, FIELD_CLASSES, Sheet } from "@/components/ui"
+import { Button, FIELD_BOX_CLASSES, FIELD_CLASSES, Sheet, SINGLE_LINE_INPUT_STYLE } from "@/components/ui"
 import { SheetScrollView } from "@/components/ui/sheetScrollables"
 import SheetTextInput from "@/components/ui/SheetTextInput"
 import { ENTITY_TYPE_META, type EntityType } from "@/constants/entityTypes"
@@ -129,6 +129,7 @@ export default function ActivityLogFilterSheet({ visible, onClose, value, onChan
                             accessibilityLabel="Search by user name"
                             accessibilityHint={value.userId ? "Clear the User filter to search by name" : undefined}
                             className={clsx(FIELD_CLASSES, value.userId && "opacity-50")}
+                            style={SINGLE_LINE_INPUT_STYLE}
                         />
                     </>
                 )}

@@ -2,7 +2,7 @@ import clsx from "clsx"
 import { Search, X } from "lucide-react-native"
 import { Pressable, View } from "react-native"
 
-import { FIELD_CLASSES } from "@/components/ui"
+import { FIELD_CLASSES, SINGLE_LINE_INPUT_STYLE } from "@/components/ui"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { PALETTE } from "@/theme"
 import SheetTextInput from "@/components/ui/SheetTextInput"
@@ -37,6 +37,7 @@ export default function SearchField({ value, onChangeText, placeholder = "Search
                 autoFocus={autoFocus}
                 accessibilityLabel={placeholder}
                 className={clsx(FIELD_CLASSES, "pl-9 pr-11")}
+                style={SINGLE_LINE_INPUT_STYLE}
             />
             {value.length > 0 && (
                 <Pressable

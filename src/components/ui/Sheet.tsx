@@ -39,7 +39,7 @@ function renderBackdrop(props: BottomSheetBackdropProps) {
 }
 
 /**
- * The bottom sheet under SelectSheet, Dialog and every picker: it drags, snaps, sizes itself to its content and rises
+ * The bottom sheet under SelectSheet and every picker: it drags, snaps, sizes itself to its content and rises
  * with the keyboard. A drag down, a tap on the backdrop and the Android back button all close it. It draws above the
  * tabs from the SheetProvider, and pads itself by the bottom inset so it clears the gesture bar.
  *

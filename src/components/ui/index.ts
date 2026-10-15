@@ -10,7 +10,13 @@ export { default as DateTimeField } from "./DateTimeField"
 export { default as Dialog } from "./Dialog"
 export { default as EmptyState } from "./EmptyState"
 export { default as Fab } from "./Fab"
-export { default as Field, FIELD_BOX_CLASSES, FIELD_CLASSES, FIELD_TEXT_CLASSES } from "./Field"
+export {
+    default as Field,
+    FIELD_BOX_CLASSES,
+    FIELD_CLASSES,
+    FIELD_TEXT_CLASSES,
+    SINGLE_LINE_INPUT_STYLE,
+} from "./Field"
 export { default as FilePickerField, getFileRejection, type PickedFile } from "./FilePickerField"
 export { default as FormScrollView } from "./FormScrollView"
 export { default as FormSheet } from "./FormSheet"

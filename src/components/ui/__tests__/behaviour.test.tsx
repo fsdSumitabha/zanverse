@@ -1,11 +1,24 @@
 import { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useState } from "react"
-import { BackHandler, Image, StyleSheet, Text, TextInput, type ViewStyle } from "react-native"
+import {
+    BackHandler,
+    Image,
+    Keyboard,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    type EmitterSubscription,
+    type KeyboardEvent,
+    type ViewStyle,
+} from "react-native"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import ReactTestRenderer from "react-test-renderer"
 
 import Avatar from "@/components/ui/Avatar"
 import Dialog from "@/components/ui/Dialog"
+import DialogHost from "@/components/ui/DialogHost"
 import Fab from "@/components/ui/Fab"
 import Pagination from "@/components/ui/Pagination"
 import SelectSheet from "@/components/ui/SelectSheet"
@@ -97,6 +110,10 @@ describe("SelectSheet", () => {
 
         await press(renderer.root.find((node) => node.props.accessibilityLabel === "Status: New"))
         expect(isSheetOpen(renderer)).toBe(true)
+        // Edge-to-edge: Android does not resize the window for the keyboard, so the sheet lifts itself.
+        const sheet = renderer.root.findByType(BottomSheetModal)
+        expect(sheet.props.keyboardBehavior).toBe("interactive")
+        expect(sheet.props.android_keyboardInputMode).toBe("adjustPan")
 
         const interested = renderer.root.find(
             (node) =>
@@ -124,7 +141,30 @@ describe("SelectSheet", () => {
 })
 
 describe("Dialog", () => {
-    test("shows its title, body and footer, and rises with the keyboard", async () => {
+    const originalOs = Platform.OS
+
+    afterEach(() => {
+        Object.defineProperty(Platform, "OS", { configurable: true, get: () => originalOs })
+    })
+
+    /** The view that centres the card in the space the system bars and the keyboard leave free. */
+    function getDialogFrame(renderer: Renderer): Node {
+        return renderer.root.find((node) => (node.type as unknown) === "View" && node.props.pointerEvents === "box-none")
+    }
+
+    function getFrameStyle(renderer: Renderer): ViewStyle {
+        return StyleSheet.flatten(getDialogFrame(renderer).props.style as ViewStyle) ?? {}
+    }
+
+    function DialogOwner({ isOpen, onClose = jest.fn() }: { isOpen: boolean; onClose?: () => void }) {
+        return (
+            <Dialog open={isOpen} onClose={onClose} title="Add a note">
+                <Text>Body</Text>
+            </Dialog>
+        )
+    }
+
+    test("shows its title, body and footer in a card centred on the screen, not in a bottom sheet", async () => {
         const renderer = await renderTree(
             <Dialog
                 open
@@ -138,40 +178,79 @@ describe("Dialog", () => {
         )
         expect(getTexts(renderer)).toEqual(expect.arrayContaining(["Add a note", "Shows on the timeline.", "Footer"]))
         expect(renderer.root.findByProps({ accessibilityLabel: "Note" })).toBeTruthy()
-        const sheet = renderer.root.findByType(BottomSheetModal)
-        expect(sheet.props.keyboardBehavior).toBe("interactive")
-        // Edge-to-edge: Android does not resize the window, so the sheet must lift itself.
-        expect(sheet.props.android_keyboardInputMode).toBe("adjustPan")
+        expect(renderer.root.findAllByType(BottomSheetModal)).toHaveLength(0)
+        expect(getFrameStyle(renderer)).toMatchObject({ alignItems: "center", justifyContent: "center" })
     })
 
-    test("back, the backdrop and the X button each call onClose", async () => {
-        const onClose = jest.fn()
+    test("closes a keyboard left open by the screen behind it, as it opens", async () => {
+        const dismiss = jest.spyOn(Keyboard, "dismiss")
+        const renderer = await renderTree(<DialogOwner isOpen={false} />)
+        expect(dismiss).not.toHaveBeenCalled()
+
+        await ReactTestRenderer.act(async () => renderer.update(<DialogOwner isOpen />))
+        expect(dismiss).toHaveBeenCalledTimes(1)
+    })
+
+    test("keeps clear of the system bars, and rises above the keyboard while its own field is typed in", async () => {
+        Object.defineProperty(Platform, "OS", { configurable: true, get: () => "android" })
+        const keyboardListeners = new Map<string, (event: KeyboardEvent) => void>()
+        jest.spyOn(Keyboard, "addListener").mockImplementation((eventName, listener) => {
+            keyboardListeners.set(eventName, listener as (event: KeyboardEvent) => void)
+            return { remove: () => keyboardListeners.delete(eventName) } as unknown as EmitterSubscription
+        })
+        const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 24, right: 0, bottom: 48, left: 0 } }
         const renderer = await renderTree(
-            <Dialog open onClose={onClose} title="Add a note">
-                <Text>Body</Text>
-            </Dialog>,
+            <SafeAreaProvider initialMetrics={metrics}>
+                <DialogOwner isOpen />
+            </SafeAreaProvider>,
         )
+        // 24 dp from the status bar and from the navigation bar.
+        expect(getFrameStyle(renderer)).toMatchObject({ paddingTop: 48, paddingBottom: 72 })
+
+        // Android reports the keyboard without the navigation bar under it.
+        const keyboard = { endCoordinates: { height: 300, screenX: 0, screenY: 452, width: 360 } } as KeyboardEvent
+        await ReactTestRenderer.act(async () => keyboardListeners.get("keyboardDidShow")?.(keyboard))
+        expect(getFrameStyle(renderer).paddingBottom).toBe(300 + 48 + 24)
+
+        await ReactTestRenderer.act(async () => keyboardListeners.get("keyboardDidHide")?.(keyboard))
+        expect(getFrameStyle(renderer).paddingBottom).toBe(72)
+    })
+
+    test("draws on the DialogHost layer, outside the scroll view it is written in", async () => {
+        function Screen({ isOpen }: { isOpen: boolean }) {
+            return (
+                <DialogHost>
+                    <ScrollView testID="screen">
+                        <DialogOwner isOpen={isOpen} />
+                    </ScrollView>
+                </DialogHost>
+            )
+        }
+        const renderer = await renderTree(<Screen isOpen />)
+        expect(isSheetOpen(renderer)).toBe(true)
+        const screen = renderer.root.findByProps({ testID: "screen" })
+        expect(screen.findAll((node) => node.props.accessibilityViewIsModal === true)).toHaveLength(0)
+
+        await ReactTestRenderer.act(async () => renderer.update(<Screen isOpen={false} />))
+        expect(isSheetOpen(renderer)).toBe(false)
+    })
+
+    test("back, the scrim and the X button each call onClose", async () => {
+        const onClose = jest.fn()
+        const renderer = await renderTree(<DialogOwner isOpen onClose={onClose} />)
         await pressBack(backListeners)
-        // The owner keeps it open here, so each press reaches onClose. The backdrop also dismisses the sheet itself,
-        // and that dismissal is reported once, not twice.
-        const [backdrop, xButton] = getCloseButtons(renderer)
+        // The owner keeps it open here, so each press reaches onClose.
+        const [scrim, xButton] = getCloseButtons(renderer)
         await press(xButton)
-        await press(backdrop)
+        await press(scrim)
         expect(onClose).toHaveBeenCalledTimes(3)
     })
 
-    test("a sheet closed by its owner does not report a close of its own", async () => {
+    test("a dialog closed by its owner does not report a close of its own", async () => {
         const onClose = jest.fn()
-        function Owner({ isOpen }: { isOpen: boolean }) {
-            return (
-                <Dialog open={isOpen} onClose={onClose} title="Add a note">
-                    <Text>Body</Text>
-                </Dialog>
-            )
-        }
-        const renderer = await renderTree(<Owner isOpen />)
+        const renderer = await renderTree(<DialogOwner isOpen onClose={onClose} />)
         expect(isSheetOpen(renderer)).toBe(true)
-        await ReactTestRenderer.act(async () => renderer.update(<Owner isOpen={false} />))
+        await ReactTestRenderer.act(async () => renderer.update(<DialogOwner isOpen={false} onClose={onClose} />))
         expect(isSheetOpen(renderer)).toBe(false)
         expect(onClose).not.toHaveBeenCalled()
         expect(backListeners).toHaveLength(0)

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { send } from "@/api/client"
 import { AUTH_API } from "@/api/endpoints"
 import { resetToApp } from "@/api/navigationRef"
+import { SINGLE_LINE_INPUT_STYLE } from "@/components/ui"
 import { useAuth } from "@/contexts/AuthContext"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { notify } from "@/lib/notify"
@@ -128,6 +129,7 @@ export default function LoginScreen() {
                                     accessibilityLabel="Email"
                                     testID="loginEmail"
                                     className={`mt-1 ${INPUT_CLASSES}`}
+                                    style={SINGLE_LINE_INPUT_STYLE}
                                 />
                             </View>
 
@@ -150,6 +152,7 @@ export default function LoginScreen() {
                                         accessibilityLabel="Password"
                                         testID="loginPassword"
                                         className={`pr-12 ${INPUT_CLASSES}`}
+                                        style={SINGLE_LINE_INPUT_STYLE}
                                     />
                                     <Pressable
                                         onPress={() => setShowPassword((prev) => !prev)}

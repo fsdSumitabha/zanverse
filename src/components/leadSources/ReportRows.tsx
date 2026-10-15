@@ -2,7 +2,7 @@ import clsx from "clsx"
 import { useMemo, useState, type ReactElement } from "react"
 import { FlatList, Pressable, Text, TextInput, View } from "react-native"
 
-import { FIELD_CLASSES } from "@/components/ui"
+import { FIELD_CLASSES, SINGLE_LINE_INPUT_STYLE } from "@/components/ui"
 import { UPLOAD_ROW_RESULT, type UploadRowResult } from "@/constants/leadSourceStatus"
 import type { LeadSourceUploadReport } from "@/types/leadSource"
 import { PALETTE } from "@/theme"
@@ -116,6 +116,7 @@ export default function ReportRows({ report, header, onOpenSource }: Props) {
                 autoCapitalize="none"
                 autoCorrect={false}
                 className={FIELD_CLASSES}
+                style={SINGLE_LINE_INPUT_STYLE}
             />
         </View>
     )

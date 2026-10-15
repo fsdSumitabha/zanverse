@@ -300,8 +300,9 @@ describe("lead source detail", () => {
             expect(findPressableByText(detailOf(app), label)).toBeTruthy()
         }
         await press(findPressableByText(detailOf(app), "Delete"))
-        expect(getTexts(detailOf(app))).toContain("Delete 1 lead source?")
-        await press(findLastPressableByText(detailOf(app), "Delete"))
+        // A dialog draws on the app's dialog layer, over the screen, so it is looked up in the whole app.
+        expect(getTexts(app)).toContain("Delete 1 lead source?")
+        await press(findLastPressableByText(app, "Delete"))
 
         expect(bodies).toEqual([{ action: "delete", ids: ["s1"], today: TODAY }])
         expect(app.root.findAllByType(LeadSourceDetailScreen)).toHaveLength(0)
@@ -354,7 +355,7 @@ describe("lead source detail", () => {
         ])
 
         await press(findPressableByText(detailOf(app), "Convert to lead"))
-        expect(getTexts(detailOf(app))).toEqual(
+        expect(getTexts(app)).toEqual(
             expect.arrayContaining([
                 "Convert Acme Traders to a lead?",
                 "A new lead is created in the Leads list, in this region.",
@@ -362,7 +363,7 @@ describe("lead source detail", () => {
             ]),
         )
         scheduledTriggers.set("callback-s1", { notification: {}, trigger: {} })
-        await press(findPressableByText(detailOf(app), "Create lead"))
+        await press(findLastPressableByText(app, "Create lead"))
 
         expect(getCalls(fetchMock)).toEqual(
             expect.arrayContaining([`POST ${DETAIL_PATH}/convert`, `GET /api/admin/operations/leads/${LEAD_ID}`]),
@@ -386,9 +387,9 @@ describe("lead source detail", () => {
         ])
 
         await press(findPressableByText(detailOf(app), "Convert to lead"))
-        await press(findPressableByText(detailOf(app), "Create lead"))
+        await press(findLastPressableByText(app, "Create lead"))
         expect(error).toHaveBeenCalledWith("This lead source is already a lead.")
-        expect(getTexts(detailOf(app))).not.toContain("Convert Acme Traders to a lead?")
+        expect(getTexts(app)).not.toContain("Convert Acme Traders to a lead?")
         await unmountApp(app)
     })
 

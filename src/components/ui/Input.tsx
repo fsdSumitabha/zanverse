@@ -9,7 +9,7 @@ import {
 
 import { PALETTE } from "@/theme"
 
-import Field, { FIELD_CLASSES } from "./Field"
+import Field, { FIELD_CLASSES, SINGLE_LINE_INPUT_STYLE } from "./Field"
 import SheetTextInput from "./SheetTextInput"
 
 export interface InputProps extends Omit<TextInputProps, "style" | "className"> {
@@ -50,8 +50,10 @@ export default function Input({
 
     // In style rather than classes: two border colour classes would be decided by stylesheet order, not by state.
     // Only keys with a value go in: an undefined borderColor would wipe out the class's border colour.
+    // A one-line box has a fixed height; a multiline one (Textarea) grows with its lines.
     const borderColor = getBorderColor(Boolean(error), isFocused)
     const boxStyle: TextStyle = {
+        ...(rest.multiline ? {} : SINGLE_LINE_INPUT_STYLE),
         ...(borderColor ? { borderColor } : {}),
         ...(minHeight !== undefined ? { minHeight } : {}),
     }

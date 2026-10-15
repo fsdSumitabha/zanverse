@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react-native"
 import { useState, type ComponentRef, type RefObject } from "react"
 import { Pressable, Text, TextInput, View } from "react-native"
 
-import { FIELD_CLASSES } from "@/components/ui"
+import { FIELD_CLASSES, SINGLE_LINE_INPUT_STYLE } from "@/components/ui"
 import SheetTextInput from "@/components/ui/SheetTextInput"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { PHONE_MESSAGES, checkPastedPhone, getPhonePlaceholder } from "@/lib/phone"
@@ -135,7 +135,7 @@ export default function PhoneField({
                     accessibilityLabel={accessibilityLabel}
                     accessibilityState={{ disabled }}
                     className={FIELD_CLASSES}
-                    style={borderColor ? { borderColor } : undefined}
+                    style={borderColor ? { ...SINGLE_LINE_INPUT_STYLE, borderColor } : SINGLE_LINE_INPUT_STYLE}
                 />
             </View>
             <CountrySheet
