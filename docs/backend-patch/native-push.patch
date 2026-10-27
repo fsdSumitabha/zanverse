@@ -1,0 +1,566 @@
+Push notifications for the native app (Android now, iOS later).
+
+Base: zan-workspace main at e845ae6 "feat(notifications): add FCM web push notifications".
+Apply from the web repo root:
+    git apply --check native-push.patch
+    git apply native-push.patch
+
+What it changes:
+- POST /api/notifications/devices accepts `platform` (PUSH_PLATFORM: 10 web, 20 Android, 30 iOS)
+  and `appVersion`. Only browsers get the push_device cookie.
+- DELETE /api/notifications/devices also reads { fid } from the JSON body, for the phone's logout.
+- sendPush adds an `android` block (priority high, 24 h TTL) and an `apns` block (alert, thread-id,
+  category, interruption level). Data gains `channel`, `type`, `entityType` and `entityId`.
+- New src/constants/pushChannels.ts: the channel list and the event -> channel map. Copy it to the
+  phone unchanged, like the other constants. src/constants/pushDevice.ts gains PUSH_PLATFORM.
+- Label "Web Push" becomes "Push" (logs only).
+
+Browsers keep working as before: they send no platform, keep the cookie, and read only title, body
+and url. No new environment variables. No migration: old PushDevice rows count as browsers.
+
+diff --git a/src/app/api/notifications/devices/route.ts b/src/app/api/notifications/devices/route.ts
+index e07c354..0e67ee8 100644
+--- a/src/app/api/notifications/devices/route.ts
++++ b/src/app/api/notifications/devices/route.ts
+@@ -3,14 +3,17 @@ import mongoose from "mongoose"
+ import dbConnect from "@/lib/db/dbConnect"
+ import PushDevice from "@/models/PushDevice"
+ import { requireAuth, AuthError } from "@/lib/auth/requireAuth"
+-import { PUSH_DEVICE_COOKIE } from "@/constants/pushDevice"
++import { PUSH_DEVICE_COOKIE, PUSH_PLATFORM } from "@/constants/pushDevice"
+ 
+ // A Firebase Installation ID is about 22 URL-safe characters.
+ const FID_PATTERN = /^[A-Za-z0-9_-]{10,200}$/
++// "1.4.0", "1.4.0+52", "2.0.0-beta.1"
++const APP_VERSION_PATTERN = /^[0-9A-Za-z.+-]{1,40}$/
++const PLATFORMS: number[] = Object.values(PUSH_PLATFORM)
+ const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365
+ 
+-// Saves this browser for push notifications. The browser calls it on every
+-// visit, so updatedAt shows when it was last seen.
++// Saves this browser or phone for push notifications. Both call it on every
++// visit or app start, so updatedAt shows when the device was last seen.
+ export async function POST(req: NextRequest) {
+     try {
+         const authUser = await requireAuth(req)
+@@ -22,22 +25,32 @@ export async function POST(req: NextRequest) {
+             return NextResponse.json({ success: false, message: "Invalid device id" }, { status: 400 })
+         }
+ 
+-        // One row per browser. If another user signed in here before, the
+-        // browser now belongs to the current user.
+-        await PushDevice.updateOne(
+-            { fid },
+-            { $set: { user: new mongoose.Types.ObjectId(authUser.id) } },
+-            { upsert: true }
+-        )
++        // A browser sends no platform. The phone app sends ANDROID or IOS.
++        const platform = body?.platform ?? PUSH_PLATFORM.WEB
++        if (!PLATFORMS.includes(platform)) {
++            return NextResponse.json({ success: false, message: "Invalid platform" }, { status: 400 })
++        }
++
++        // One row per device. If another user signed in here before, the
++        // device now belongs to the current user.
++        const update: Record<string, unknown> = { user: new mongoose.Types.ObjectId(authUser.id), platform }
++        // The version only helps support, so a bad one is dropped rather than refused.
++        if (typeof body?.appVersion === "string" && APP_VERSION_PATTERN.test(body.appVersion)) {
++            update.appVersion = body.appVersion
++        }
++        await PushDevice.updateOne({ fid }, { $set: update }, { upsert: true })
+ 
+         const res = NextResponse.json({ success: true })
+-        res.cookies.set(PUSH_DEVICE_COOKIE, fid, {
+-            httpOnly: true,
+-            secure: true,
+-            sameSite: "lax",
+-            path: "/",
+-            maxAge: ONE_YEAR_SECONDS,
+-        })
++        // Only a browser gets the cookie. The phone app keeps its FID itself.
++        if (platform === PUSH_PLATFORM.WEB) {
++            res.cookies.set(PUSH_DEVICE_COOKIE, fid, {
++                httpOnly: true,
++                secure: true,
++                sameSite: "lax",
++                path: "/",
++                maxAge: ONE_YEAR_SECONDS,
++            })
++        }
+         return res
+     } catch (err) {
+         if (err instanceof AuthError) {
+@@ -48,13 +61,16 @@ export async function POST(req: NextRequest) {
+     }
+ }
+ 
+-// Stops push notifications on this browser.
++// Stops push notifications on this device. A browser is found by its cookie.
++// The phone app has no cookie, so it sends { fid } in the body. It must call
++// this before it logs out, while it still holds the JWT.
+ export async function DELETE(req: NextRequest) {
+     try {
+         const authUser = await requireAuth(req)
+         await dbConnect()
+ 
+-        const fid = req.cookies.get(PUSH_DEVICE_COOKIE)?.value
++        const body = await req.json().catch(() => null)
++        const fid = typeof body?.fid === "string" ? body.fid : req.cookies.get(PUSH_DEVICE_COOKIE)?.value
+         if (fid) {
+             await PushDevice.deleteOne({ fid, user: new mongoose.Types.ObjectId(authUser.id) })
+         }
+diff --git a/src/app/api/notifications/devices/test/route.ts b/src/app/api/notifications/devices/test/route.ts
+index 99162a4..cfe3c6e 100644
+--- a/src/app/api/notifications/devices/test/route.ts
++++ b/src/app/api/notifications/devices/test/route.ts
+@@ -3,8 +3,9 @@ import mongoose from "mongoose"
+ import dbConnect from "@/lib/db/dbConnect"
+ import { requireAuth, AuthError } from "@/lib/auth/requireAuth"
+ import { sendPush } from "@/lib/notifications/sendPush"
++import { PUSH_CHANNEL } from "@/constants/pushChannels"
+ 
+-// Sends a test push to every browser of the signed-in user.
++// Sends a test push to every browser and phone of the signed-in user.
+ export async function POST(req: NextRequest) {
+     try {
+         const authUser = await requireAuth(req)
+@@ -14,6 +15,7 @@ export async function POST(req: NextRequest) {
+             title: "Test notification",
+             body: "Push notifications work on this device.",
+             url: "/admin/operations/notifications",
++            channel: PUSH_CHANNEL.GENERAL,
+         })
+ 
+         return NextResponse.json({ success: true, ...result })
+diff --git a/src/constants/notificationChannels.ts b/src/constants/notificationChannels.ts
+index f926c58..b65ade3 100644
+--- a/src/constants/notificationChannels.ts
++++ b/src/constants/notificationChannels.ts
+@@ -6,7 +6,7 @@ import { dispatchSms } from "@/lib/notifications/channels/sms"
+ export const NOTIFICATION_CHANNEL = {
+     2: { label: "Email",    channel: dispatchEmail },
+     3: { label: "SMS",      channel: dispatchSms   },
+-    4: { label: "Web Push", channel: dispatchPush  },
++    4: { label: "Push",     channel: dispatchPush  },
+ } as const
+ 
+ export type NotificationChannel = keyof typeof NOTIFICATION_CHANNEL
+diff --git a/src/constants/pushChannels.ts b/src/constants/pushChannels.ts
+new file mode 100644
+index 0000000..e0f859f
+--- /dev/null
++++ b/src/constants/pushChannels.ts
+@@ -0,0 +1,171 @@
++import { EVENT_CODE, type EventType } from "./eventTypes"
++
++/**
++ * How loud a push channel is.
++ *
++ * Android fixes it when the phone app creates the channel. After that, only
++ * the user can change it, in system Settings. iOS has no channels, so the
++ * server sends the level with each message (see sendPush.ts).
++ */
++export const PUSH_LEVEL = {
++    /** Sound, and the notification pops up over the screen. */
++    URGENT: 10,
++    /** Sound, no pop-up. */
++    DEFAULT: 20,
++    /** No sound. It shows in the notification list only. */
++    SILENT: 30,
++} as const
++
++export type PushLevel =
++    (typeof PUSH_LEVEL)[keyof typeof PUSH_LEVEL]
++
++/** Headings that sort the channels in Android's notification settings. */
++export const PUSH_CHANNEL_GROUP = {
++    CALLS: 10,
++    PIPELINE: 20,
++    TEAM: 30,
++} as const
++
++export type PushChannelGroup =
++    (typeof PUSH_CHANNEL_GROUP)[keyof typeof PUSH_CHANNEL_GROUP]
++
++export const PUSH_CHANNEL_GROUP_META: Record<
++    PushChannelGroup,
++    { id: string; label: string }
++> = {
++    10: { id: "calls", label: "Calls and meetings" },
++    20: { id: "pipeline", label: "Pipeline" },
++    30: { id: "team", label: "Team activity" },
++}
++
++/**
++ * The kinds of push notification. On Android, each one is a notification
++ * channel that the user can turn off or change in system Settings.
++ *
++ * `id` is the Android channel id and the iOS thread id. Android keeps the
++ * user's choices under that id, so never change or reuse one. The same rule
++ * applies to the codes.
++ *
++ * CALLBACKS comes from the phone itself: the app schedules the reminder.
++ * The server sends to every other channel.
++ */
++export const PUSH_CHANNEL = {
++    CALLBACKS: 10,
++    MEETINGS: 20,
++    NEW_LEADS: 30,
++    NEW_RECORDS: 40,
++    QUOTATIONS: 50,
++    STAGE_CHANGES: 60,
++    NOTES: 70,
++    LOGGED_CALLS: 80,
++    DOCUMENTS: 90,
++    /** Test pushes, and events with no channel below. */
++    GENERAL: 100,
++} as const
++
++export type PushChannel =
++    (typeof PUSH_CHANNEL)[keyof typeof PUSH_CHANNEL]
++
++export const PUSH_CHANNEL_META: Record<
++    PushChannel,
++    { id: string; label: string; description: string; level: PushLevel; group?: PushChannelGroup }
++> = {
++    10: {
++        id: "callbacks",
++        label: "Callback reminders",
++        description: "When a callback you set on a lead source is due.",
++        level: PUSH_LEVEL.URGENT,
++        group: PUSH_CHANNEL_GROUP.CALLS,
++    },
++    20: {
++        id: "meetings",
++        label: "Meeting updates",
++        description: "A meeting is scheduled, moved, cancelled, missed or completed.",
++        level: PUSH_LEVEL.DEFAULT,
++        group: PUSH_CHANNEL_GROUP.CALLS,
++    },
++    30: {
++        id: "new_leads",
++        label: "New leads",
++        description: "A new lead comes in from the website, Facebook or the booking page.",
++        level: PUSH_LEVEL.DEFAULT,
++        group: PUSH_CHANNEL_GROUP.PIPELINE,
++    },
++    40: {
++        id: "new_records",
++        label: "New clients and projects",
++        description: "A lead becomes a client, or someone adds a client or project.",
++        level: PUSH_LEVEL.DEFAULT,
++        group: PUSH_CHANNEL_GROUP.PIPELINE,
++    },
++    50: {
++        id: "quotations",
++        label: "Quotations",
++        description: "A quotation is sent to a client.",
++        level: PUSH_LEVEL.DEFAULT,
++        group: PUSH_CHANNEL_GROUP.PIPELINE,
++    },
++    60: {
++        id: "stage_changes",
++        label: "Stage changes",
++        description: "A lead, client or project moves to a new stage.",
++        level: PUSH_LEVEL.SILENT,
++        group: PUSH_CHANNEL_GROUP.PIPELINE,
++    },
++    70: {
++        id: "notes",
++        label: "Notes",
++        description: "Someone adds a note to a lead, client or project.",
++        level: PUSH_LEVEL.SILENT,
++        group: PUSH_CHANNEL_GROUP.TEAM,
++    },
++    80: {
++        id: "logged_calls",
++        label: "Logged calls",
++        description: "Someone logs a call with a lead or client.",
++        level: PUSH_LEVEL.SILENT,
++        group: PUSH_CHANNEL_GROUP.TEAM,
++    },
++    90: {
++        id: "documents",
++        label: "Documents",
++        description: "Someone uploads a document to a lead, client or project.",
++        level: PUSH_LEVEL.SILENT,
++        group: PUSH_CHANNEL_GROUP.TEAM,
++    },
++    100: {
++        id: "general",
++        label: "General",
++        description: "Test notifications, and alerts that fit no other channel.",
++        level: PUSH_LEVEL.DEFAULT,
++    },
++}
++
++/**
++ * The channel each event's push goes to. An event that is not listed goes to
++ * GENERAL. NOTIFICATION_RULES decides who receives the event.
++ */
++export const PUSH_CHANNEL_BY_EVENT: Partial<Record<EventType, PushChannel>> = {
++    [EVENT_CODE.MEETING_SCHEDULED]: PUSH_CHANNEL.MEETINGS,
++    [EVENT_CODE.MEETING_RESCHEDULED]: PUSH_CHANNEL.MEETINGS,
++    [EVENT_CODE.MEETING_CANCELLED]: PUSH_CHANNEL.MEETINGS,
++    [EVENT_CODE.MEETING_MISSED]: PUSH_CHANNEL.MEETINGS,
++    [EVENT_CODE.MEETING_COMPLETED]: PUSH_CHANNEL.MEETINGS,
++
++    [EVENT_CODE.LEAD_CREATED]: PUSH_CHANNEL.NEW_LEADS,
++
++    [EVENT_CODE.LEAD_CONVERTED]: PUSH_CHANNEL.NEW_RECORDS,
++    [EVENT_CODE.CLIENT_CREATED]: PUSH_CHANNEL.NEW_RECORDS,
++    [EVENT_CODE.PROJECT_CREATED]: PUSH_CHANNEL.NEW_RECORDS,
++
++    [EVENT_CODE.QUOTATION_SENT]: PUSH_CHANNEL.QUOTATIONS,
++
++    [EVENT_CODE.LEAD_STATUS_CHANGED]: PUSH_CHANNEL.STAGE_CHANGES,
++    [EVENT_CODE.CLIENT_STATUS_CHANGED]: PUSH_CHANNEL.STAGE_CHANGES,
++    [EVENT_CODE.PROJECT_STATUS_CHANGED]: PUSH_CHANNEL.STAGE_CHANGES,
++    [EVENT_CODE.STATUS_CHANGED]: PUSH_CHANNEL.STAGE_CHANGES,
++
++    [EVENT_CODE.NOTE_ADDED]: PUSH_CHANNEL.NOTES,
++    [EVENT_CODE.CALL_MADE]: PUSH_CHANNEL.LOGGED_CALLS,
++    [EVENT_CODE.DOCUMENT_UPLOADED]: PUSH_CHANNEL.DOCUMENTS,
++}
+diff --git a/src/constants/pushDevice.ts b/src/constants/pushDevice.ts
+index d434449..1e48fa5 100644
+--- a/src/constants/pushDevice.ts
++++ b/src/constants/pushDevice.ts
+@@ -1,7 +1,21 @@
+ /**
+  * Cookie that holds this browser's Firebase Installation ID (FID).
+  *
+- * POST /api/notifications/devices sets it. Logout reads it to stop push
+- * alerts on this browser, then deletes it.
++ * POST /api/notifications/devices sets it for browsers only. Logout reads it
++ * to stop push alerts on this browser, then deletes it. The phone app gets no
++ * cookie. It sends its FID in the DELETE body instead.
+  */
+ export const PUSH_DEVICE_COOKIE = "push_device"
++
++/**
++ * What kind of app a push device is. A browser sends no platform and is saved
++ * as WEB. The phone app sends ANDROID or IOS.
++ */
++export const PUSH_PLATFORM = {
++    WEB: 10,
++    ANDROID: 20,
++    IOS: 30,
++} as const
++
++export type PushPlatform =
++    (typeof PUSH_PLATFORM)[keyof typeof PUSH_PLATFORM]
+diff --git a/src/lib/notifications/channels/push.ts b/src/lib/notifications/channels/push.ts
+index 2a3e4ab..1a12d44 100644
+--- a/src/lib/notifications/channels/push.ts
++++ b/src/lib/notifications/channels/push.ts
+@@ -1,10 +1,19 @@
+ import { NOTIFICATION_CHANNEL } from "@/constants/notificationChannels"
++import { PUSH_CHANNEL, PUSH_CHANNEL_BY_EVENT } from "@/constants/pushChannels"
+ import { sendPush } from "../sendPush"
+ import type { DispatchContext } from "../../../types/notification"
+ 
+ export async function dispatchPush(ctx: DispatchContext): Promise<void> {
+     const label = NOTIFICATION_CHANNEL[4].label
+     const { title, body, url } = ctx.message
+-    const { sent, failed } = await sendPush(ctx.recipients, { title, body, url })
++    const { sent, failed } = await sendPush(ctx.recipients, {
++        title,
++        body,
++        url,
++        channel: PUSH_CHANNEL_BY_EVENT[ctx.type] ?? PUSH_CHANNEL.GENERAL,
++        type: ctx.type,
++        entityType: ctx.entityType,
++        entityId: String(ctx.entityId),
++    })
+     console.log(`[notifications] ${label} type=${ctx.type} sent=${sent} failed=${failed}`)
+ }
+diff --git a/src/lib/notifications/emit.ts b/src/lib/notifications/emit.ts
+index f2895d7..213f562 100644
+--- a/src/lib/notifications/emit.ts
++++ b/src/lib/notifications/emit.ts
+@@ -8,7 +8,7 @@ import type { NotificationChannel } from "@/constants/notificationChannels"
+ const MAX_RECIPIENTS = 500
+ 
+ // Used when the caller does not pass `channels`. In-App is always on (see dispatch.ts).
+-const DEFAULT_CHANNELS: NotificationChannel[] = [4]   // Web Push
++const DEFAULT_CHANNELS: NotificationChannel[] = [4]   // Push: browsers and the phone app
+ 
+ export async function emitNotification(input: EmitInput): Promise<void> {
+     try {
+diff --git a/src/lib/notifications/sendPush.ts b/src/lib/notifications/sendPush.ts
+index 5a74e36..cfce84d 100644
+--- a/src/lib/notifications/sendPush.ts
++++ b/src/lib/notifications/sendPush.ts
+@@ -1,11 +1,18 @@
+ import type { Types } from "mongoose"
++import type { ApnsConfig, Aps } from "firebase-admin/messaging"
+ import PushDevice from "@/models/PushDevice"
+ import { adminMessaging } from "@/lib/firebase/admin"
++import { PUSH_CHANNEL_META, PUSH_LEVEL, type PushChannel } from "@/constants/pushChannels"
++import type { EventType } from "@/constants/eventTypes"
+ 
+ export interface PushMessage {
+     title: string
+     body?: string
+     url?: string
++    channel: PushChannel
++    type?: EventType            // the event behind it. A test push has none.
++    entityType?: number         // ENTITY_TYPE code of the record the event is about
++    entityId?: string
+ }
+ 
+ export interface PushResult {
+@@ -16,7 +23,10 @@ export interface PushResult {
+ // FCM takes at most 500 IDs per call.
+ const BATCH_SIZE = 500
+ 
+-// FCM returns these when a browser is gone for good. We delete its row.
++// A push the device has not received within a day is dropped.
++const TTL_SECONDS = 60 * 60 * 24
++
++// FCM returns these when a device is gone for good. We delete its row.
+ // Not "invalid-argument": a bad payload also returns it, and would wipe every row.
+ const DEAD_DEVICE_CODES = [
+     "messaging/installation-id-not-registered",
+@@ -24,11 +34,15 @@ const DEAD_DEVICE_CODES = [
+ ]
+ 
+ /**
+- * Sends one message to every browser of the given users.
++ * Sends one message to every browser and phone of the given users.
+  *
+- * It sends data only (title, body, url). The service worker at
+- * /firebase-messaging-sw.js turns it into a system notification. If a CRM tab
+- * is open on screen, Firebase passes it to that tab instead (see PushListener).
++ * It sends data only: title, body and url, plus channel, type, entityType and
++ * entityId for the phone app. Each platform shows it in its own way:
++ * - Browser: the service worker at /firebase-messaging-sw.js turns it into a
++ *   system notification. If a CRM tab is open on screen, Firebase passes it to
++ *   that tab instead (see PushListener). Browsers ignore the extra fields.
++ * - Android: the app shows it on the Android channel for `channel`.
++ * - iOS: iOS shows the `apns` alert itself (see getApnsConfig).
+  */
+ export async function sendPush(userIds: Types.ObjectId[], message: PushMessage): Promise<PushResult> {
+     const devices = await PushDevice.find({ user: { $in: userIds } })
+@@ -38,10 +52,14 @@ export async function sendPush(userIds: Types.ObjectId[], message: PushMessage):
+     if (devices.length === 0) return { sent: 0, failed: 0 }
+ 
+     // FCM data values must be strings, so empty fields are left out.
+-    const data: Record<string, string> = { title: message.title }
++    const data: Record<string, string> = { title: message.title, channel: String(message.channel) }
+     if (message.body) data.body = message.body
+     if (message.url) data.url = message.url
++    if (message.type !== undefined) data.type = String(message.type)
++    if (message.entityType !== undefined) data.entityType = String(message.entityType)
++    if (message.entityId) data.entityId = message.entityId
+ 
++    const apns = getApnsConfig(message)
+     const fids = devices.map((d) => d.fid)
+     const dead: string[] = []
+     let sent = 0
+@@ -53,15 +71,24 @@ export async function sendPush(userIds: Types.ObjectId[], message: PushMessage):
+             data,
+             webpush: {
+                 // "high" wakes a sleeping phone. TTL drops the alert if the browser stays offline for a day.
+-                headers: { Urgency: "high", TTL: String(60 * 60 * 24) },
++                headers: { Urgency: "high", TTL: String(TTL_SECONDS) },
++            },
++            android: {
++                // Without "high", Android holds a data-only message until the
++                // app is opened. FCM lowers the priority of apps that send
++                // "high" and then show nothing, so send it only for pushes
++                // that always show a notification. Every push does today.
++                priority: "high",
++                ttl: TTL_SECONDS * 1000,
+             },
++            apns,
+         })
+ 
+         sent += res.successCount
+         res.responses.forEach((r, idx) => {
+             if (!r.error) return
+             if (DEAD_DEVICE_CODES.includes(r.error.code)) dead.push(batch[idx])
+-            else console.error(`[notifications] push to one browser failed: ${r.error.code}`)
++            else console.error(`[notifications] push to one device failed: ${r.error.code}`)
+         })
+     }
+ 
+@@ -71,3 +98,35 @@ export async function sendPush(userIds: Types.ObjectId[], message: PushMessage):
+ 
+     return { sent, failed: fids.length - sent }
+ }
++
++/**
++ * The iOS part of the message. iOS shows the alert itself, even when the app
++ * is closed. iOS has no channels, so the channel decides three things here:
++ * - thread-id groups the alerts, one group per channel.
++ * - category picks the action buttons, once the iOS app defines them.
++ * - A SILENT channel arrives without sound and without lighting the screen.
++ *
++ * Browsers and Android ignore this part. "time-sensitive" is left out: it
++ * needs an entitlement from Apple, and no server push is urgent yet.
++ */
++function getApnsConfig(message: PushMessage): ApnsConfig {
++    const meta = PUSH_CHANNEL_META[message.channel]
++    const isSilent = meta.level === PUSH_LEVEL.SILENT
++
++    const aps: Aps = {
++        alert: message.body ? { title: message.title, body: message.body } : { title: message.title },
++        threadId: meta.id,
++        category: meta.id,
++        "interruption-level": isSilent ? "passive" : "active",
++    }
++    if (!isSilent) aps.sound = "default"
++
++    return {
++        headers: {
++            "apns-push-type": "alert",
++            "apns-priority": "10",
++            "apns-expiration": String(Math.floor(Date.now() / 1000) + TTL_SECONDS),
++        },
++        payload: { aps },
++    }
++}
+diff --git a/src/models/PushDevice.ts b/src/models/PushDevice.ts
+index b1d75d8..8898539 100644
+--- a/src/models/PushDevice.ts
++++ b/src/models/PushDevice.ts
+@@ -1,24 +1,31 @@
+ import mongoose, { Schema, Document, Types } from "mongoose"
++import { PUSH_PLATFORM, type PushPlatform } from "@/constants/pushDevice"
+ 
+ 
+-// One row per browser that receives push notifications.
++// One row per browser or phone app that receives push notifications.
+ export interface IPushDevice extends Document {
+     user: Types.ObjectId;
+ 
+-    // Firebase Installation ID (FID). Firebase gives one to each browser.
++    // Firebase Installation ID (FID). Firebase gives one to each browser and
++    // to each install of the phone app.
+     fid: string;
+ 
++    platform: PushPlatform;          // PUSH_PLATFORM code. Rows saved before this field are browsers.
++    appVersion?: string;             // the phone app's version, e.g. "1.4.0". Browsers send none.
++
+     createdAt: Date;                 // from timestamps
+-    updatedAt: Date;                 // moves forward on every visit
++    updatedAt: Date;                 // moves forward on every visit or app start
+ }
+ 
+ const PushDeviceSchema = new Schema<IPushDevice>({
+-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+-    fid:  { type: String, required: true, unique: true },   // a browser belongs to one user at a time
++    user:       { type: Schema.Types.ObjectId, ref: "User", required: true },
++    fid:        { type: String, required: true, unique: true },   // a device belongs to one user at a time
++    platform:   { type: Number, enum: Object.values(PUSH_PLATFORM), default: PUSH_PLATFORM.WEB },
++    appVersion: { type: String, maxlength: 40 },
+ }, { timestamps: true });
+ 
+ PushDeviceSchema.index({ user: 1 });                                                   // the send lookup
+-PushDeviceSchema.index({ updatedAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 60 });  // drop browsers not seen for 60 days
++PushDeviceSchema.index({ updatedAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 60 });  // drop devices not seen for 60 days
+ 
+ 
+ export default mongoose.models.PushDevice ||

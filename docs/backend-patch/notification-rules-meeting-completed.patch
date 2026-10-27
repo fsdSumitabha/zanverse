@@ -1,0 +1,31 @@
+Optional. Meeting Completed (2050) reaches the same roles as the other meeting events.
+
+Base: zan-workspace main at e845ae6. Independent of native-push.patch: apply either, both, in any order.
+    git apply --check notification-rules-meeting-completed.patch
+    git apply notification-rules-meeting-completed.patch
+
+Today 2050 has no rule, so only the meeting's attendees get it. The rule comments name 2020 as
+"Completed" and 2040 as "Rescheduled", which suggests 2050 was meant to be listed. 2020 is really
+Rescheduled and 2040 is Missed (see interactionTypes.ts).
+
+This changes the web too: Admin, Project Manager, Senior Blockchain Developer and BDE start getting
+"Meeting with X completed" in the bell and as a browser push. Skip this patch if that is not wanted.
+After applying, copy src/constants/notificationRules.ts to the phone again.
+
+diff --git a/src/constants/notificationRules.ts b/src/constants/notificationRules.ts
+index f7a12d9..80fe5e4 100644
+--- a/src/constants/notificationRules.ts
++++ b/src/constants/notificationRules.ts
+@@ -13,9 +13,10 @@ export const NOTIFICATION_RULES: Partial<Record<EventType, UserRole[]>> = {
+     1210: [ 10, 30, 45, 60 ],   // Project Status changed
+ 
+     2010: [ 10, 30, 45, 60 ],   // Meeting Scheduled
+-    2020: [ 10, 30, 45, 60 ],   // Meeting Completed
++    2020: [ 10, 30, 45, 60 ],   // Meeting Rescheduled
+     2030: [ 10, 30, 45, 60 ],   // Meeting Cancelled
+-    2040: [ 10, 30, 45, 60 ],  // Meeting Rescheduled
++    2040: [ 10, 30, 45, 60 ],   // Meeting Missed (nothing emits it yet)
++    2050: [ 10, 30, 45, 60 ],   // Meeting Completed
+ 
+     2110: [ 10, 30, 45, 60 ],   // Note Added
+     
