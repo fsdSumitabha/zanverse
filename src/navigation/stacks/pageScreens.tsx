@@ -7,6 +7,7 @@ import SearchScreen from "@/screens/dashboard/SearchScreen"
 import NotificationsScreen from "@/screens/notifications/NotificationsScreen"
 import ProfileEditScreen from "@/screens/profile/ProfileEditScreen"
 import ProfileScreen from "@/screens/profile/ProfileScreen"
+import NotificationSettingsScreen from "@/screens/settings/NotificationSettingsScreen"
 import SettingsScreen from "@/screens/settings/SettingsScreen"
 import OverallStatsScreen from "@/screens/stats/OverallStatsScreen"
 
@@ -21,6 +22,7 @@ const PAGES: { name: PageName; component: ComponentType }[] = [
     { name: "Profile", component: ProfileScreen },
     { name: "ProfileEdit", component: ProfileEditScreen },
     { name: "Settings", component: SettingsScreen },
+    { name: "NotificationSettings", component: NotificationSettingsScreen },
 ]
 
 interface PageStack {

@@ -49,6 +49,10 @@ export const NOTIFICATIONS_API = {
     FEED: "/api/notifications",
     READ_ALL: "/api/notifications/read-all",
     SEEN: "/api/notifications/seen",
+    /** `POST { fid, platform, appVersion }` saves this phone for push; `DELETE { fid }` removes it. */
+    DEVICES: "/api/notifications/devices",
+    /** `POST` sends a test push to every device of the signed-in user. */
+    DEVICES_TEST: "/api/notifications/devices/test",
     /** `PATCH` marks one row read. */
     read: (id: string) => `/api/notifications/${id}/read`,
 } as const

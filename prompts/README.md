@@ -1897,6 +1897,11 @@ exact spec for the backend owner.
 Recorded in `docs/OVERVIEW.md` §4. Notifee adds its own Maven repo. Its manifest already declares
 `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM` and `RECEIVE_BOOT_COMPLETED`, so the app's manifest is unchanged.
 
+**Update 2026-10-28:** Notifee was archived in April 2026. It is replaced by `react-native-notify-kit` 10.9.1 (same API,
+same Java packages, so the R8 rules stand), and React Native Firebase moved to 27.1.0 in FID mode (`firebase.json`).
+`token.ts` became `device.ts`; the `crm` channel became the ten channels of `src/constants/pushChannels.ts`. The app's
+manifest now lists `POST_NOTIFICATIONS` and `SCHEDULE_EXACT_ALARM` itself, plus the `NOTIFICATION_PREFERENCES` link.
+
 ### What is in it
 
 - `src/lib/push/`:

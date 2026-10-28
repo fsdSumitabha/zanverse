@@ -2,6 +2,12 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Notifications (asked in context on Android 13+, never at launch) and exact callback reminders (Android 14+
+         denies them to a new install until the person allows "Alarms & reminders"). react-native-notify-kit declares
+         both as well; they are listed here so the app's own needs are visible. Never USE_EXACT_ALARM: Play allows it
+         for alarm and calendar apps only. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <!-- Android 11+ package visibility: the dialer, the browser and WhatsApp, for src/lib/contact.ts. -->
     <queries>
@@ -47,11 +53,18 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="zanverse" />
         </intent-filter>
+        <!-- Android Settings shows "Additional settings in the app" under the app's notifications, which opens the
+             in-app Notification settings screen. MainActivity turns this intent into zanverse://settings/notifications. -->
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.NOTIFICATION_PREFERENCES" />
+        </intent-filter>
       </activity>
 
       <!-- Pushes that Firebase shows itself, while the app is closed: the white ZAN mark on the brand navy, as the
            app's own notifications (src/lib/push/channels.ts). @react-native-firebase/messaging declares the colour
-           too (white, unless a firebase.json sets one), so this one replaces it. -->
+           too (white, unless firebase.json sets one), so this one replaces it. CRM pushes are data-only and the app
+           draws them; firebase.json makes "general" the channel for any push Firebase draws itself. -->
       <meta-data
         android:name="com.google.firebase.messaging.default_notification_icon"
         android:resource="@drawable/ic_notification" />

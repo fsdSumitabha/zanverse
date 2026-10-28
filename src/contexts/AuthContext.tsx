@@ -5,7 +5,8 @@ import { AUTH_API } from "@/api/endpoints"
 import { resetToLogin } from "@/api/navigationRef"
 import type { UserRole } from "@/constants/userRoles"
 import { notify } from "@/lib/notify"
-import { registerDeviceToken, unregisterDeviceToken } from "@/lib/push/token"
+import { registerPushDevice, unregisterPushDevice } from "@/lib/push/device"
+import { clearPhoneNotifications } from "@/lib/push/reminders"
 import type { ActiveRegion, RegionCode } from "@/lib/region"
 import { readCachedMe, writeCachedMe } from "@/store/cache"
 import { clearToken, getToken, loadToken } from "@/store/keychain"
@@ -98,8 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             saveActiveRegion(data.activeRegion)
             writeCachedMe(data)
             setUser(data)
-            // After login and on every start: the backend gets this phone's push token. Fire-and-forget.
-            registerDeviceToken()
+            // After login and on every start: the backend gets this phone's FID for push. Fire-and-forget.
+            registerPushDevice()
             return data
         } catch (error) {
             // Opened from the cache: keep that user through any failure. Only `data: null` or a 401 ends the session.
@@ -148,8 +149,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function logout(): Promise<void> {
         // 1. Tell the server without waiting. It clears a cookie the app never had, so the result does not matter.
         send(AUTH_API.LOGOUT, "POST").catch(() => undefined)
-        // The push token goes too, while the request can still carry the session's JWT.
-        unregisterDeviceToken()
+        // The phone leaves the push list too, while the request can still carry the session's JWT. Its tray and
+        // reminders are this person's, so they go as well.
+        unregisterPushDevice()
+        clearPhoneNotifications()
 
         // 2. Forget the session on the device: the token, the cached user, the region pin and every cached list.
         await clearToken()

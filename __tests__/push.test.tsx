@@ -1,10 +1,12 @@
-import notifee from "@notifee/react-native"
 import { getApps } from "@react-native-firebase/app"
-import { onMessage } from "@react-native-firebase/messaging"
+import { onMessage, unregister } from "@react-native-firebase/messaging"
+import notifee from "react-native-notify-kit"
 import ReactTestRenderer from "react-test-renderer"
 
 import { runBulk } from "@/lib/leadSourceBulk"
+import { notify } from "@/lib/notify"
 import { registerPushBackgroundHandlers } from "@/lib/push/background"
+import NotificationSettingsScreen from "@/screens/settings/NotificationSettingsScreen"
 import LeadSourceDetailScreen from "@/screens/leadSources/LeadSourceDetailScreen"
 import { clearToken, saveToken } from "@/store/keychain"
 import { clearAll, getRemindersEnabled, saveActiveRegion, saveRemindersEnabled } from "@/store/mmkv"
@@ -39,8 +41,9 @@ const IN_TWO_HOURS = new Date(2026, 9, 6, 12, 0, 0).toISOString()
 const LIST_PATH = /^\/api\/admin\/operations\/lead-sources\?/
 const DEVICES = "/api/notifications/devices"
 
-const { scheduledTriggers } = jest.requireMock("@notifee/react-native") as {
+const { scheduledTriggers, createdChannels } = jest.requireMock("react-native-notify-kit") as {
     scheduledTriggers: Map<string, { notification: { title?: string; data?: { url?: string } } }>
+    createdChannels: Map<string, { name: string }>
 }
 const mockedNotifee = notifee as jest.Mocked<typeof notifee>
 
@@ -253,7 +256,45 @@ describe("taps", () => {
     })
 })
 
-describe("push token", () => {
+describe("channels", () => {
+    it("has the agent's channels after sign-in, so Android Settings lists them before any push", async () => {
+        const renderer = await start()
+        await settle()
+
+        // A BDE (60) gets every CRM event and works lead sources, so every channel exists. The crm channel's
+        // deletion is covered in src/lib/push/__tests__/channels.test.ts: it runs once per app start.
+        expect([...createdChannels.keys()].sort()).toEqual([
+            "callbacks",
+            "documents",
+            "general",
+            "logged_calls",
+            "meetings",
+            "new_leads",
+            "new_records",
+            "notes",
+            "quotations",
+            "stage_changes",
+        ])
+        expect(createdChannels.has("crm")).toBe(false)
+        await unmountApp(renderer)
+    })
+
+    it("opens Notification settings from App Settings with the phone's settings on it", async () => {
+        const renderer = await start()
+        await openFromProfileSheet(renderer, "App Settings")
+        await press(findPressable(renderer, "Notification settings"))
+        await settle()
+
+        expect(renderer.root.findAllByType(NotificationSettingsScreen)).toHaveLength(1)
+        const texts = getTexts(renderer)
+        expect(texts).toContain("Notifications are on")
+        expect(texts).toContain("Callback reminders")
+        expect(texts).toContain("Send a test notification")
+        await unmountApp(renderer)
+    })
+})
+
+describe("push device", () => {
     beforeEach(() => {
         ;(getApps as jest.Mock).mockReturnValue([{ name: "[DEFAULT]" }])
     })
@@ -262,8 +303,9 @@ describe("push token", () => {
         ;(getApps as jest.Mock).mockReturnValue([])
     })
 
-    it("registers after sign-in, shows push in the picker line, shows a push in front, and unregisters on logout", async () => {
-        rows = [makeRow(SOURCE_A)]
+    it("registers by FID after sign-in, toasts a push on screen, and leaves push and clears the tray on logout", async () => {
+        rows = [makeRow(SOURCE_A, { status: 30, callbackAt: IN_TWO_HOURS })]
+        const info = jest.spyOn(notify, "info")
         const bodies: { method: string; body: unknown }[] = []
         const deviceRoute = (method: string): FetchRoute => ({
             method,
@@ -279,33 +321,47 @@ describe("push token", () => {
             { method: "POST", path: "/api/auth/logout", reply: () => respond(200, { success: true }) },
         ])
         await settle()
-        expect(bodies).toEqual([{ method: "POST", body: { token: "fcm-token", platform: "ios" } }])
+        // Jest runs as iOS (30). The version is package.json's.
+        expect(bodies).toEqual([
+            { method: "POST", body: { fid: "installation-fid-1", platform: 30, appVersion: "0.0.1" } },
+        ])
 
+        // Only this phone rings for a callback: the server sends no callback push.
         await openLeadSources(renderer)
-        await press(findPressable(renderer, "Status: New. Press to change."))
-        await press(findPressable(renderer, "Call Back"))
-        expect(getTexts(renderer)).toContain("Reminder on this phone and by push")
+        await settle()
+        expect(scheduledTriggers.has(`callback-${SOURCE_A}`)).toBe(true)
+        await press(findPressable(renderer, "Status: Call Back. Press to change."))
+        expect(getTexts(renderer)).toContain("Reminder on this phone")
         await press(findPressableByText(renderer, "Cancel"))
 
-        // A push while the app is open is shown on the CRM channel.
+        // A push while the app is open is a toast with Open, as on the web, and nothing in the tray.
         const onPush = (onMessage as jest.Mock).mock.calls[0][1]
         await ReactTestRenderer.act(async () =>
             onPush({
-                notification: { title: "New lead assigned", body: "Acme" },
-                data: { url: "/admin/operations/leads/x" },
+                data: {
+                    title: "New lead from Acme",
+                    body: "Came in via Facebook",
+                    url: "/admin/operations/leads/x",
+                    channel: "30",
+                },
             }),
         )
-        expect(mockedNotifee.displayNotification).toHaveBeenCalledWith(
+        expect(info).toHaveBeenCalledWith(
+            "New lead from Acme",
             expect.objectContaining({
-                title: "New lead assigned",
-                android: expect.objectContaining({ channelId: "crm" }),
+                description: "Came in via Facebook",
+                action: expect.objectContaining({ label: "Open" }),
             }),
         )
+        expect(mockedNotifee.displayNotification).not.toHaveBeenCalled()
 
         await openProfileSheet(renderer)
         await press(findPressable(renderer, "Log Out"))
         await settle()
-        expect(bodies.at(-1)).toEqual({ method: "DELETE", body: { token: "fcm-token" } })
+        expect(bodies.at(-1)).toEqual({ method: "DELETE", body: { fid: "installation-fid-1" } })
+        expect(unregister).toHaveBeenCalledTimes(1)
+        expect(scheduledTriggers.size).toBe(0)
+        info.mockRestore()
         await unmountApp(renderer)
     })
 })

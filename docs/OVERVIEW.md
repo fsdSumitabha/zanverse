@@ -35,7 +35,7 @@ web never could: tap a row and the dialer opens.
 | **Files** | `react-native-image-picker` (avatars), `@react-native-documents/picker` (xlsx/csv, recordings), `react-native-blob-util` (authenticated downloads). FormData over the same endpoints. |
 | **Charts** | Only `overall-stats` charts. `react-native-gifted-charts` on `react-native-svg`, built last. |
 | **Dialer** | `Linking.openURL("tel:…")` inside the web's existing `dialer.ts` `startCall()` — a one-function change that unlocks the whole module. |
-| **Notifications** | Polling first, gated on `AppState`. Push (FCM + Notifee) is session 23 and needs backend work. |
+| **Notifications** | FCM push in Installation ID (FID) mode, data-only, drawn by `react-native-notify-kit` on ten Android channels in three groups (`src/constants/pushChannels.ts`, copied from the web). Permission is asked in context, never at launch. The bell still polls every 60 s while the app is in front, as the backup. |
 | **Storage** | Keychain (JWT only), MMKV (cache + prefs, region-keyed, wiped on logout and region switch), blob-util cache dir (downloads). |
 | **Offline** | Read-only: show cached lists, disable write buttons, no replay queue. Writes are guarded server-side and must not be replayed blindly. |
 
@@ -65,11 +65,11 @@ Already installed: `react-native@0.87.1`, `react@19.2.3`, `typescript@^6.0.3`, `
 | `@react-native-community/netinfo` | `^12` | offline banner |
 | `@sentry/react-native` | `^7` | crash reporting |
 | `react-native-gifted-charts` + `react-native-linear-gradient` | `1.4.81` + `2.8.3` (pinned in session 20) | session 20 only |
-| `@notifee/react-native` | `9.1.8` (pinned in session 23) | device callback reminders, foreground display of pushes, tap events |
-| `@react-native-firebase/app` + `@react-native-firebase/messaging` | `26.4.0` + `26.4.0` (pinned in session 23) | FCM token and messages; inert without `android/app/google-services.json` |
+| `react-native-notify-kit` | `10.9.1` (pinned 2026-10-28) | channels, callback reminders with Call and Snooze, display of data-only pushes, tap events. The maintained fork of Notifee (archived April 2026): same API and Java packages |
+| `@react-native-firebase/app` + `@react-native-firebase/messaging` | `27.1.0` + `27.1.0` (pinned 2026-10-28) | FID registration (`register`/`onRegistered`, opted in by `firebase.json`) and messages; inert without `android/app/google-services.json` |
 | `react-native-reanimated` + `react-native-worklets` + `@gorhom/bottom-sheet` | `^4.7` + `^0.13` + `^5` | Reanimated + Worklets are installed in session 1, because `nativewind/babel` loads their Babel plugin. Bottom sheet stays session 21. |
 
-**Deliberately not used:** TanStack Query, react-hook-form, client-side zod, Redux/Zustand, react-native-windows, Skia,
+**Deliberately not used:** `@notifee/react-native` (archived), FCM token APIs (`getToken`/`onTokenRefresh`: Firebase says not to mix them with FID mode), TanStack Query, react-hook-form, client-side zod, Redux/Zustand, react-native-windows, Skia,
 react-phone-number-input (its logic already lives in `lib/phone.ts`), react-dropzone, chart.js, recharts, framer-motion.
 
 ## 5. Project structure

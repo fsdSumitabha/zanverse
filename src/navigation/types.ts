@@ -18,6 +18,8 @@ export type PageParamList = {
     Profile: undefined
     ProfileEdit: undefined
     Settings: undefined
+    /** Also opened by Android's "Additional settings in the app" link, as zanverse://settings/notifications. */
+    NotificationSettings: undefined
 }
 
 export type LeadsStackParamList = PageParamList & {

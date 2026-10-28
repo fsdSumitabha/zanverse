@@ -17,21 +17,28 @@ jest.mock("@sentry/react-native", () => ({
     reactNavigationIntegration: jest.fn(() => ({ name: "ReactNavigation", registerNavigationContainer: jest.fn() })),
 }))
 
-// Notifee talks to native code. The stand-in keeps scheduled reminders in memory.
-jest.mock("@notifee/react-native", () => require("./notifeeMock"))
+// notify-kit talks to native code. The stand-in keeps reminders, channels and the tray in memory.
+jest.mock("react-native-notify-kit", () => require("./notifyKitMock"))
 
-// Firebase is not configured in tests (no google-services.json), as on a build without it: no app, so no token.
+// Firebase is not configured in tests (no google-services.json), as on a build without it: no app, so no FID.
+// register() calls every onRegistered listener with the FID, as the real SDK does after registering.
 jest.mock("@react-native-firebase/app", () => ({ getApps: jest.fn(() => []), getApp: jest.fn() }))
-jest.mock("@react-native-firebase/messaging", () => ({
-    getMessaging: jest.fn(() => ({})),
-    getToken: jest.fn(() => Promise.resolve("fcm-token")),
-    deleteToken: jest.fn(() => Promise.resolve()),
-    onTokenRefresh: jest.fn(() => jest.fn()),
-    onMessage: jest.fn(() => jest.fn()),
-    onNotificationOpenedApp: jest.fn(() => jest.fn()),
-    getInitialNotification: jest.fn(() => Promise.resolve(null)),
-    setBackgroundMessageHandler: jest.fn(),
-}))
+jest.mock("@react-native-firebase/messaging", () => {
+    const listeners = new Set()
+    return {
+        getMessaging: jest.fn(() => ({})),
+        onRegistered: jest.fn((messaging, listener) => {
+            listeners.add(listener)
+            return jest.fn(() => listeners.delete(listener))
+        }),
+        register: jest.fn(async () => listeners.forEach((listener) => listener("installation-fid-1"))),
+        unregister: jest.fn(() => Promise.resolve()),
+        onMessage: jest.fn(() => jest.fn()),
+        onNotificationOpenedApp: jest.fn(() => jest.fn()),
+        getInitialNotification: jest.fn(() => Promise.resolve(null)),
+        setBackgroundMessageHandler: jest.fn(),
+    }
+})
 
 // The real sheets need Reanimated and native gestures. The stand-in keeps present / dismiss / onDismiss.
 jest.mock("@gorhom/bottom-sheet", () => require("./bottomSheetMock"))

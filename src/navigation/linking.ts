@@ -110,6 +110,7 @@ const PAGE_PATHS: Record<keyof PageParamList, string> = {
     Profile: "profile",
     ProfileEdit: "profile/edit",
     Settings: "settings",
+    NotificationSettings: "settings/notifications",
 }
 
 // Each tab's paths, typed against its own stack. React Navigation cannot infer the nested types through

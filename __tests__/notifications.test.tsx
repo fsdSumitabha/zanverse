@@ -176,12 +176,12 @@ describe("header bell", () => {
         await unmountApp(renderer)
     })
 
-    it("polls every 30 s in front, never in the background, and once at once on return", async () => {
+    it("polls every 60 s in front, never in the background, and once at once on return", async () => {
         const renderer = await signIn()
         // Wi-Fi, so no cellular back-off.
         await sendNetwork({ type: "wifi" })
 
-        await advance(30_000)
+        await advance(60_000)
         expect(countCalls(`GET ${FEED}?limit=4`)).toBe(2)
 
         const handlers = (AppState.addEventListener as jest.Mock).mock.calls
@@ -189,7 +189,7 @@ describe("header bell", () => {
             .map(([, handler]) => handler as (state: string) => void)
         Object.defineProperty(AppState, "currentState", { value: "background", configurable: true })
         await ReactTestRenderer.act(async () => handlers.forEach((handler) => handler("background")))
-        await advance(120_000)
+        await advance(240_000)
         expect(countCalls(`GET ${FEED}?limit=4`)).toBe(2)
 
         Object.defineProperty(AppState, "currentState", { value: "active", configurable: true })
@@ -199,16 +199,16 @@ describe("header bell", () => {
         await unmountApp(renderer)
     })
 
-    it("backs off to 60 s on mobile data while nothing changes", async () => {
+    it("backs off to 120 s on mobile data while nothing changes", async () => {
         const renderer = await signIn()
         await sendNetwork({ type: "cellular" })
 
-        // The first 30 s poll finds the same feed, so the next one waits 60 s.
-        await advance(30_000)
+        // The first 60 s poll finds the same feed, so the next one waits 120 s.
+        await advance(60_000)
         expect(countCalls(`GET ${FEED}?limit=4`)).toBe(2)
-        await advance(30_000)
+        await advance(60_000)
         expect(countCalls(`GET ${FEED}?limit=4`)).toBe(2)
-        await advance(30_000)
+        await advance(60_000)
         expect(countCalls(`GET ${FEED}?limit=4`)).toBe(3)
         await unmountApp(renderer)
     })

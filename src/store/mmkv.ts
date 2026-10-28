@@ -9,8 +9,9 @@ import { ALL_REGIONS, REGION_CODES, type ActiveRegion } from "@/lib/region"
  * - the session: the last `/api/auth/me` payload and the active region. Both go on logout and on login.
  * - the region-keyed cache: anything fetched under one region, stored as `cache.<region>.<key>`. It goes on a region
  *   switch, because it no longer matches what the person is looking at.
- * - preferences that outlive a session: the last login email, so Login can prefill it, and the two push settings
- *   (whether the notification permission was asked, and whether callback reminders are on).
+ * - preferences that outlive a session: the last login email, so Login can prefill it, and the push settings
+ *   (whether the notification permission was asked, whether Android stopped asking, and whether callback reminders
+ *   are on).
  */
 
 const storage = createMMKV({ id: "zanverse" })
@@ -20,6 +21,7 @@ const KEY = {
     ACTIVE_REGION: "session.activeRegion",
     LAST_EMAIL: "prefs.lastEmail",
     PUSH_PERMISSION_ASKED: "push.permissionAsked",
+    PUSH_PERMISSION_BLOCKED: "push.permissionBlocked",
     PUSH_REMINDERS_ENABLED: "push.remindersEnabled",
     INSTALL_SEEN: "prefs.installSeen",
 } as const
@@ -89,6 +91,16 @@ export function wasPushPermissionAsked(): boolean {
 /** Remembers that the notification permission was asked, whatever the answer. */
 export function markPushPermissionAsked(): void {
     storage.set(KEY.PUSH_PERMISSION_ASKED, true)
+}
+
+/** True once Android answered "never ask again": only system Settings can turn notifications on now. */
+export function isPushPermissionBlocked(): boolean {
+    return storage.getBoolean(KEY.PUSH_PERMISSION_BLOCKED) === true
+}
+
+/** Remembers that Android stopped showing the notification permission dialog for this app. */
+export function markPushPermissionBlocked(): void {
+    storage.set(KEY.PUSH_PERMISSION_BLOCKED, true)
 }
 
 /** The Profile screen's "Callback reminders" switch. On unless turned off. */

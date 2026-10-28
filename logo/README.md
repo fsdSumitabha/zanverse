@@ -53,7 +53,7 @@ Other source files: `svg/zan-mark-dark.svg` (for dark backgrounds), `svg/zan-mar
 | Launcher icon, Android 7 | `res/mipmap-{mdpi…xxxhdpi}/ic_launcher.png` and `ic_launcher_round.png` | 48 dp bitmaps: 48, 72, 96, 144, 192 px. |
 | Splash, Android 12+ | `res/drawable/splash_icon.xml`, `res/drawable-night/splash_icon.xml`, `res/values-v31/styles.xml` | 288 dp canvas, mark 128 dp inside the 192 dp circle. Light and dark versions. |
 | Window background | `res/values/styles.xml`, `res/values(-night)/colors.xml` | The splash colour, so the screen does not flash white (or grey in dark mode) before React draws. |
-| Notification icon | `res/drawable/ic_notification.xml` | 24 dp, white, alpha only. Used by Notifee (`src/lib/push/channels.ts`) and by Firebase (`AndroidManifest.xml`). Without it Android shows a white blob. |
+| Notification icon | `res/drawable/ic_notification.xml` | 24 dp, white, alpha only. Used by notify-kit (`src/lib/push/channels.ts`) and by Firebase (`AndroidManifest.xml`). Without it Android shows a white blob. |
 | Notification accent | `@color/notification_accent`, and `NOTIFICATION_APPEARANCE` in `src/lib/push/channels.ts` | The brand navy. |
 | Google Play listing | `play-store/icon-512.png`, `play-store/feature-graphic-1024x500.png` | Icon: 512 px, 32-bit PNG, full square (Play rounds the corners). Feature graphic: 1024 x 500, no alpha. |
 

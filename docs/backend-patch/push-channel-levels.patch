@@ -1,0 +1,132 @@
+Push channel levels, and an optional picture on a push.
+
+Base: zan-workspace main at d050b94 (native-push.patch, committed).
+Apply from the web repo root:
+    git apply --check push-channel-levels.patch
+    git apply push-channel-levels.patch
+
+What it changes:
+- src/constants/pushChannels.ts: New leads and New clients and projects become URGENT (sound and
+  a pop-up). Stage changes, Notes, Logged calls and Documents become DEFAULT (sound, no pop-up).
+  No channel is SILENT now. The phone copies this file unchanged.
+- sendPush passes the rendered message's imageUrl to the phone as data.imageUrl. The phone shows
+  it as the round picture on the right of the notification. No renderer sets imageUrl today, so no
+  push carries a picture yet.
+
+Effect on browsers: none. On iPhones (later): every channel now plays a sound ("active").
+
+diff --git a/src/constants/pushChannels.ts b/src/constants/pushChannels.ts
+index e0f859f..c4c99d1 100644
+--- a/src/constants/pushChannels.ts
++++ b/src/constants/pushChannels.ts
+@@ -12,7 +12,7 @@ export const PUSH_LEVEL = {
+     URGENT: 10,
+     /** Sound, no pop-up. */
+     DEFAULT: 20,
+-    /** No sound. It shows in the notification list only. */
++    /** No sound. It shows in the notification list only. No channel uses it today. */
+     SILENT: 30,
+ } as const
+ 
+@@ -88,14 +88,14 @@ export const PUSH_CHANNEL_META: Record<
+         id: "new_leads",
+         label: "New leads",
+         description: "A new lead comes in from the website, Facebook or the booking page.",
+-        level: PUSH_LEVEL.DEFAULT,
++        level: PUSH_LEVEL.URGENT,
+         group: PUSH_CHANNEL_GROUP.PIPELINE,
+     },
+     40: {
+         id: "new_records",
+         label: "New clients and projects",
+         description: "A lead becomes a client, or someone adds a client or project.",
+-        level: PUSH_LEVEL.DEFAULT,
++        level: PUSH_LEVEL.URGENT,
+         group: PUSH_CHANNEL_GROUP.PIPELINE,
+     },
+     50: {
+@@ -109,28 +109,28 @@ export const PUSH_CHANNEL_META: Record<
+         id: "stage_changes",
+         label: "Stage changes",
+         description: "A lead, client or project moves to a new stage.",
+-        level: PUSH_LEVEL.SILENT,
++        level: PUSH_LEVEL.DEFAULT,
+         group: PUSH_CHANNEL_GROUP.PIPELINE,
+     },
+     70: {
+         id: "notes",
+         label: "Notes",
+         description: "Someone adds a note to a lead, client or project.",
+-        level: PUSH_LEVEL.SILENT,
++        level: PUSH_LEVEL.DEFAULT,
+         group: PUSH_CHANNEL_GROUP.TEAM,
+     },
+     80: {
+         id: "logged_calls",
+         label: "Logged calls",
+         description: "Someone logs a call with a lead or client.",
+-        level: PUSH_LEVEL.SILENT,
++        level: PUSH_LEVEL.DEFAULT,
+         group: PUSH_CHANNEL_GROUP.TEAM,
+     },
+     90: {
+         id: "documents",
+         label: "Documents",
+         description: "Someone uploads a document to a lead, client or project.",
+-        level: PUSH_LEVEL.SILENT,
++        level: PUSH_LEVEL.DEFAULT,
+         group: PUSH_CHANNEL_GROUP.TEAM,
+     },
+     100: {
+diff --git a/src/lib/notifications/channels/push.ts b/src/lib/notifications/channels/push.ts
+index 1a12d44..a68d041 100644
+--- a/src/lib/notifications/channels/push.ts
++++ b/src/lib/notifications/channels/push.ts
+@@ -5,7 +5,7 @@ import type { DispatchContext } from "../../../types/notification"
+ 
+ export async function dispatchPush(ctx: DispatchContext): Promise<void> {
+     const label = NOTIFICATION_CHANNEL[4].label
+-    const { title, body, url } = ctx.message
++    const { title, body, url, imageUrl } = ctx.message
+     const { sent, failed } = await sendPush(ctx.recipients, {
+         title,
+         body,
+@@ -14,6 +14,7 @@ export async function dispatchPush(ctx: DispatchContext): Promise<void> {
+         type: ctx.type,
+         entityType: ctx.entityType,
+         entityId: String(ctx.entityId),
++        imageUrl,
+     })
+     console.log(`[notifications] ${label} type=${ctx.type} sent=${sent} failed=${failed}`)
+ }
+diff --git a/src/lib/notifications/sendPush.ts b/src/lib/notifications/sendPush.ts
+index cfce84d..f0830d4 100644
+--- a/src/lib/notifications/sendPush.ts
++++ b/src/lib/notifications/sendPush.ts
+@@ -13,6 +13,7 @@ export interface PushMessage {
+     type?: EventType            // the event behind it. A test push has none.
+     entityType?: number         // ENTITY_TYPE code of the record the event is about
+     entityId?: string
++    imageUrl?: string           // a picture for the notification, e.g. a person's avatar. Most have none.
+ }
+ 
+ export interface PushResult {
+@@ -36,8 +37,8 @@ const DEAD_DEVICE_CODES = [
+ /**
+  * Sends one message to every browser and phone of the given users.
+  *
+- * It sends data only: title, body and url, plus channel, type, entityType and
+- * entityId for the phone app. Each platform shows it in its own way:
++ * It sends data only: title, body and url, plus channel, type, entityType,
++ * entityId and imageUrl for the phone app. Each platform shows it in its own way:
+  * - Browser: the service worker at /firebase-messaging-sw.js turns it into a
+  *   system notification. If a CRM tab is open on screen, Firebase passes it to
+  *   that tab instead (see PushListener). Browsers ignore the extra fields.
+@@ -58,6 +59,7 @@ export async function sendPush(userIds: Types.ObjectId[], message: PushMessage):
+     if (message.type !== undefined) data.type = String(message.type)
+     if (message.entityType !== undefined) data.entityType = String(message.entityType)
+     if (message.entityId) data.entityId = message.entityId
++    if (message.imageUrl) data.imageUrl = message.imageUrl
+ 
+     const apns = getApnsConfig(message)
+     const fids = devices.map((d) => d.fid)

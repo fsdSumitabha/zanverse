@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from "react"
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View, useColorScheme } from "react-native"
 
 import NotificationRow from "@/components/notifications/NotificationRow"
+import PushPermissionCard from "@/components/notifications/PushPermissionCard"
 import { EmptyState, SegmentedControl, SkeletonBlock, type Segment } from "@/components/ui"
 import { useAuth } from "@/contexts/AuthContext"
 import { useNotifications } from "@/contexts/NotificationContext"
@@ -39,7 +40,8 @@ function SkeletonRows() {
 
 /**
  * The notifications inbox: newest first, older pages on scroll, All / Unread, mark one or all read, and a tap that
- * opens the lead, client or project a row is about. Ported from the web's notifications/page.tsx.
+ * opens the lead, client or project a row is about. Ported from the web's notifications/page.tsx. While the phone
+ * shows no notifications, a card on top offers to turn them on: the in-context ask, never at launch.
  */
 export default function NotificationsScreen() {
     const { role } = useAuth()
@@ -67,6 +69,7 @@ export default function NotificationsScreen() {
 
     const header = (
         <View className="gap-3 px-3 pb-3 pt-3">
+            <PushPermissionCard />
             <View className="flex-row flex-wrap items-center gap-2">
                 <Bell size={20} className="text-neutral-700 dark:text-neutral-300" />
                 <Text accessibilityRole="header" className="text-lg font-semibold text-neutral-900 dark:text-white">

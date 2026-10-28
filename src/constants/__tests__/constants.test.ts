@@ -163,7 +163,7 @@ describe("RN edits", () => {
         expect(NOTIFICATION_CHANNEL).toEqual({
             2: { label: "Email" },
             3: { label: "SMS" },
-            4: { label: "Web Push" },
+            4: { label: "Push" },
         })
     })
 

@@ -16,9 +16,12 @@ interface NotificationState {
     markSeen: () => void
 }
 
-/** How often the bell refreshes while the app is in front: the web's 30 s, or 60 s on mobile data when idle. */
-export const POLL_MS = 30_000
-export const CELLULAR_IDLE_POLL_MS = 60_000
+/**
+ * How often the bell refreshes while the app is in front: the web's 60 s, or 120 s on mobile data when idle. Push is
+ * the fast path; the poll is the backup for a phone whose battery saver holds pushes back.
+ */
+export const POLL_MS = 60_000
+export const CELLULAR_IDLE_POLL_MS = 120_000
 const BELL_LIMIT = 4
 
 const NotificationContext = createContext<NotificationState | null>(null)

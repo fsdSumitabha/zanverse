@@ -4,7 +4,7 @@
 export const NOTIFICATION_CHANNEL = {
     2: { label: "Email" },
     3: { label: "SMS" },
-    4: { label: "Web Push" },
+    4: { label: "Push" },
 } as const
 
 export type NotificationChannel = keyof typeof NOTIFICATION_CHANNEL

@@ -1,13 +1,12 @@
 import { useNavigation } from "@react-navigation/native"
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { ChevronRight, Code, Pencil, Send, type LucideIcon } from "lucide-react-native"
+import { Bell, ChevronRight, Code, Pencil, Send, type LucideIcon } from "lucide-react-native"
 import { useState, type ReactNode } from "react"
 import { Pressable, ScrollView, Text, View } from "react-native"
 
 import { ApiError, send } from "@/api/client"
 import { API_BASE_URL, OPERATIONS_API } from "@/api/endpoints"
 import { navigationRef } from "@/api/navigationRef"
-import ReminderSwitch from "@/components/profile/ReminderSwitch"
 import { Card } from "@/components/ui"
 import { enableIconClassNames } from "@/lib/iconClassName"
 import { notify } from "@/lib/notify"
@@ -18,7 +17,7 @@ type Navigation = NativeStackNavigationProp<PageParamList, "Settings">
 
 const APP_NAME = "ZAN Mobile"
 
-enableIconClassNames(ChevronRight, Code, Pencil, Send)
+enableIconClassNames(Bell, ChevronRight, Code, Pencil, Send)
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
     return (
@@ -69,8 +68,8 @@ function Divider() {
 }
 
 /**
- * App Settings, from the profile sheet: the account, the callback reminder switch, what the app talks to, and in a
- * debug build the developer tools that used to sit on the More tab.
+ * App Settings, from the profile sheet: the account, notification settings, what the app talks to, and in a debug
+ * build the developer tools that used to sit on the More tab.
  */
 export default function SettingsScreen() {
     const navigation = useNavigation<Navigation>()
@@ -103,7 +102,13 @@ export default function SettingsScreen() {
             </Section>
 
             <Section title="Notifications">
-                <ReminderSwitch />
+                <Card className="overflow-hidden">
+                    <SettingsRow
+                        label="Notification settings"
+                        icon={Bell}
+                        onPress={() => navigation.navigate("NotificationSettings")}
+                    />
+                </Card>
             </Section>
 
             <Section title="About">

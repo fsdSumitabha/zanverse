@@ -1,4 +1,4 @@
-import notifee from "@notifee/react-native"
+import notifee from "react-native-notify-kit"
 import { Linking, Text } from "react-native"
 import type ReactTestRenderer from "react-test-renderer"
 
@@ -155,8 +155,8 @@ async function settle() {
     for (let i = 0; i < 5; i += 1) await flush()
 }
 
-// What the Notifee stand-in has scheduled (jest/notifeeMock.js).
-const { scheduledTriggers } = jest.requireMock("@notifee/react-native") as {
+// What the notify-kit stand-in has scheduled (jest/notifyKitMock.js).
+const { scheduledTriggers } = jest.requireMock("react-native-notify-kit") as {
     scheduledTriggers: Map<string, object>
 }
 
