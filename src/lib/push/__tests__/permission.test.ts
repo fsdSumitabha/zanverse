@@ -4,6 +4,7 @@ interface Loaded {
     permission: typeof Permission
     notifee: Record<string, jest.Mock>
     request: jest.SpyInstance
+    alert: jest.SpyInstance
 }
 
 const DENIED = { authorizationStatus: 0, android: { alarm: 0 } }
@@ -13,16 +14,18 @@ const GRANTED = { authorizationStatus: 1, android: { alarm: 1 } }
 // store, a fresh notify-kit stand-in, and a Platform set to the Android version under test.
 function load(androidVersion: number | null, answer: string = "denied"): Loaded {
     jest.resetModules()
-    const { Platform, PermissionsAndroid } = require("react-native")
+    const { Alert, Platform, PermissionsAndroid } = require("react-native")
     if (androidVersion !== null) {
         jest.replaceProperty(Platform, "OS", "android")
         jest.spyOn(Platform, "Version", "get").mockReturnValue(androidVersion)
     }
     const request = jest.spyOn(PermissionsAndroid, "request").mockResolvedValue(answer)
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined)
     return {
         permission: require("@/lib/push/permission"),
         notifee: require("react-native-notify-kit").default,
         request,
+        alert,
     }
 }
 
@@ -80,5 +83,38 @@ describe("exact alarms", () => {
         expect(await permission.hasExactAlarms()).toBe(false)
         notifee.getNotificationSettings.mockResolvedValueOnce(GRANTED)
         expect(await permission.hasExactAlarms()).toBe(true)
+    })
+
+    it("asks once ever while they are denied, and Open settings goes to Android's page", async () => {
+        const { permission, notifee, alert } = load(34)
+        notifee.getNotificationSettings.mockResolvedValue(DENIED)
+
+        await permission.askExactAlarmsOnce()
+        await permission.askExactAlarmsOnce()
+        expect(alert).toHaveBeenCalledTimes(1)
+        expect(alert).toHaveBeenCalledWith("Ring callbacks on time?", expect.any(String), expect.any(Array))
+
+        const buttons = alert.mock.calls[0][2] as { text: string; onPress?: () => void }[]
+        expect(buttons.map((button) => button.text)).toEqual(["Not now", "Open settings"])
+        buttons[1].onPress?.()
+        expect(notifee.openAlarmPermissionSettings).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not ask while exact alarms are allowed, and keeps the ask for when they are not", async () => {
+        const { permission, notifee, alert } = load(34)
+        notifee.getNotificationSettings.mockResolvedValue(GRANTED)
+        await permission.askExactAlarmsOnce()
+        expect(alert).not.toHaveBeenCalled()
+
+        notifee.getNotificationSettings.mockResolvedValue(DENIED)
+        await permission.askExactAlarmsOnce()
+        expect(alert).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not ask on iOS, which has no such permission", async () => {
+        const { permission, notifee, alert } = load(null)
+        notifee.getNotificationSettings.mockResolvedValue(DENIED)
+        await permission.askExactAlarmsOnce()
+        expect(alert).not.toHaveBeenCalled()
     })
 })

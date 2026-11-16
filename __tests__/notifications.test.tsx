@@ -1,5 +1,5 @@
 import NetInfo from "@react-native-community/netinfo"
-import { AppState, FlatList } from "react-native"
+import { AppState, FlatList, Text } from "react-native"
 import Swipeable from "react-native-gesture-handler/Swipeable"
 import ReactTestRenderer from "react-test-renderer"
 
@@ -30,6 +30,7 @@ jest.useFakeTimers({ now: new Date(2026, 9, 6, 10, 0, 0) })
 const ADMIN = { id: "u1", name: "Asha Rao", email: "asha@zan.test", role: 10, regions: ["IN"], activeRegion: "IN" }
 const LEAD_ID = "64b7f0c2a1b2c3d4e5f60718"
 const FEED = "/api/notifications"
+const LONG_TITLE = "Robin rescheduled the meeting with Kaveri Foods Private Ltd"
 
 function makeRow(id: string, overrides: object = {}) {
     return {
@@ -76,7 +77,8 @@ function feedRoutes(extra: FetchRoute[]): FetchRoute[] {
                         }),
                         makeRow("seen", { title: "Meeting moved", readAt: null }),
                         makeRow("plain", { title: "Old note" }),
-                        ...Array.from({ length: 12 }, (_, i) => makeRow(`r${i}`)),
+                        makeRow("r0", { title: LONG_TITLE }),
+                        ...Array.from({ length: 11 }, (_, i) => makeRow(`r${i + 1}`)),
                     ],
                     unseen: 1,
                     unread: 2,
@@ -215,6 +217,13 @@ describe("header bell", () => {
 })
 
 describe("inbox", () => {
+    it("shows a long title whole: it ends with the record's name", async () => {
+        const renderer = await openInbox()
+        const title = renderer.root.findAllByType(Text).find((node) => node.props.children === LONG_TITLE)
+        expect(title?.props.numberOfLines).toBeUndefined()
+        await unmountApp(renderer)
+    })
+
     it("loads 15 rows in three states and marks them seen once", async () => {
         const renderer = await openInbox()
         const texts = getTexts(renderer)

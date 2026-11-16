@@ -66,6 +66,7 @@ function MeetingCard({ meeting, onChanged }: { meeting: MeetingListItem; onChang
     const isScheduled = meeting.status === MEETING_STATUS.SCHEDULED || isRescheduled
     const isUpcoming = isScheduled && temporal === "UPCOMING"
     const isToday = isScheduled && temporal === "TODAY"
+    const showComplete = isScheduled && canClose && temporal === "PAST"
     // Rescheduled wins over the green and red dots, so that state is seen first.
     const dot: DotColor | null = isRescheduled
         ? "orange"
@@ -175,7 +176,8 @@ function MeetingCard({ meeting, onChanged }: { meeting: MeetingListItem; onChang
                     <MeetingActions
                         meetingId={meeting._id}
                         showCancel={isScheduled && canClose}
-                        showComplete={isScheduled && canClose && temporal === "PAST"}
+                        showMissed={showComplete}
+                        showComplete={showComplete}
                         showReschedule={isScheduled && canReschedule}
                         meetingLink={meetingLink}
                         onReschedule={() => setSheet("reschedule")}

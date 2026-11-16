@@ -10,8 +10,8 @@ import { ALL_REGIONS, REGION_CODES, type ActiveRegion } from "@/lib/region"
  * - the region-keyed cache: anything fetched under one region, stored as `cache.<region>.<key>`. It goes on a region
  *   switch, because it no longer matches what the person is looking at.
  * - preferences that outlive a session: the last login email, so Login can prefill it, and the push settings
- *   (whether the notification permission was asked, whether Android stopped asking, and whether callback reminders
- *   are on).
+ *   (whether the notification permission was asked, whether Android stopped asking, whether exact alarms were asked
+ *   for, and whether callback reminders are on).
  */
 
 const storage = createMMKV({ id: "zanverse" })
@@ -22,6 +22,7 @@ const KEY = {
     LAST_EMAIL: "prefs.lastEmail",
     PUSH_PERMISSION_ASKED: "push.permissionAsked",
     PUSH_PERMISSION_BLOCKED: "push.permissionBlocked",
+    PUSH_EXACT_ALARM_ASKED: "push.exactAlarmAsked",
     PUSH_REMINDERS_ENABLED: "push.remindersEnabled",
     INSTALL_SEEN: "prefs.installSeen",
 } as const
@@ -101,6 +102,16 @@ export function isPushPermissionBlocked(): boolean {
 /** Remembers that Android stopped showing the notification permission dialog for this app. */
 export function markPushPermissionBlocked(): void {
     storage.set(KEY.PUSH_PERMISSION_BLOCKED, true)
+}
+
+/** True once the app has asked to allow exact alarms. It asks once, ever, after the first callback saved. */
+export function wasExactAlarmAsked(): boolean {
+    return storage.getBoolean(KEY.PUSH_EXACT_ALARM_ASKED) === true
+}
+
+/** Remembers that exact alarms were asked for, whatever the answer. */
+export function markExactAlarmAsked(): void {
+    storage.set(KEY.PUSH_EXACT_ALARM_ASKED, true)
 }
 
 /** The Profile screen's "Callback reminders" switch. On unless turned off. */

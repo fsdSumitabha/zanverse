@@ -1,6 +1,9 @@
+import { Platform } from "react-native"
 import notifee, {
     AndroidImportance,
+    AndroidStyle,
     AndroidVisibility,
+    type AndroidBigTextStyle,
     type AndroidChannel,
     type NativeAndroidChannel,
 } from "react-native-notify-kit"
@@ -27,6 +30,23 @@ export const CALLBACK_CHANNEL_ID = PUSH_CHANNEL_META[PUSH_CHANNEL.CALLBACKS].id
  * Firebase shows its own pushes with the same two values, from AndroidManifest.xml and res/values/colors.xml.
  */
 export const NOTIFICATION_APPEARANCE = { smallIcon: "ic_notification", color: "#183668" } as const
+
+/**
+ * Makes typed text safe to show. On Android, notify-kit reads a notification's text as HTML, so a note such as
+ * "Price<budget for now" would show as "Price". iOS shows the text as it is.
+ */
+export function toNotificationText(text: string): string {
+    if (Platform.OS !== "android") return text
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+/**
+ * Shows the whole body when the notification is opened. Android shows one line of body when closed, and no more when
+ * opened unless a notification has this style. The server cuts a body at 80 characters, about three lines.
+ */
+export function getExpandedStyle(body: string | undefined): AndroidBigTextStyle | undefined {
+    return body ? { type: AndroidStyle.BIGTEXT, text: body } : undefined
+}
 
 // The one channel every push used before the channel list. Deleting it moves nobody's settings: there is no match.
 const RETIRED_CHANNEL_IDS = ["crm"]

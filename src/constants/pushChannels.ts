@@ -87,7 +87,7 @@ export const PUSH_CHANNEL_META: Record<
     30: {
         id: "new_leads",
         label: "New leads",
-        description: "A new lead comes in from the website, Facebook or the booking page.",
+        description: "Someone adds a lead, or one comes in from the website, Facebook or the booking page.",
         level: PUSH_LEVEL.URGENT,
         group: PUSH_CHANNEL_GROUP.PIPELINE,
     },

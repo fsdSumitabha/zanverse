@@ -1,6 +1,6 @@
 Push channel levels, and an optional picture on a push.
 
-Base: zan-workspace main at d050b94 (native-push.patch, committed).
+Base: zan-workspace main at 1d42333. It applies on d050b94 too.
 Apply from the web repo root:
     git apply --check push-channel-levels.patch
     git apply push-channel-levels.patch
@@ -8,7 +8,8 @@ Apply from the web repo root:
 What it changes:
 - src/constants/pushChannels.ts: New leads and New clients and projects become URGENT (sound and
   a pop-up). Stage changes, Notes, Logged calls and Documents become DEFAULT (sound, no pop-up).
-  No channel is SILENT now. The phone copies this file unchanged.
+  No channel is SILENT now. New leads' description also names leads added by hand. The phone copies
+  this file unchanged, and already has these values.
 - sendPush passes the rendered message's imageUrl to the phone as data.imageUrl. The phone shows
   it as the round picture on the right of the notification. No renderer sets imageUrl today, so no
   push carries a picture yet.
@@ -16,7 +17,7 @@ What it changes:
 Effect on browsers: none. On iPhones (later): every channel now plays a sound ("active").
 
 diff --git a/src/constants/pushChannels.ts b/src/constants/pushChannels.ts
-index e0f859f..c4c99d1 100644
+index e0f859f..3231e8d 100644
 --- a/src/constants/pushChannels.ts
 +++ b/src/constants/pushChannels.ts
 @@ -12,7 +12,7 @@ export const PUSH_LEVEL = {
@@ -28,11 +29,13 @@ index e0f859f..c4c99d1 100644
      SILENT: 30,
  } as const
  
-@@ -88,14 +88,14 @@ export const PUSH_CHANNEL_META: Record<
+@@ -87,15 +87,15 @@ export const PUSH_CHANNEL_META: Record<
+     30: {
          id: "new_leads",
          label: "New leads",
-         description: "A new lead comes in from the website, Facebook or the booking page.",
+-        description: "A new lead comes in from the website, Facebook or the booking page.",
 -        level: PUSH_LEVEL.DEFAULT,
++        description: "Someone adds a lead, or one comes in from the website, Facebook or the booking page.",
 +        level: PUSH_LEVEL.URGENT,
          group: PUSH_CHANNEL_GROUP.PIPELINE,
      },

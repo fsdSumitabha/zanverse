@@ -57,11 +57,11 @@ function NotificationRow({ row, onOpen, onMarkRead }: Props) {
         >
             <NotificationBadge badge={row.badge} size="md" />
             <View className="min-w-0 flex-1">
-                <View className="flex-row flex-wrap items-center gap-2">
+                {/* The title wraps, as on the web's page: it says who did what, and ends with the record's name. */}
+                <View className="flex-row items-start gap-2">
                     <Text
-                        numberOfLines={1}
                         className={clsx(
-                            "flex-shrink text-sm",
+                            "min-w-0 flex-1 text-sm",
                             isUnread
                                 ? "font-semibold text-neutral-900 dark:text-white"
                                 : "font-normal text-neutral-600 dark:text-neutral-400",

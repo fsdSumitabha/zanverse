@@ -1,3 +1,4 @@
+import clsx from "clsx"
 import { AlarmClock, BatteryWarning, Send, type LucideIcon } from "lucide-react-native"
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import { AppState, Platform, Pressable, Text, View } from "react-native"
@@ -51,7 +52,11 @@ function ActionChip({ label, onPress, isBusy = false }: { label: string; onPress
             onPress={onPress}
             disabled={isBusy}
             accessibilityRole="button"
-            className="min-h-[44px] justify-center rounded-md border border-blue-500/40 px-3 active:bg-blue-500/10 disabled:opacity-50"
+            accessibilityState={{ disabled: isBusy, busy: isBusy }}
+            className={clsx(
+                "min-h-[44px] justify-center rounded-md border border-blue-500/40 px-3 active:bg-blue-500/10",
+                isBusy && "opacity-50",
+            )}
         >
             <Text className="text-xs text-blue-600 dark:text-blue-400">{isBusy ? "Sending…" : label}</Text>
         </Pressable>

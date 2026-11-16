@@ -74,7 +74,8 @@ add `POST /api/auth/renew`, or accept the weekly re-login deliberately.
 
 **State (2026-10-28): superseded.** The web repo built push its own way in `e845ae6` (Firebase Installation IDs, a
 `PushDevice` model, web push), and `docs/backend-patch/native-push.patch` (committed there as `d050b94`) plus
-`docs/backend-patch/push-channel-levels.patch` added what the phone needs: `{ fid, platform, appVersion }` on POST,
+`docs/backend-patch/push-channel-levels.patch` (committed with `meeting-lead-url.patch` as `e0d71b9`) added what the
+phone needs: `{ fid, platform, appVersion }` on POST,
 `{ fid }` on DELETE, Android high priority, an APNs alert, and `channel`/`type`/`entityType`/`entityId`/`imageUrl` in the
 data, with the channel list in `src/constants/pushChannels.ts`. The token-based spec below is kept as history only; do
 not build it.

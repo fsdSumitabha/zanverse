@@ -9,7 +9,7 @@ import { notify } from "@/lib/notify"
 import { getActiveRegion } from "@/store/mmkv"
 import type { Lead } from "@/types/lead"
 
-import { openPushUrl } from "./openPushUrl"
+import { INBOX_URL, openPushUrl } from "./openPushUrl"
 import { PRESS_ACTION } from "./pressActions"
 import { snoozeCallbackReminder } from "./reminders"
 import { syncChannelSummaries } from "./remoteMessage"
@@ -96,7 +96,8 @@ function queueCall(notification: Notification): void {
 export async function handleNotificationEvent({ type, detail }: Event): Promise<void> {
     const notification = detail.notification
     if (!notification) return
-    const url = notification.data?.url
+    // A bundle header has no url, and neither has a push with no record. They open the inbox, as the web's worker does.
+    const url = readText(notification.data?.url) ?? INBOX_URL
     if (type === EventType.DISMISSED) {
         await syncChannelSummaries()
         return

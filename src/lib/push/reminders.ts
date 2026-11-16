@@ -7,14 +7,20 @@ import notifee, {
 } from "react-native-notify-kit"
 
 import { LEAD_SOURCE_STATUS } from "@/constants/leadSourceStatus"
-import { PUSH_CHANNEL } from "@/constants/pushChannels"
+import { PUSH_CHANNEL, PUSH_CHANNEL_META } from "@/constants/pushChannels"
 import { formatPhoneForDisplay } from "@/lib/phone"
 import { REGIONS, parseRegionCode } from "@/lib/region"
 import { getRemindersEnabled } from "@/store/mmkv"
 import type { LeadSourceRow } from "@/types/leadSource"
 
-import { CALLBACK_CHANNEL_ID, NOTIFICATION_APPEARANCE, ensureChannel } from "./channels"
-import { hasExactAlarms, ensureNotificationPermission } from "./permission"
+import {
+    CALLBACK_CHANNEL_ID,
+    NOTIFICATION_APPEARANCE,
+    ensureChannel,
+    getExpandedStyle,
+    toNotificationText,
+} from "./channels"
+import { askExactAlarmsOnce, ensureNotificationPermission } from "./permission"
 import { CALL_ACTION, OPEN_PRESS, SNOOZE_ACTION } from "./pressActions"
 
 const ID_PREFIX = "callback-"
@@ -44,19 +50,23 @@ function getDueTime(row: ReminderRow, now: number): number | null {
     return Number.isFinite(at) && at > now ? at : null
 }
 
-// Exact when Android allows exact alarms; otherwise an alarm that still fires in Doze, a few minutes late at most.
-async function getTrigger(timestamp: number): Promise<TimestampTrigger> {
-    const type = (await hasExactAlarms())
-        ? AlarmType.SET_EXACT_AND_ALLOW_WHILE_IDLE
-        : AlarmType.SET_AND_ALLOW_WHILE_IDLE
-    return { type: TriggerType.TIMESTAMP, timestamp, alarmManager: { type } }
+// Always asks for an exact alarm. Without the permission, notify-kit uses an alarm that still fires in Doze, a few
+// minutes late at most. When the person allows it later, notify-kit sets every stored reminder again, now exact.
+function getTrigger(timestamp: number): TimestampTrigger {
+    return {
+        type: TriggerType.TIMESTAMP,
+        timestamp,
+        alarmManager: { type: AlarmType.SET_EXACT_AND_ALLOW_WHILE_IDLE },
+    }
 }
 
 // Call opens the source and dials the number in `data`. Snooze rings again in 15 minutes without opening the app.
+// `title` and `body` are already safe to show (toNotificationText), so a snoozed reminder can pass its own back.
 function buildReminder({ id, title, body, data }: ReminderContent): Notification {
     return {
         id,
         title,
+        subtitle: PUSH_CHANNEL_META[PUSH_CHANNEL.CALLBACKS].label,
         body,
         data,
         android: {
@@ -65,6 +75,7 @@ function buildReminder({ id, title, body, data }: ReminderContent): Notification
             visibility: AndroidVisibility.PUBLIC,
             pressAction: OPEN_PRESS,
             actions: [CALL_ACTION, SNOOZE_ACTION],
+            style: getExpandedStyle(body),
         },
     }
 }
@@ -73,16 +84,19 @@ async function createReminder(row: ReminderRow, at: number): Promise<void> {
     const phoneCountry = REGIONS[parseRegionCode(row.region)].phoneCountry
     const reminder = buildReminder({
         id: getReminderId(row._id),
-        title: `Call back ${row.name}`,
-        body: `${formatPhoneForDisplay(row.phone, phoneCountry)} · ${row.lastNote || "no notes yet"}`,
+        title: toNotificationText(`Call back ${row.name}`),
+        body: toNotificationText(
+            `${formatPhoneForDisplay(row.phone, phoneCountry)} · ${row.lastNote || "no notes yet"}`,
+        ),
         data: { url: `${DETAIL_PATH}${row._id}`, local: "1", name: row.name, phone: row.phone, region: row.region },
     })
-    await notifee.createTriggerNotification(reminder, await getTrigger(at))
+    await notifee.createTriggerNotification(reminder, getTrigger(at))
 }
 
 /**
  * Sets, moves or removes a source's reminder from the row the API answered with. `askPermission` is for the moment a
- * callback is saved, the only time the app asks. A failure is logged and never reaches the save that called this.
+ * callback is saved, the only time the app asks: first to show notifications, then, once ever, to ring at the exact
+ * minute. A failure is logged and never reaches the save that called this.
  */
 export async function scheduleCallbackReminder(
     row: ReminderRow,
@@ -95,9 +109,10 @@ export async function scheduleCallbackReminder(
             await notifee.cancelNotification(getReminderId(row._id))
             return
         }
-        if (askPermission) await ensureNotificationPermission()
+        const canShow = askPermission && (await ensureNotificationPermission())
         await ensureChannel(PUSH_CHANNEL.CALLBACKS)
         await createReminder(row, at)
+        if (canShow) await askExactAlarmsOnce()
     } catch (error) {
         console.warn("Push: could not schedule the callback reminder", error)
     }
@@ -154,7 +169,7 @@ export async function snoozeCallbackReminder(notification: Notification): Promis
             body: notification.body,
             data: notification.data,
         })
-        await notifee.createTriggerNotification(reminder, await getTrigger(Date.now() + SNOOZE_MS))
+        await notifee.createTriggerNotification(reminder, getTrigger(Date.now() + SNOOZE_MS))
     } catch (error) {
         console.warn("Push: could not snooze the callback reminder", error)
     }

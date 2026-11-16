@@ -1,10 +1,12 @@
-import { PermissionsAndroid, Platform } from "react-native"
+import { Alert, PermissionsAndroid, Platform } from "react-native"
 import notifee, { AndroidNotificationSetting, AuthorizationStatus } from "react-native-notify-kit"
 
 import {
     isPushPermissionBlocked,
+    markExactAlarmAsked,
     markPushPermissionAsked,
     markPushPermissionBlocked,
+    wasExactAlarmAsked,
     wasPushPermissionAsked,
 } from "@/store/mmkv"
 
@@ -87,6 +89,23 @@ export async function hasExactAlarms(): Promise<boolean> {
 /** Opens Android's "Alarms & reminders" page for the app. */
 export function openExactAlarmSettings(): Promise<void> {
     return notifee.openAlarmPermissionSettings()
+}
+
+/**
+ * Asks once ever, after the first callback is saved, to allow exact alarms. Android 14 and later deny them to a new
+ * install, and few people would find the row in Notification settings. "Not now" leaves that row as the way back.
+ */
+export async function askExactAlarmsOnce(): Promise<void> {
+    if (Platform.OS !== "android" || wasExactAlarmAsked() || (await hasExactAlarms())) return
+    markExactAlarmAsked()
+    Alert.alert(
+        "Ring callbacks on time?",
+        "Android can ring a callback reminder a few minutes late. To ring it at the exact minute, allow Alarms & reminders for this app.",
+        [
+            { text: "Not now", style: "cancel" },
+            { text: "Open settings", onPress: () => openExactAlarmSettings() },
+        ],
+    )
 }
 
 /** True while Android's battery saver may stop the app in the background, which can hold pushes back. */

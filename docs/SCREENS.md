@@ -484,7 +484,7 @@
 
 **API calls**
 - GET /api/admin/operations/meetings?page&limit=10&search&status&range&entityType (list; note the response uses pagination.totalPages while every other list API uses pagination.pages - the client falls back across both)
-- PATCH /api/admin/operations/meetings/:id/status (MeetingCard: CANCELLED, or COMPLETED + outcome note)
+- PATCH /api/admin/operations/meetings/:id/status (MeetingCard: CANCELLED, MISSED, or COMPLETED + outcome note)
 - PATCH /api/admin/operations/meetings/:id/reschedule (RescheduleMeetingForm)
 
 **State.** meetings[], loading, totalPages, accessError. page from usePagination (URL ?page), search from useSearch (URL ?search, written by the layout SearchBar), status/range/entityType read straight off useSearchParams. fetchMeetings is a useCallback re-fired by any of those; handleAuthError() turns 401 into a toast + replace(/login) and 403 into an <AccessDenied> render. Each MeetingCard owns expanded, rescheduleOpen, completeOpen, outcome, submittingComplete, markingMissed, outcomeExpanded.

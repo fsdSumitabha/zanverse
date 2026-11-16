@@ -1,0 +1,26 @@
+Meeting notifications about a lead open the lead.
+
+Base: zan-workspace main at 1d42333. Independent of push-channel-levels.patch: apply either, both,
+in any order.
+    git apply --check meeting-lead-url.patch
+    git apply meeting-lead-url.patch
+
+parentUrlFromMeeting returned undefined when meeting.entityType was 0, because it tested
+`!meeting?.entityType` and ENTITY_TYPE.LEAD is 0. So a meeting on a lead had no url: the bell row was
+not a link, a browser push opened the inbox, and a phone push had no record to open. Client (1) and
+project (2) meetings were fine. Old rows keep their missing url; new ones get it.
+
+diff --git a/src/lib/notifications/render.ts b/src/lib/notifications/render.ts
+index 26d00a9..b85cf2e 100644
+--- a/src/lib/notifications/render.ts
++++ b/src/lib/notifications/render.ts
+@@ -90,7 +90,8 @@ function bodyLine(...parts: unknown[]): string | undefined {
+ }
+ 
+ function parentUrlFromMeeting(meeting: any): string | undefined {
+-    if (!meeting?.entityType || !meeting?.entityId) return undefined
++    // Not `!meeting.entityType`: a lead's code is 0.
++    if (meeting?.entityType == null || !meeting?.entityId) return undefined
+     const id = String(meeting.entityId)
+     switch (meeting.entityType) {
+         case 0: return leadUrl(id)

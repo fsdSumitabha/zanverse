@@ -1,7 +1,11 @@
 import { navigationRef } from "@/api/navigationRef"
 import { resolveNotificationPath } from "@/navigation/linking"
+import { openPage } from "@/navigation/openPage"
 import { openRecord } from "@/navigation/openRecord"
 import { readCachedMe } from "@/store/cache"
+
+/** The notifications inbox: where the test push points, and where a push with no record opens, as on the web. */
+export const INBOX_URL = "/admin/operations/notifications"
 
 // A tap that arrived before the app could navigate (a cold start from a notification, or the Login screen) waits here.
 let pendingUrl: string | null = null
@@ -32,6 +36,10 @@ export function openPushUrl(url: unknown): void {
     if (!canNavigate()) {
         pendingUrl = url
         waitForReady()
+        return
+    }
+    if (url === INBOX_URL) {
+        openPage("Notifications")
         return
     }
     const target = resolveNotificationPath(url)

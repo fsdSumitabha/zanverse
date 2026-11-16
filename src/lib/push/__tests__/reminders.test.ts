@@ -1,3 +1,4 @@
+import { Alert, Platform } from "react-native"
 import notifee from "react-native-notify-kit"
 
 import {
@@ -33,6 +34,10 @@ const REMINDER_ANDROID = {
     ],
 }
 
+function getAndroid(body: string) {
+    return { ...REMINDER_ANDROID, style: { type: 1, text: body } }
+}
+
 function makeRow(overrides: object = {}) {
     return {
         _id: "64b7f0c2a1b2c3d4e5f60001",
@@ -62,6 +67,7 @@ describe("scheduleCallbackReminder", () => {
         expect(entry?.notification).toEqual({
             id: REMINDER_ID,
             title: "Call back Priya Sharma",
+            subtitle: "Callback reminders",
             body: "+91 98765 43210 · Asked for the owner",
             data: {
                 url: "/admin/operations/lead-sources/64b7f0c2a1b2c3d4e5f60001",
@@ -70,7 +76,7 @@ describe("scheduleCallbackReminder", () => {
                 phone: "+919876543210",
                 region: "IN",
             },
-            android: REMINDER_ANDROID,
+            android: getAndroid("+91 98765 43210 · Asked for the owner"),
         })
         expect(entry?.trigger).toEqual({
             type: 0,
@@ -80,13 +86,13 @@ describe("scheduleCallbackReminder", () => {
         expect(mocked.createChannel).toHaveBeenCalledWith(expect.objectContaining({ id: "callbacks", importance: 4 }))
     })
 
-    it("says no notes yet, and falls back to an inexact idle alarm when exact alarms are off", async () => {
+    it("says no notes yet, and asks for an exact alarm whatever the permission: notify-kit falls back", async () => {
         mocked.getNotificationSettings.mockResolvedValueOnce({ authorizationStatus: 1, android: { alarm: 0 } } as never)
         await scheduleCallbackReminder(makeRow())
 
         const entry = scheduledTriggers.get(REMINDER_ID)
         expect(entry?.notification.body).toBe("+91 98765 43210 · no notes yet")
-        expect(entry?.trigger.alarmManager).toEqual({ type: 1 })
+        expect(entry?.trigger.alarmManager).toEqual({ type: 3 })
     })
 
     it("removes the reminder for a cleared, past or converted callback", async () => {
@@ -172,9 +178,68 @@ describe("snooze", () => {
         expect(displayedNotifications.has(REMINDER_ID)).toBe(false)
         const entry = scheduledTriggers.get(REMINDER_ID)
         expect(entry?.notification).toEqual(
-            expect.objectContaining({ title: "Call back Priya Sharma", android: REMINDER_ANDROID }),
+            expect.objectContaining({
+                title: "Call back Priya Sharma",
+                android: getAndroid("+91 98765 43210 · no notes yet"),
+            }),
         )
         expect(entry?.trigger).toEqual({ type: 0, timestamp: Date.now() + 15 * 60 * 1000, alarmManager: { type: 3 } })
+    })
+})
+
+describe("exact alarms on Android", () => {
+    it("asks once, after the reminder is set, and only when notifications can show", async () => {
+        const os = jest.replaceProperty(Platform, "OS", "android")
+        const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined)
+        const exactOff = { authorizationStatus: 1, android: { alarm: 0 } } as never
+        const denied = { authorizationStatus: 0, android: { alarm: 0 } } as never
+
+        // Notifications are off, so a late ring is not the problem yet.
+        mocked.getNotificationSettings.mockResolvedValue(denied)
+        mocked.requestPermission.mockResolvedValue(denied)
+        await scheduleCallbackReminder(makeRow(), { askPermission: true })
+        expect(alert).not.toHaveBeenCalled()
+
+        // A reminder set by a list load, not by the person saving a callback, never asks.
+        mocked.getNotificationSettings.mockResolvedValue(exactOff)
+        await scheduleCallbackReminder(makeRow())
+        expect(alert).not.toHaveBeenCalled()
+
+        await scheduleCallbackReminder(makeRow(), { askPermission: true })
+        expect(scheduledTriggers.has(REMINDER_ID)).toBe(true)
+        expect(alert).toHaveBeenCalledTimes(1)
+        expect(alert).toHaveBeenCalledWith("Ring callbacks on time?", expect.any(String), expect.any(Array))
+
+        await scheduleCallbackReminder(makeRow(), { askPermission: true })
+        expect(alert).toHaveBeenCalledTimes(1)
+
+        mocked.getNotificationSettings.mockReset()
+        mocked.getNotificationSettings.mockResolvedValue({ authorizationStatus: 1, android: { alarm: 1 } } as never)
+        mocked.requestPermission.mockReset()
+        mocked.requestPermission.mockResolvedValue({ authorizationStatus: 1 } as never)
+        alert.mockRestore()
+        os.restore()
+    })
+})
+
+describe("typed text on Android", () => {
+    it("escapes a reminder once, and a snooze does not escape it again", async () => {
+        const os = jest.replaceProperty(Platform, "OS", "android")
+        await scheduleCallbackReminder(makeRow({ name: "A&B Traders", lastNote: "Price<budget" }))
+
+        const first = scheduledTriggers.get(REMINDER_ID)?.notification as { title: string; body: string; data: object }
+        expect(first.title).toBe("Call back A&amp;B Traders")
+        expect(first.body).toBe("+91 98765 43210 · Price&lt;budget")
+
+        // A press hands back the text the reminder was built with.
+        await snoozeCallbackReminder({
+            id: REMINDER_ID,
+            title: first.title,
+            body: first.body,
+            data: first.data as never,
+        })
+        expect(scheduledTriggers.get(REMINDER_ID)?.notification.title).toBe("Call back A&amp;B Traders")
+        os.restore()
     })
 })
 

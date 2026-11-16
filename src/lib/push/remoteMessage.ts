@@ -4,7 +4,13 @@ import notifee, { AndroidGroupAlertBehavior, AndroidVisibility } from "react-nat
 import { PUSH_CHANNEL, PUSH_CHANNEL_META, type PushChannel } from "@/constants/pushChannels"
 import { notify } from "@/lib/notify"
 
-import { NOTIFICATION_APPEARANCE, ensureChannel, resolveChannel } from "./channels"
+import {
+    NOTIFICATION_APPEARANCE,
+    ensureChannel,
+    getExpandedStyle,
+    resolveChannel,
+    toNotificationText,
+} from "./channels"
 import { openPushUrl } from "./openPushUrl"
 import { CALL_ACTION, OPEN_ACTION, OPEN_PRESS } from "./pressActions"
 import { getReminderId } from "./reminders"
@@ -16,6 +22,15 @@ const MIN_BUNDLE_SIZE = 2
 
 function readText(value: unknown): string | undefined {
     return typeof value === "string" && value ? value : undefined
+}
+
+// The server writes the words: who did what in the title, the detail in the body (src/lib/notifications/render.ts).
+function readTitle(message: RemoteMessage): string {
+    return readText(message.notification?.title) ?? readText(message.data?.title) ?? FALLBACK_TITLE
+}
+
+function readBody(message: RemoteMessage): string | undefined {
+    return readText(message.notification?.body) ?? readText(message.data?.body)
 }
 
 // One notification per record: a second update about the same lead replaces the first instead of stacking. A callback
@@ -31,6 +46,7 @@ async function displayChannelSummary(id: string, label: string): Promise<void> {
     await notifee.displayNotification({
         id: `${SUMMARY_PREFIX}${id}`,
         title: label,
+        subtitle: label,
         android: {
             channelId: id,
             ...NOTIFICATION_APPEARANCE,
@@ -72,24 +88,28 @@ export async function syncChannelSummaries(): Promise<void> {
  * Shows a push from the CRM on the channel its `data.channel` names, with the app in the background or closed. Every
  * high-priority push must show a notification: FCM lowers the priority of apps that let them pass silently.
  *
- * The large picture on the right appears only when the push carries `data.imageUrl`. Leads and clients have no photo,
- * so no push from today's server has one.
+ * The header shows the channel's name. The title stays on one line, so it can be cut. The whole body shows when the
+ * notification is opened. The large picture on the right appears only when the push carries `data.imageUrl`. Leads and
+ * clients have no photo, so no push from today's server has one.
  */
 export async function displayRemoteMessage(message: RemoteMessage): Promise<void> {
     const data = message.data ?? {}
     const channel = resolveChannel(data.channel)
-    const channelId = PUSH_CHANNEL_META[channel].id
+    const { id: channelId, label } = PUSH_CHANNEL_META[channel]
     const entityId = readText(data.entityId)
     const notificationId = getNotificationId(channel, entityId)
     const imageUrl = readText(data.imageUrl)
+    const rawBody = readBody(message)
+    const body = rawBody ? toNotificationText(rawBody) : undefined
     // A new lead can be called straight from the tray. The app looks up the number: a push never carries one.
     const actions = channel === PUSH_CHANNEL.NEW_LEADS && entityId ? [CALL_ACTION, OPEN_ACTION] : undefined
 
     await ensureChannel(channel)
     await notifee.displayNotification({
         ...(notificationId ? { id: notificationId } : {}),
-        title: readText(message.notification?.title) ?? readText(data.title) ?? FALLBACK_TITLE,
-        body: readText(message.notification?.body) ?? readText(data.body),
+        title: toNotificationText(readTitle(message)),
+        subtitle: label,
+        body,
         data,
         android: {
             channelId,
@@ -98,6 +118,7 @@ export async function displayRemoteMessage(message: RemoteMessage): Promise<void
             visibility: AndroidVisibility.PUBLIC,
             pressAction: OPEN_PRESS,
             actions,
+            style: getExpandedStyle(body),
             ...(imageUrl ? { largeIcon: imageUrl, circularLargeIcon: true } : {}),
         },
     })
@@ -115,8 +136,8 @@ export async function showForegroundPush(message: RemoteMessage): Promise<void> 
         return
     }
     const url = readText(data.url)
-    notify.info(readText(message.notification?.title) ?? readText(data.title) ?? FALLBACK_TITLE, {
-        description: readText(message.notification?.body) ?? readText(data.body),
+    notify.info(readTitle(message), {
+        description: readBody(message),
         action: url ? { label: "Open", onClick: () => openPushUrl(url) } : undefined,
     })
 }

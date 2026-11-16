@@ -78,6 +78,7 @@ module.exports = {
     AndroidImportance: { NONE: 0, MIN: 1, LOW: 2, DEFAULT: 3, HIGH: 4 },
     AndroidVisibility: { SECRET: -1, PRIVATE: 0, PUBLIC: 1 },
     AndroidGroupAlertBehavior: { ALL: 0, SUMMARY: 1, CHILDREN: 2 },
+    AndroidStyle: { BIGPICTURE: 0, BIGTEXT: 1, INBOX: 2, MESSAGING: 3 },
     AndroidNotificationSetting: { NOT_SUPPORTED: -1, DISABLED: 0, ENABLED: 1 },
     AlarmType: {
         SET: 0,

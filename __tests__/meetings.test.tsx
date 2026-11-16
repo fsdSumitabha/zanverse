@@ -254,6 +254,62 @@ describe("meetings list", () => {
         await unmountApp(renderer)
     })
 
+    it("offers Missed only on a past meeting, confirms, and uses the server's message", async () => {
+        const alert = jest.spyOn(Alert, "alert").mockImplementation((_title, _message, buttons) => {
+            buttons?.find((button) => button.style === "destructive")?.onPress?.()
+        })
+        const success = jest.spyOn(notify, "success")
+        const bodies: unknown[] = []
+        const renderer = await openMeetings(ADMIN, [
+            {
+                method: "PATCH",
+                path: `${MEETINGS}/m2/status`,
+                reply: (init) => {
+                    bodies.push(JSON.parse(String(init.body)))
+                    return respond(200, { success: true, message: "Meeting marked as missed" })
+                },
+            },
+        ])
+
+        // m1 is today and m2 is past: one Missed button, on m2.
+        expect(renderer.root.findAllByType(Text).filter((node) => node.props.children === "Missed")).toHaveLength(1)
+        const before = getListCalls().length
+        await press(findPressableByText(renderer, "Missed"))
+
+        expect(alert).toHaveBeenCalledWith("Mark this meeting as missed?", expect.any(String), expect.any(Array))
+        expect(bodies).toEqual([{ status: 2040 }])
+        expect(success).toHaveBeenCalledWith("Meeting marked as missed")
+        expect(getListCalls().length).toBe(before + 1)
+        await unmountApp(renderer)
+    })
+
+    it("does not mark a meeting missed when the confirm is declined, and shows a refusal as a toast", async () => {
+        const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined)
+        const error = jest.spyOn(notify, "error")
+        const bodies: unknown[] = []
+        const renderer = await openMeetings(ADMIN, [
+            {
+                method: "PATCH",
+                path: `${MEETINGS}/m2/status`,
+                reply: (init) => {
+                    bodies.push(JSON.parse(String(init.body)))
+                    return respond(409, { success: false, message: "Meeting is already closed" })
+                },
+            },
+        ])
+
+        await press(findPressableByText(renderer, "Missed"))
+        expect(bodies).toEqual([])
+
+        alert.mockImplementation((_title, _message, buttons) => {
+            buttons?.find((button) => button.style === "destructive")?.onPress?.()
+        })
+        await press(findPressableByText(renderer, "Missed"))
+        expect(bodies).toEqual([{ status: 2040 }])
+        expect(error).toHaveBeenCalledWith("Meeting is already closed")
+        await unmountApp(renderer)
+    })
+
     it("opens the Meet link, the entity, and the next page", async () => {
         const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined)
         const renderer = await openMeetings(ADMIN, [
@@ -298,7 +354,7 @@ describe("meetings list", () => {
     it("shows no actions to a role outside the write roles", async () => {
         const renderer = await openMeetings(MARKETER)
         const texts = getTexts(renderer)
-        for (const label of ["Reschedule", "Completed", "Cancel"]) expect(texts).not.toContain(label)
+        for (const label of ["Reschedule", "Completed", "Missed", "Cancel"]) expect(texts).not.toContain(label)
         expect(texts).toContain("Join")
         await unmountApp(renderer)
     })

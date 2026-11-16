@@ -30,6 +30,12 @@ export default function NotificationSettingsScreen() {
             <Section title="This phone">
                 <ReminderSwitch />
                 <PhoneSettingsCard />
+                {Platform.OS === "android" && (
+                    <Text className="px-1 text-xs text-neutral-500 dark:text-neutral-400">
+                        Do not force-stop this app in Android Settings. After a force stop, no push reaches this phone
+                        until you open the app again.
+                    </Text>
+                )}
             </Section>
 
             {Platform.OS === "android" && (

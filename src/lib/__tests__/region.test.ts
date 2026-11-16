@@ -12,7 +12,12 @@ import {
 describe("resolveEffectiveRegion", () => {
     test("the all-regions view falls back to India, the default region", () => {
         expect(resolveEffectiveRegion(ALL_REGIONS).label).toBe("India")
-        expect(resolveEffectiveRegion(ALL_REGIONS)).toEqual({ code: "IN", label: "India", phoneCountry: "IN" })
+        expect(resolveEffectiveRegion(ALL_REGIONS)).toEqual({
+            code: "IN",
+            label: "India",
+            phoneCountry: "IN",
+            timeZone: "Asia/Kolkata",
+        })
     })
 
     test("a single region resolves to itself", () => {

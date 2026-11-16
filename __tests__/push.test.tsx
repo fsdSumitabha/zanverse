@@ -6,6 +6,7 @@ import ReactTestRenderer from "react-test-renderer"
 import { runBulk } from "@/lib/leadSourceBulk"
 import { notify } from "@/lib/notify"
 import { registerPushBackgroundHandlers } from "@/lib/push/background"
+import NotificationsScreen from "@/screens/notifications/NotificationsScreen"
 import NotificationSettingsScreen from "@/screens/settings/NotificationSettingsScreen"
 import LeadSourceDetailScreen from "@/screens/leadSources/LeadSourceDetailScreen"
 import { clearToken, saveToken } from "@/store/keychain"
@@ -238,6 +239,20 @@ describe("taps", () => {
         await flush()
         expect(renderer.root.findAllByType(LeadSourceDetailScreen)).toHaveLength(1)
         expect(getCalls(fetchMock)).toContain(`GET /api/admin/operations/lead-sources/${SOURCE_A}`)
+        await unmountApp(renderer)
+    })
+
+    it.each([
+        ["the test push", { data: { url: "/admin/operations/notifications" } }],
+        ["a push with no record", { data: { title: "Robin rescheduled the meeting with Acme" } }],
+        ["a bundle header", { id: "summary-notes" }],
+    ])("opens the inbox for %s, as the web's worker does", async (_name, notification) => {
+        const renderer = await start()
+        const onEvent = mockedNotifee.onForegroundEvent.mock.calls[0][0]
+
+        await ReactTestRenderer.act(async () => onEvent({ type: 1, detail: { notification } }))
+        await flush()
+        expect(renderer.root.findAllByType(NotificationsScreen)).toHaveLength(1)
         await unmountApp(renderer)
     })
 
