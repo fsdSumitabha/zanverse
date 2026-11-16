@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug builds only: plain HTTP, for the dev API at http://10.0.2.2:3000 and for Metro. The main manifest carries no
+    cleartext setting, so the release build is HTTPS-only (Android's default since API 28).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:usesCleartextTraffic="true"
+        tools:targetApi="28" />
+</manifest>

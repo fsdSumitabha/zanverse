@@ -1,0 +1,43 @@
+# Manager upload → report: pick a sheet, upload it, and land on the report with its four tiles.
+#
+# Before the run, put the seed file where the system picker shows it:
+#   adb push .maestro/fixtures/lead-sources-seed.xlsx /sdcard/Download/
+# Then:
+#   maestro test -e MANAGE_EMAIL=manager@example.com -e MANAGE_PASSWORD=secret .maestro/upload-report.yaml
+# The account is a MANAGE role (10, 15, 45 or 69) working in one region, so the upload's region is already set.
+# The file picker is Android's own screen: the flow taps the file by its name there, since that screen is not ours to
+# give ids to.
+appId: com.zanverse
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: loginEmail
+- inputText: ${MANAGE_EMAIL}
+- tapOn:
+    id: loginPassword
+- inputText: ${MANAGE_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: loginSubmit
+- extendedWaitUntil:
+    notVisible:
+      id: loginSubmit
+    timeout: 20000
+- openLink: zanverse://lead-sources
+- tapOn:
+    id: uploadSheetButton
+- tapOn:
+    id: uploadPickFile
+- tapOn:
+    text: ".*lead-sources-seed.*"
+- tapOn:
+    id: uploadSubmit
+- extendedWaitUntil:
+    visible:
+      id: reportTileImported
+    timeout: 60000
+# The tile labels are drawn in upper case, so the match ignores case.
+- assertVisible: "(?i)rows read"
+- assertVisible: "(?i)with warnings"
+- assertVisible: "(?i)skipped"

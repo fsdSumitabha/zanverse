@@ -20,13 +20,13 @@ web never could: tap a row and the dialer opens.
 |---|---|
 | **Android** | The target. Everything ships here first. |
 | **iOS** | Same `src/`, built in session 24. Needs a Mac. |
-| **Windows** | **Use the existing web app.** `react-native-windows` is at 0.84 (0.85 preview) and requires RN 0.84.1, so it cannot build against 0.87. Session 24 records this decision; it is not a build. |
+| **Windows** | **Use the existing web app.** `react-native-windows` is at 0.84 (0.85 preview) and requires RN 0.84.1, so it cannot build against 0.87. Session 24 recorded this decision, with the evidence and the conditions to reopen it, in [`docs/WINDOWS.md`](WINDOWS.md). It is not a build. |
 
 ## 3. Architecture (already decided)
 
 | Area | Decision |
 |---|---|
-| **Styling** | **NativeWind** — the web's Tailwind class strings are copied verbatim, so all `*_META` colour maps keep working. Default `nativewind@^4.1` + `tailwindcss@~3.4`; session 1 spikes v5 and switches only if it builds clean. |
+| **Styling** | **NativeWind** — the web's Tailwind class strings are copied verbatim, so all `*_META` colour maps keep working. **Settled in session 1: `nativewind@4.2.7` + `tailwindcss@3.4.19`.** v5 (5.0.0-rc.0) failed: its Metro transformer is Expo's and needs the `expo` package. Do not re-open this until v5 is stable and works without Expo. Details in `prompts/README.md`. |
 | **Navigation** | React Navigation 7: native-stack root (Splash → Auth → App), bottom tabs built from the web's `MobileNav` items with the same role arrays. |
 | **Data** | Plain `fetch` + `useState`/`useEffect`, like the web. One `src/api/client.ts` (ported from the web's `lead-sources/api.ts` + `handleAuthError.ts`), one `useListQuery` hook for every list. No TanStack Query, no Redux. |
 | **Auth** | JWT in `react-native-keychain`, sent as `Authorization: Bearer`. Needs the backend changes in `BACKEND_CHANGES.md` — **session 4 is blocked until they are on the dev API**. |
@@ -41,14 +41,16 @@ web never could: tap a row and the dialer opens.
 
 ## 4. Packages (versions verified on npm, 2026-10-01)
 
+The exact pinned versions are in `prompts/README.md`, section "Session 1 — toolchain lock".
+
 Already installed: `react-native@0.87.1`, `react@19.2.3`, `typescript@^6.0.3`, `react-native-safe-area-context@^5.5.2`.
 
 | Package | Version | For |
 |---|---|---|
-| `nativewind` + `tailwindcss` | `^4.1` + `~3.4` | styling (v5 + Tailwind 4 spiked in session 1) |
+| `nativewind` + `tailwindcss` | `4.2.7` + `3.4.19` | styling (v5 + Tailwind 4 spiked in session 1 and rejected) |
 | `@react-navigation/native`, `native-stack`, `bottom-tabs` | `^7` | navigation |
 | `react-native-screens` | `^4.28` | navigation |
-| `react-native-gesture-handler` | `^2` | navigation, swipe actions |
+| `react-native-gesture-handler` | `^2` (2.33.0, npm tag `legacy`) | navigation, swipe actions |
 | `react-native-svg` | `^15.15` | **keystone** — icons and charts both need it |
 | `lucide-react-native` | `^1.49` | same icon names as the web |
 | `react-native-keychain` | `^10` | the JWT, nothing else |
@@ -62,8 +64,10 @@ Already installed: `react-native@0.87.1`, `react@19.2.3`, `typescript@^6.0.3`, `
 | `react-native-blob-util` | `^0.25` | authenticated downloads |
 | `@react-native-community/netinfo` | `^12` | offline banner |
 | `@sentry/react-native` | `^7` | crash reporting |
-| `react-native-gifted-charts` + `react-native-linear-gradient` | `^1.4` | session 20 only |
-| `react-native-reanimated` + `react-native-worklets` + `@gorhom/bottom-sheet` | `^4.7` + `^0.13` + `^5` | session 21 only; Reanimated 4 needs the separate worklets package |
+| `react-native-gifted-charts` + `react-native-linear-gradient` | `1.4.81` + `2.8.3` (pinned in session 20) | session 20 only |
+| `@notifee/react-native` | `9.1.8` (pinned in session 23) | device callback reminders, foreground display of pushes, tap events |
+| `@react-native-firebase/app` + `@react-native-firebase/messaging` | `26.4.0` + `26.4.0` (pinned in session 23) | FCM token and messages; inert without `android/app/google-services.json` |
+| `react-native-reanimated` + `react-native-worklets` + `@gorhom/bottom-sheet` | `^4.7` + `^0.13` + `^5` | Reanimated + Worklets are installed in session 1, because `nativewind/babel` loads their Babel plugin. Bottom sheet stays session 21. |
 
 **Deliberately not used:** TanStack Query, react-hook-form, client-side zod, Redux/Zustand, react-native-windows, Skia,
 react-phone-number-input (its logic already lives in `lib/phone.ts`), react-dropzone, chart.js, recharts, framer-motion.
@@ -127,12 +131,15 @@ ObjectId). Everything else ports.
 correct on day one — and it means two copies now exist. When a code or label changes in the web app, copy the file
 again. A silent drift here makes the app and the web disagree with no error anywhere.
 
+A few copies carry small RN edits (no mongoose, no server imports, type-only lucide). Session 2 lists them in
+`prompts/README.md`. Redo those edits whenever you copy one of those files again.
+
 ## 9. Session plan
 
 Each session is one prompt file in `prompts/`, ends with a working app, and finishes when its Definition of Done is met.
 
-| # | Session | Size | Depends on |
-|---|---|---|---|
+| # | Session | Size | Depends on | Status |
+|---|---|---|---|---|
 | 1 | Native spike and toolchain lock | M | — |
 | 2 | Foundation A — shared core copied verbatim | M | 1 |
 | 3 | Foundation B — design system primitives | M | 2 |
@@ -156,7 +163,7 @@ Each session is one prompt file in `prompts/`, ends with a working app, and fini
 | 21 | Polish — sheets, caching, offline, Sentry | M | 20 |
 | 22 | Android release build | M | 21 |
 | 23 | Push notifications for due callbacks | L | 22 + backend work |
-| 24 | iOS build and the Windows decision | M | 22 |
+| 24 | iOS build and the Windows decision | M | 22 | ✅ Windows decision done ([`docs/WINDOWS.md`](WINDOWS.md)); the iOS code and project changes are in, but the build needs a Mac |
 
 ## 10. Decisions still open
 
@@ -168,6 +175,7 @@ Each session is one prompt file in `prompts/`, ends with a working app, and fini
 | Automatic call logging on Android | Ship the manual "log this call" sheet first. Never attempt in-app call recording: Android 10+ blocks it and Play removes apps that work around it. |
 | Distribution to staff | Play Store internal testing track — automatic updates, Play App Signing, no review wait. Decide before session 22. |
 | Due-callback reminders | Local notification first (no backend work), real push in session 23 once the scheduled job exists. |
+| A Windows app | Decided in session 24: Windows uses the web app. See [`docs/WINDOWS.md`](WINDOWS.md) for the evidence and the conditions to reopen it. |
 
 ## 11. Top risks
 
@@ -178,7 +186,9 @@ Each session is one prompt file in `prompts/`, ends with a working app, and fini
    server-side, and virtualize the list regardless.
 5. **Cookies may appear to work** on Android because `fetch` has a cookie jar. Do not build on that; use the Bearer token.
 6. **Edge-to-edge is on** — content draws under the status and gesture bars. Floating buttons need
-   `useBottomTabBarHeight() + insets.bottom`.
+   `useBottomTabBarHeight() + insets.bottom`. **Session 1 finding:** `useBottomTabBarHeight()` already includes
+   `insets.bottom`, and a tab screen already ends at the tab bar's top edge, so that sum counts the inset twice.
+   Check the spike screen's printed numbers on a device before session 6 (see `prompts/README.md`).
 7. **Constants drift** between the two copies (see §8).
 8. **Release builds differ from debug** — R8 minification breaks reflection-based native modules. Test a release build
    in session 22, not at launch.

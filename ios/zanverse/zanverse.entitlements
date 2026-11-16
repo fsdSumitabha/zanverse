@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		Keychain Sharing with one access group. src/store/keychain.ts keeps the JWT in this group, so it stays the
+		app's own across updates; with no explicit group the keychain uses this first one.
+	-->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.zanverse</string>
+	</array>
+</dict>
+</plist>
