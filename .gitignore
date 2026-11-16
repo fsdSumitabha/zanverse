@@ -79,3 +79,5 @@ reference/
 
 # personal Claude settings (machine-specific paths)
 .claude/settings.local.json
+
+.env*

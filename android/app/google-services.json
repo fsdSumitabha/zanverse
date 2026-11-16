@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "601314262463",
+    "project_id": "zanverse-75f77",
+    "storage_bucket": "zanverse-75f77.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:601314262463:android:d1ab061d5050e6f8a1350a",
+        "android_client_info": {
+          "package_name": "com.zanverse"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAOhsGJbQnUZF_go2BXaNM10zCss7beNEQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
