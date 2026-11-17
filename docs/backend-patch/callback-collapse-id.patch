@@ -1,0 +1,60 @@
+A callback push on iPhone replaces the phone's own reminder for the same source.
+
+Base: zan-workspace main at 8a8191c.
+Apply from the web repo root:
+    git apply --check /path/to/zanverse/docs/backend-patch/callback-collapse-id.patch
+    git apply /path/to/zanverse/docs/backend-patch/callback-collapse-id.patch
+    npx tsc --noEmit
+
+What it changes:
+- sendPush.ts builds apns-collapse-id in one helper, getCollapseId. Every channel keeps
+  `<channel id>-<entityId>`, as today. A callback push now uses `callback-<sourceId>`.
+  That is the id the phone gives its own reminder (zanverse src/lib/push/reminders.ts) and
+  the id Android already uses for a callback push (zanverse src/lib/push/remoteMessage.ts).
+  Before, iOS would have used `callbacks-<sourceId>`, so a server push and the reminder
+  would show as two notifications on an iPhone.
+
+Nothing sends a callback push yet, and the iOS app is not built. So nothing changes today.
+No migration and no new environment variable.
+
+diff --git a/src/lib/notifications/sendPush.ts b/src/lib/notifications/sendPush.ts
+index 15a3e69..0b8c346 100644
+--- a/src/lib/notifications/sendPush.ts
++++ b/src/lib/notifications/sendPush.ts
+@@ -2,7 +2,7 @@ import type { Types } from "mongoose"
+ import type { ApnsConfig, Aps } from "firebase-admin/messaging"
+ import PushDevice from "@/models/PushDevice"
+ import { adminMessaging } from "@/lib/firebase/admin"
+-import { PUSH_CHANNEL_META, PUSH_LEVEL, type PushChannel } from "@/constants/pushChannels"
++import { PUSH_CHANNEL, PUSH_CHANNEL_META, PUSH_LEVEL, type PushChannel } from "@/constants/pushChannels"
+ import type { EventType } from "@/constants/eventTypes"
+ 
+ export interface PushMessage {
+@@ -102,6 +102,18 @@ export async function sendPush(userIds: Types.ObjectId[], message: PushMessage):
+     return { sent, failed: fids.length - sent }
+ }
+ 
++/**
++ * The id that makes a new push replace the last one about the same record.
++ * It is the phone app's notification id, so iOS and Android replace the same
++ * notification: `<channel id>-<entityId>`. A callback push takes the id of the
++ * phone's own reminder for that source, `callback-<sourceId>`
++ * (zanverse src/lib/push/reminders.ts), so the two never show at once.
++ */
++function getCollapseId(channel: PushChannel, entityId: string): string {
++    if (channel === PUSH_CHANNEL.CALLBACKS) return `callback-${entityId}`
++    return `${PUSH_CHANNEL_META[channel].id}-${entityId}`
++}
++
+ /**
+  * The iOS part of the message. iOS shows the alert itself, even when the app
+  * is closed. iOS has no channels, so the channel decides three things here:
+@@ -130,7 +142,7 @@ function getApnsConfig(message: PushMessage): ApnsConfig {
+             "apns-priority": "10",
+             "apns-expiration": String(Math.floor(Date.now() / 1000) + TTL_SECONDS),
+             // One notification per record: a new update replaces the last one.
+-            ...(message.entityId ? { "apns-collapse-id": `${meta.id}-${message.entityId}` } : {}),
++            ...(message.entityId ? { "apns-collapse-id": getCollapseId(message.channel, message.entityId) } : {}),
+         },
+         payload: { aps },
+     }
