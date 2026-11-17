@@ -42,7 +42,7 @@ export const ACTIVITY_LOGS_API = `${OPERATIONS_API}/activity-logs`
 export const LEAD_SOURCES_API = "/api/admin/operations/lead-sources"
 export const LEAD_SOURCE_UPLOADS_API = `${LEAD_SOURCES_API}/uploads`
 export const LEAD_SOURCE_TEMPLATE_API = `${LEAD_SOURCES_API}/template`
-/** Not on the dev API yet: BACKEND_CHANGES.md item 6. The upload screen falls back on a 404. */
+/** BACKEND_CHANGES.md item 6. A server without it answers 404, and the upload screen falls back. */
 export const LEAD_SOURCE_COLUMNS_API = `${LEAD_SOURCES_API}/columns`
 
 export const NOTIFICATIONS_API = {

@@ -1,0 +1,146 @@
+Bring the web repo up to the phone app at zanverse 0fb667b.
+
+Base: zan-workspace main at e0d71b9. It also applies on top of the uncommitted company-name
+change in render.ts, resolveParentName.ts and the client status route. The two changes touch
+different files.
+Apply from the web repo root:
+    git apply --check /path/to/zanverse/docs/backend-patch/web-sync-0fb667b.patch
+    git apply /path/to/zanverse/docs/backend-patch/web-sync-0fb667b.patch
+    npx tsc --noEmit
+
+It replaces one-notification-per-record.patch. That patch makes the same first three changes.
+It does not apply, because it is saved with CRLF line endings and the service worker route is
+saved with LF. This file uses LF, which git apply accepts for both kinds of file.
+
+What it changes:
+- Browsers show one notification per record. The service worker tags each push about a record
+  with its channel and entityId. A new update replaces the last one and alerts again, as on
+  Android. A push with no record, such as the test push, has no tag and stays as it is.
+- A callback push stays on screen in a desktop browser until someone acts on it
+  (requireInteraction). Nothing sends a callback push yet.
+- sendPush adds apns-collapse-id, so an iPhone also replaces the last update. It does nothing
+  until the iOS app exists.
+- New route GET /api/admin/operations/lead-sources/columns (BACKEND_CHANGES.md item 6). It
+  returns the sheet columns and the two upload limits from src/config/leadSourceSheet.ts. The
+  phone's upload screen shows the expected header row from it. Roles: LEAD_SOURCE_MANAGE_ROLES.
+- The bell's dropdown wraps a long title instead of cutting it with "...", as the
+  notifications page and the phone already do.
+
+No migration and no new environment variable.
+
+diff --git a/src/app/api/admin/operations/lead-sources/columns/route.ts b/src/app/api/admin/operations/lead-sources/columns/route.ts
+new file mode 100644
+index 0000000..15aafa2
+--- /dev/null
++++ b/src/app/api/admin/operations/lead-sources/columns/route.ts
+@@ -0,0 +1,42 @@
++import { NextRequest, NextResponse } from "next/server"
++import { requireRole } from "@/lib/auth/requireRole"
++import { LEAD_SOURCE_MANAGE_ROLES } from "@/constants/leadSourceRoles"
++import { LEAD_SOURCE_COLUMNS, LEAD_SOURCE_SHEET_RULES } from "@/config/leadSourceSheet"
++import { errorResponse } from "@/lib/lead-sources/http"
++
++/**
++ * GET /api/admin/operations/lead-sources/columns
++ *
++ * The sheet columns and the upload limits from src/config/leadSourceSheet.ts.
++ * The phone app's upload screen shows the expected header row from it,
++ * because the app cannot import that file. The web upload page imports the
++ * file directly and does not call this route.
++ *
++ * Only the fields the upload screen needs. `kind`, `inList` and `searchable`
++ * stay on the server.
++ */
++export async function GET(req: NextRequest) {
++    try {
++        await requireRole(req, LEAD_SOURCE_MANAGE_ROLES)
++
++        const columns = LEAD_SOURCE_COLUMNS.map((column) => ({
++            key: column.key,
++            label: column.label,
++            headers: [...column.headers],
++            required: Boolean(column.required),
++        }))
++
++        return NextResponse.json({
++            success: true,
++            data: {
++                columns,
++                rules: {
++                    maxFileMb: LEAD_SOURCE_SHEET_RULES.maxFileMb,
++                    maxRows: LEAD_SOURCE_SHEET_RULES.maxRows,
++                },
++            },
++        })
++    } catch (error) {
++        return errorResponse(error, "Failed to load the sheet columns")
++    }
++}
+diff --git a/src/app/firebase-messaging-sw.js/route.ts b/src/app/firebase-messaging-sw.js/route.ts
+index e752c51..3505840 100644
+--- a/src/app/firebase-messaging-sw.js/route.ts
++++ b/src/app/firebase-messaging-sw.js/route.ts
+@@ -1,5 +1,6 @@
+ import { SDK_VERSION } from "firebase/app"
+ import { firebaseConfig } from "@/lib/firebase/firebase"
++import { PUSH_CHANNEL } from "@/constants/pushChannels"
+ 
+ /**
+  * The push service worker. Firebase looks for it at /firebase-messaging-sw.js.
+@@ -19,12 +20,18 @@ importScripts("https://www.gstatic.com/firebasejs/${SDK_VERSION}/firebase-messag
+ firebase.initializeApp(${JSON.stringify(firebaseConfig)});
+ const messaging = firebase.messaging();
+ 
+-// The server sends data only: title, body and url.
++// The server sends data only: title, body, url, the channel and the record's id.
+ messaging.onBackgroundMessage((payload) => {
+     const data = payload.data || {};
++    // One notification per record, as on the phone: a new update replaces the last one and alerts again.
++    const tag = data.entityId ? data.channel + "-" + data.entityId : "";
+     return self.registration.showNotification(data.title || "Zan CRM", {
+         body: data.body,
+         icon: "/icon-192.png",
++        tag,
++        renotify: Boolean(tag),
++        // A due callback stays on screen until someone acts on it.
++        requireInteraction: data.channel === "${PUSH_CHANNEL.CALLBACKS}",
+         data: { url: data.url || "/admin/operations/notifications" },
+     });
+ });
+diff --git a/src/components/admin/operations/NotificationBell.tsx b/src/components/admin/operations/NotificationBell.tsx
+index 44cbaa2..21b9408 100644
+--- a/src/components/admin/operations/NotificationBell.tsx
++++ b/src/components/admin/operations/NotificationBell.tsx
+@@ -224,7 +224,8 @@ export default function NotificationBell() {
+                                     }`}>
+                                         <NotificationBadge badge={row.badge} size="sm" />
+                                         <div className="flex-1 min-w-0">
+-                                            <div className={`text-xs truncate ${isUnread ? "font-semibold text-neutral-900 dark:text-white" : "font-medium text-neutral-700 dark:text-neutral-300"}`}>
++                                            {/* The title wraps, as on the notifications page and the phone. It ends with the record's name. */}
++                                            <div className={`text-xs break-words ${isUnread ? "font-semibold text-neutral-900 dark:text-white" : "font-medium text-neutral-700 dark:text-neutral-300"}`}>
+                                                 {row.title}
+                                             </div>
+                                             {row.body && (
+diff --git a/src/lib/notifications/sendPush.ts b/src/lib/notifications/sendPush.ts
+index f0830d4..15a3e69 100644
+--- a/src/lib/notifications/sendPush.ts
++++ b/src/lib/notifications/sendPush.ts
+@@ -41,7 +41,8 @@ const DEAD_DEVICE_CODES = [
+  * entityId and imageUrl for the phone app. Each platform shows it in its own way:
+  * - Browser: the service worker at /firebase-messaging-sw.js turns it into a
+  *   system notification. If a CRM tab is open on screen, Firebase passes it to
+- *   that tab instead (see PushListener). Browsers ignore the extra fields.
++ *   that tab instead (see PushListener). The worker uses channel and entityId
++ *   to replace an older notification about the same record. It ignores the rest.
+  * - Android: the app shows it on the Android channel for `channel`.
+  * - iOS: iOS shows the `apns` alert itself (see getApnsConfig).
+  */
+@@ -128,6 +129,8 @@ function getApnsConfig(message: PushMessage): ApnsConfig {
+             "apns-push-type": "alert",
+             "apns-priority": "10",
+             "apns-expiration": String(Math.floor(Date.now() / 1000) + TTL_SECONDS),
++            // One notification per record: a new update replaces the last one.
++            ...(message.entityId ? { "apns-collapse-id": `${meta.id}-${message.entityId}` } : {}),
+         },
+         payload: { aps },
+     }

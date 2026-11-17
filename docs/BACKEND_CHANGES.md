@@ -20,8 +20,7 @@ the jar is cleared. The app therefore sends the JWT as a header, which the API d
 | 3 | Return the signed JWT in the login response body | `/api/auth/login` — it already returns `{ id, name, email, role, regions }` and the web ignores the body, so adding `token` breaks nothing |
 | 4 | Accept the active region as `X-Active-Region` when the `active_region` cookie is absent | wherever `narrowToActiveRegion(...)` reads the cookie. Safe by construction: the value can only narrow to regions the user already holds, and unknown values are ignored |
 | 5 | Confirm the two `.xlsx` routes authenticate through the helper, so they inherit the Bearer fallback | `GET /api/admin/operations/lead-sources/template` and `GET /api/admin/operations/lead-sources/uploads/:id/download` |
-
-| 6 | Add `GET /api/admin/operations/lead-sources/columns`, returning `{ success: true, data: { columns: [{ key, label, headers, required }], rules: { maxFileMb, maxRows } } }` read from `LEAD_SOURCE_COLUMNS` and `LEAD_SOURCE_SHEET_RULES` in `src/config/leadSourceSheet.ts`, behind `requireRole(req, LEAD_SOURCE_MANAGE_ROLES)` | a new `src/app/api/admin/operations/lead-sources/columns/route.ts` |
+| 6 | Add `GET /api/admin/operations/lead-sources/columns`, returning `{ success: true, data: { columns: [{ key, label, headers, required }], rules: { maxFileMb, maxRows } } }` read from `LEAD_SOURCE_COLUMNS` and `LEAD_SOURCE_SHEET_RULES` in `src/config/leadSourceSheet.ts`, behind `requireRole(req, LEAD_SOURCE_MANAGE_ROLES)`. `docs/backend-patch/web-sync-0fb667b.patch` adds it | a new `src/app/api/admin/operations/lead-sources/columns/route.ts` |
 
 Without 1–3 the app cannot log in at all. Without 4 every list silently shows the wrong region's data. Without 5 the app
 can upload a sheet but never download the report it produced. Without 6 the upload screen cannot show the expected
@@ -79,6 +78,17 @@ phone needs: `{ fid, platform, appVersion }` on POST,
 `{ fid }` on DELETE, Android high priority, an APNs alert, and `channel`/`type`/`entityType`/`entityId`/`imageUrl` in the
 data, with the channel list in `src/constants/pushChannels.ts`. The token-based spec below is kept as history only; do
 not build it.
+
+**State (2026-11-16).** `docs/backend-patch/web-sync-0fb667b.patch` brings the web repo up to this repo's `0fb667b`.
+It makes the changes of `one-notification-per-record.patch`: one browser notification per record, a callback push
+that stays on screen, and `apns-collapse-id`. It also adds the item 6 route, and the web bell wraps long titles as the
+phone does. Use it instead of `one-notification-per-record.patch`. That file is checked out with CRLF line endings,
+and `git apply` then refuses the web's service worker route, which is saved with LF. `.gitattributes` now keeps every
+`.patch` file LF on checkout.
+
+The server's notification text changed too. Each title starts with the first name of the team member who acted, for
+example "Robin scheduled a meeting with Kaveri Foods". A client is named by its company, or by the contact's name when
+it has no company. The phone shows `data.title` and `data.body` as they come, so it needs no change for this.
 
 The original spec, for the web repo, in its own file names. Every path is relative to
 `github.com/fsdSumitabha/zan-workspace`.

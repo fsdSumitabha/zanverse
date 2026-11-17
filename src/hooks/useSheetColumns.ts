@@ -18,8 +18,8 @@ interface SheetRules {
 
 /**
  * The expected header row and the upload limits, from the server's leadSourceSheet.ts, so the phone never shows a
- * stale copy. The route is BACKEND_CHANGES.md item 6. Until it exists, `columns` stays null and the limits fall
- * back to the local copy.
+ * stale copy. The route is BACKEND_CHANGES.md item 6. On a server without it, `columns` stays null and the limits
+ * fall back to the local copy.
  */
 export function useSheetColumns() {
     const [columns, setColumns] = useState<SheetColumnInfo[] | null>(null)

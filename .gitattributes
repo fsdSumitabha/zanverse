@@ -1,0 +1,3 @@
+# Patch files stay LF on every checkout. In the web repo (core.autocrlf=true), git apply takes an LF patch
+# for files saved with LF or with CRLF. A CRLF patch fails on every file saved with LF.
+*.patch text eol=lf
