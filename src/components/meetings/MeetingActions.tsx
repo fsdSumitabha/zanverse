@@ -87,7 +87,7 @@ export default function MeetingActions(props: Props) {
     }
 
     function confirmCancel() {
-        Alert.alert("Cancel this meeting?", "It is marked cancelled for everyone.", [
+        Alert.alert("Cancel this meeting?", "Google Calendar emails the guests of an online meeting. It stays in the CRM as cancelled.", [
             { text: "Keep it", style: "cancel" },
             {
                 text: "Cancel meeting",

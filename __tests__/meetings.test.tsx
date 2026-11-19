@@ -27,8 +27,10 @@ import {
 jest.useFakeTimers({ now: new Date(2026, 9, 6, 10, 0, 0) })
 
 const ADMIN = { id: "u1", name: "Asha Rao", email: "asha@zan.test", role: 10, regions: ["IN"], activeRegion: "IN" }
-// 50 can open Meetings but may not reschedule or close.
+// 50 (Digital Marketer) may reschedule and close meetings, like the sales roles.
 const MARKETER = { id: "u4", name: "Dev Patel", email: "dev@zan.test", role: 50, regions: ["IN"], activeRegion: "IN" }
+// 20 (HR) can open Meetings but may not reschedule or close.
+const HR = { id: "u5", name: "Meera Iyer", email: "meera@zan.test", role: 20, regions: ["IN"], activeRegion: "IN" }
 const MEETINGS = "/api/admin/operations/meetings"
 const LEAD_ID = "64b7f0c2a1b2c3d4e5f60718"
 
@@ -352,10 +354,17 @@ describe("meetings list", () => {
     })
 
     it("shows no actions to a role outside the write roles", async () => {
-        const renderer = await openMeetings(MARKETER)
+        const renderer = await openMeetings(HR)
         const texts = getTexts(renderer)
         for (const label of ["Reschedule", "Completed", "Missed", "Cancel"]) expect(texts).not.toContain(label)
         expect(texts).toContain("Join")
+        await unmountApp(renderer)
+    })
+
+    it("shows the actions to a Digital Marketer", async () => {
+        const renderer = await openMeetings(MARKETER)
+        const texts = getTexts(renderer)
+        for (const label of ["Reschedule", "Cancel", "Completed", "Missed"]) expect(texts).toContain(label)
         await unmountApp(renderer)
     })
 

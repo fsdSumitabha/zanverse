@@ -26,8 +26,12 @@ export interface MeetingListItem extends Meeting {
     entity?: { type: number; label: string; title: string }
 }
 
-/** Roles allowed to reschedule or close a meeting. Mirrors the backend PATCH roles on both routes. */
-const RESCHEDULE_ROLES = [10, 15, 60, 65, 69, 45, 70]
+/**
+ * Roles allowed to reschedule or close a meeting. Mirrors MEETING_MANAGE_ROLES in the web's
+ * src/constants/meetingRoles.ts, which the API routes read. 50 (Digital Marketer) was missing here,
+ * so a marketer saw no buttons although the API accepted them.
+ */
+const RESCHEDULE_ROLES = [10, 15, 45, 50, 60, 65, 69, 70]
 const CLOSE_ROLES = RESCHEDULE_ROLES
 // The web clamps agenda + description over 110 characters to two lines.
 const LONG_TEXT = 110
@@ -66,7 +70,10 @@ function MeetingCard({ meeting, onChanged }: { meeting: MeetingListItem; onChang
     const isScheduled = meeting.status === MEETING_STATUS.SCHEDULED || isRescheduled
     const isUpcoming = isScheduled && temporal === "UPCOMING"
     const isToday = isScheduled && temporal === "TODAY"
-    const showComplete = isScheduled && canClose && temporal === "PAST"
+    // Once the start time has passed, not from the next day: a 10 AM meeting can be closed at 11 AM.
+    // The API has always allowed this.
+    const hasStarted = new Date(meeting.scheduledAt).getTime() <= Date.now()
+    const showComplete = isScheduled && canClose && hasStarted
     // Rescheduled wins over the green and red dots, so that state is seen first.
     const dot: DotColor | null = isRescheduled
         ? "orange"

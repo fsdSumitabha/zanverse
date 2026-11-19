@@ -104,7 +104,19 @@ function buildHeaders(token: string | null, hasJsonBody: boolean): Record<string
     if (token) headers.Authorization = `Bearer ${token}`
     const region = getActiveRegion()
     if (region) headers["X-Active-Region"] = region
+    // The phone's time zone, e.g. "Asia/Dubai". The API reads it for "Today" filters and date ranges, because the
+    // server's clock is UTC. Not a credential. See zan-workspace docs/time-zones.md.
+    const timeZone = getDeviceTimeZone()
+    if (timeZone) headers["X-Time-Zone"] = timeZone
     return headers
+}
+
+function getDeviceTimeZone(): string | null {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || null
+    } catch {
+        return null
+    }
 }
 
 async function handleUnauthorized(message: string | undefined): Promise<void> {
